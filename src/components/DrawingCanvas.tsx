@@ -1,8 +1,10 @@
+
 import React, { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Eraser, Play, Circle, Square, Triangle, RotateCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Available colors for the color picker
 const COLORS = [
@@ -37,9 +39,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const [mode, setMode] = useState<DrawingMode>("draw");
   const [shapeTool, setShapeTool] = useState<ShapeTool>("none");
   const [isLoading, setIsLoading] = useState(false);
+  const isMobile = useIsMobile();
   
-  // For shape drawing
+  // For shape drawing preview
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
+  const canvasStateRef = useRef<ImageData | null>(null);
+  
+  // Background pattern image
+  const [bgPattern, setBgPattern] = useState<HTMLImageElement | null>(null);
   
   // Initialize canvas
   useEffect(() => {
@@ -64,7 +71,16 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         context.lineJoin = "round";
         context.strokeStyle = color;
         context.lineWidth = brushSize;
+        drawBackground();
       }
+    };
+    
+    // Create background pattern
+    const pattern = new Image();
+    pattern.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+CiAgPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZmZmZmZmIiAvPgogIDxwYXRoIGQ9Ik0gMCAwIEwgMjAgMjAiIHN0cm9rZT0iI2YwZjBmMCIgc3Ryb2tlLXdpZHRoPSIxIiAvPgogIDxwYXRoIGQ9Ik0gMjAgMCBMIDAgMjAiIHN0cm9rZT0iI2YwZjBmMCIgc3Ryb2tlLXdpZHRoPSIxIiAvPgo8L3N2Zz4=";
+    pattern.onload = () => {
+      setBgPattern(pattern);
+      drawBackground();
     };
     
     resizeCanvas();
@@ -73,6 +89,23 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     window.addEventListener("resize", resizeCanvas);
     return () => window.removeEventListener("resize", resizeCanvas);
   }, []);
+  
+  // Draw background pattern
+  const drawBackground = () => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context || !bgPattern) return;
+    
+    // Clear canvas
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Create pattern and fill
+    const pattern = context.createPattern(bgPattern, "repeat");
+    if (pattern) {
+      context.fillStyle = pattern;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  };
   
   // Update context when color or brush size changes
   useEffect(() => {
@@ -83,74 +116,88 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
 
   // Drawing functions
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!ctx) return;
+    if (!ctx || !canvasRef.current) return;
     
     setIsDrawing(true);
     
     const { x, y } = getPointerPosition(e);
     
     if (mode === "shape") {
+      // Save the current state of the canvas for shape preview
+      canvasStateRef.current = ctx.getImageData(
+        0, 0, canvasRef.current.width, canvasRef.current.height
+      );
       startPointRef.current = { x, y };
-    } else {
+    } else if (mode === "draw") {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    } else if (mode === "erase") {
+      ctx.globalCompositeOperation = "destination-out";
       ctx.beginPath();
       ctx.moveTo(x, y);
     }
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing || !ctx) return;
+    if (!isDrawing || !ctx || !canvasRef.current) return;
     
     const { x, y } = getPointerPosition(e);
     
-    if (mode === "shape") {
-      // For shape preview, we'll need to clear and redraw
-      if (!startPointRef.current) return;
+    if (mode === "shape" && startPointRef.current && canvasStateRef.current) {
+      // Restore canvas state before drawing preview
+      ctx.putImageData(canvasStateRef.current, 0, 0);
       
-      // In a real implementation, you'd draw a preview here
-    } else {
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    }
-  };
-
-  const stopDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing || !ctx) return;
-    
-    if (mode === "shape" && startPointRef.current) {
       const { x: startX, y: startY } = startPointRef.current;
-      const { x: endX, y: endY } = getPointerPosition(e);
       
-      // Draw the shape based on start and end points
+      // Set correct drawing style for preview
+      ctx.strokeStyle = color;
+      ctx.globalCompositeOperation = "source-over";
+      
+      // Draw shape preview
       switch (shapeTool) {
         case "rectangle":
           ctx.beginPath();
-          ctx.rect(startX, startY, endX - startX, endY - startY);
+          ctx.rect(startX, startY, x - startX, y - startY);
           ctx.stroke();
           break;
         case "circle":
           ctx.beginPath();
-          const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+          const radius = Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2));
           ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
           ctx.stroke();
           break;
         case "triangle":
           ctx.beginPath();
           ctx.moveTo(startX, startY);
-          ctx.lineTo(endX, endY);
-          ctx.lineTo(startX - (endX - startX), endY);
+          ctx.lineTo(x, y);
+          ctx.lineTo(startX - (x - startX), y);
           ctx.closePath();
           ctx.stroke();
           break;
         case "line":
           ctx.beginPath();
           ctx.moveTo(startX, startY);
-          ctx.lineTo(endX, endY);
+          ctx.lineTo(x, y);
           ctx.stroke();
           break;
       }
-      
-      startPointRef.current = null;
+    } else if (mode === "draw" || mode === "erase") {
+      ctx.lineTo(x, y);
+      ctx.stroke();
     }
+  };
+
+  const stopDrawing = () => {
+    if (!isDrawing || !ctx) return;
+    
+    // Reset composite operation after erasing
+    if (mode === "erase") {
+      ctx.globalCompositeOperation = "source-over";
+    }
+    
+    // Clear saved canvas state and start point
+    canvasStateRef.current = null;
+    startPointRef.current = null;
     
     setIsDrawing(false);
     ctx.beginPath(); // Reset path
@@ -180,7 +227,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   // Function to clear the canvas
   const clearCanvas = () => {
     if (!ctx || !canvasRef.current) return;
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    drawBackground();
   };
 
   // Function to handle solve button click
@@ -225,7 +272,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <div className="flex flex-wrap gap-2 p-4 border-b">
+      <div className={`flex flex-wrap gap-2 p-4 border-b ${isMobile ? 'overflow-x-auto' : ''}`}>
         <div className="flex gap-2 mr-4">
           {COLORS.map((colorOption) => (
             <button
@@ -242,7 +289,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         </div>
         
         <div className="flex items-center gap-2 mr-4">
-          <span className="text-sm">Size:</span>
+          <span className="text-sm whitespace-nowrap">Size:</span>
           <Slider
             value={[brushSize]}
             min={1}
@@ -256,38 +303,42 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         <div className="flex gap-2">
           <Button
             variant={mode === "erase" ? "default" : "outline"}
-            size="icon"
+            size={isMobile ? "sm" : "icon"}
             onClick={toggleEraserMode}
             className={mode === "erase" ? "tool-active" : ""}
           >
             <Eraser className="h-5 w-5" />
+            {isMobile && <span className="ml-1">Erase</span>}
           </Button>
           
           <Button
             variant={shapeTool === "rectangle" ? "default" : "outline"}
-            size="icon"
+            size={isMobile ? "sm" : "icon"}
             onClick={() => selectShapeTool("rectangle")}
             className={shapeTool === "rectangle" ? "tool-active" : ""}
           >
             <Square className="h-5 w-5" />
+            {isMobile && <span className="ml-1">Rect</span>}
           </Button>
           
           <Button
             variant={shapeTool === "circle" ? "default" : "outline"}
-            size="icon"
+            size={isMobile ? "sm" : "icon"}
             onClick={() => selectShapeTool("circle")}
             className={shapeTool === "circle" ? "tool-active" : ""}
           >
             <Circle className="h-5 w-5" />
+            {isMobile && <span className="ml-1">Circle</span>}
           </Button>
           
           <Button
             variant={shapeTool === "triangle" ? "default" : "outline"}
-            size="icon"
+            size={isMobile ? "sm" : "icon"}
             onClick={() => selectShapeTool("triangle")}
             className={shapeTool === "triangle" ? "tool-active" : ""}
           >
             <Triangle className="h-5 w-5" />
+            {isMobile && <span className="ml-1">Triangle</span>}
           </Button>
         </div>
       </div>
