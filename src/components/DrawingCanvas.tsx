@@ -1,8 +1,7 @@
-
 import React, { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Eraser, Play, Reset, Circle, Square, Triangle } from "lucide-react";
+import { Eraser, Play, Circle, Square, Triangle, RotateCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 // Available colors for the color picker
@@ -313,7 +312,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
           onClick={clearCanvas}
           className="flex items-center gap-2"
         >
-          <Reset className="h-4 w-4" />
+          <RotateCcw className="h-4 w-4" />
           Clear
         </Button>
         
