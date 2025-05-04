@@ -75,9 +75,10 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
       }
     };
     
-    // Create background pattern
+    // Create an enhanced background pattern
     const pattern = new Image();
-    pattern.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+CiAgPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZmZmZmZmIiAvPgogIDxwYXRoIGQ9Ik0gMCAwIEwgMjAgMjAiIHN0cm9rZT0iI2YwZjBmMCIgc3Ryb2tlLXdpZHRoPSIxIiAvPgogIDxwYXRoIGQ9Ik0gMjAgMCBMIDAgMjAiIHN0cm9rZT0iI2YwZjBmMCIgc3Ryb2tlLXdpZHRoPSIxIiAvPgo8L3N2Zz4=";
+    pattern.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CiAgPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZjhmOGZiIiAvPgogIDxwYXRoIGQ9Ik0gMCAwIEwgNDAgNDAiIHN0cm9rZT0iI2UwZTBlOCIgc3Ryb2tlLXdpZHRoPSIxIiAvPgogIDxwYXRoIGQ9Ik0gNDAgMCBMIDAgNDAiIHN0cm9rZT0iI2UwZTBlOCIgc3Ryb2tlLXdpZHRoPSIxIiAvPgogIDxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjEiIGZpbGw9IiNjY2NjZGQiIC8+Cjwvc3ZnPg==";
+    
     pattern.onload = () => {
       setBgPattern(pattern);
       drawBackground();
@@ -224,7 +225,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     }
   };
 
-  // Function to clear the canvas
+  // Function to clear the canvas - now properly redraws the background
   const clearCanvas = () => {
     if (!ctx || !canvasRef.current) return;
     drawBackground();
@@ -272,8 +273,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <div className={`flex flex-wrap gap-2 p-4 border-b ${isMobile ? 'overflow-x-auto' : ''}`}>
-        <div className="flex gap-2 mr-4">
+      <div className={`flex flex-wrap gap-2 p-4 border-b ${isMobile ? 'overflow-x-auto pb-6' : ''}`}>
+        <div className="flex gap-2 mr-4 flex-wrap">
           {COLORS.map((colorOption) => (
             <button
               key={colorOption}
@@ -296,11 +297,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
             max={20}
             step={1}
             onValueChange={(value) => setBrushSize(value[0])}
-            className="w-32"
+            className="w-28 md:w-32"
           />
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant={mode === "erase" ? "default" : "outline"}
             size={isMobile ? "sm" : "icon"}
