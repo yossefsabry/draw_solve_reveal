@@ -32,7 +32,9 @@ interface DrawingCanvasProps {
 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawingLayerRef = useRef<HTMLCanvasElement>(null);
   const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
+  const [drawingCtx, setDrawingCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState(COLORS[0]);
   const [brushSize, setBrushSize] = useState(5);
@@ -55,10 +57,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   // Initialize canvas
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const drawingLayer = drawingLayerRef.current;
+    if (!canvas || !drawingLayer) return;
     
     const context = canvas.getContext("2d");
-    if (!context) return;
+    const drawingContext = drawingLayer.getContext("2d");
+    if (!context || !drawingContext) return;
     
     // Set canvas size to match its display size
     const resizeCanvas = () => {
@@ -68,13 +72,17 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
       const { width, height } = parent.getBoundingClientRect();
       canvas.width = width;
       canvas.height = height;
+      drawingLayer.width = width;
+      drawingLayer.height = height;
       
       // Restore context settings after resize
-      if (context) {
+      if (context && drawingContext) {
         context.lineCap = "round";
         context.lineJoin = "round";
-        context.strokeStyle = color;
-        context.lineWidth = brushSize;
+        drawingContext.lineCap = "round";
+        drawingContext.lineJoin = "round";
+        drawingContext.strokeStyle = color;
+        drawingContext.lineWidth = brushSize;
         drawBackground();
         redrawObjects();
       }
@@ -91,6 +99,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     
     resizeCanvas();
     setCtx(context);
+    setDrawingCtx(drawingContext);
     
     window.addEventListener("resize", resizeCanvas);
     return () => window.removeEventListener("resize", resizeCanvas);
@@ -115,59 +124,62 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
 
   // Redraw all objects on the canvas
   const redrawObjects = () => {
-    if (!ctx) return;
+    if (!drawingCtx || !drawingLayerRef.current) return;
+    
+    // Clear drawing layer
+    drawingCtx.clearRect(0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height);
     
     objects.forEach(obj => {
-      ctx.save();
-      ctx.strokeStyle = obj.color;
-      ctx.lineWidth = obj.lineWidth;
+      drawingCtx.save();
+      drawingCtx.strokeStyle = obj.color;
+      drawingCtx.lineWidth = obj.lineWidth;
       
       switch (obj.type) {
         case 'rectangle':
-          ctx.beginPath();
-          ctx.rect(obj.x, obj.y, obj.width, obj.height);
-          ctx.stroke();
+          drawingCtx.beginPath();
+          drawingCtx.rect(obj.x, obj.y, obj.width, obj.height);
+          drawingCtx.stroke();
           break;
         case 'circle':
-          ctx.beginPath();
-          ctx.arc(obj.x, obj.y, obj.radius, 0, 2 * Math.PI);
-          ctx.stroke();
+          drawingCtx.beginPath();
+          drawingCtx.arc(obj.x, obj.y, obj.radius, 0, 2 * Math.PI);
+          drawingCtx.stroke();
           break;
         case 'triangle':
-          ctx.beginPath();
-          ctx.moveTo(obj.x1, obj.y1);
-          ctx.lineTo(obj.x2, obj.y2);
-          ctx.lineTo(obj.x3, obj.y3);
-          ctx.closePath();
-          ctx.stroke();
+          drawingCtx.beginPath();
+          drawingCtx.moveTo(obj.x1, obj.y1);
+          drawingCtx.lineTo(obj.x2, obj.y2);
+          drawingCtx.lineTo(obj.x3, obj.y3);
+          drawingCtx.closePath();
+          drawingCtx.stroke();
           break;
         case 'line':
-          ctx.beginPath();
-          ctx.moveTo(obj.x1, obj.y1);
-          ctx.lineTo(obj.x2, obj.y2);
-          ctx.stroke();
+          drawingCtx.beginPath();
+          drawingCtx.moveTo(obj.x1, obj.y1);
+          drawingCtx.lineTo(obj.x2, obj.y2);
+          drawingCtx.stroke();
           break;
         case 'text':
-          ctx.font = '24px Arial';
-          ctx.fillStyle = obj.color;
-          ctx.fillText(obj.text, obj.x, obj.y);
+          drawingCtx.font = '24px Arial';
+          drawingCtx.fillStyle = obj.color;
+          drawingCtx.fillText(obj.text, obj.x, obj.y);
           break;
       }
       
-      ctx.restore();
+      drawingCtx.restore();
     });
   };
   
   // Update context when color or brush size changes
   useEffect(() => {
-    if (!ctx) return;
-    ctx.strokeStyle = mode === "erase" ? "#FFFFFF" : color;
-    ctx.lineWidth = brushSize;
-  }, [ctx, color, brushSize, mode]);
+    if (!drawingCtx) return;
+    drawingCtx.strokeStyle = color;
+    drawingCtx.lineWidth = brushSize;
+  }, [drawingCtx, color, brushSize]);
 
   // Drawing functions
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!ctx || !canvasRef.current) return;
+    if (!drawingCtx || !drawingLayerRef.current) return;
     
     setIsDrawing(true);
     
@@ -176,17 +188,17 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     
     if (mode === "shape") {
       // Save the current state of the canvas for shape preview
-      canvasStateRef.current = ctx.getImageData(
-        0, 0, canvasRef.current.width, canvasRef.current.height
+      canvasStateRef.current = drawingCtx.getImageData(
+        0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height
       );
       startPointRef.current = { x, y };
     } else if (mode === "draw") {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
+      drawingCtx.beginPath();
+      drawingCtx.moveTo(x, y);
     } else if (mode === "erase") {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.beginPath();
-      ctx.moveTo(x, y);
+      drawingCtx.globalCompositeOperation = "destination-out";
+      drawingCtx.beginPath();
+      drawingCtx.moveTo(x, y);
     } else if (mode === "move") {
       // Check if we're clicking on a shape
       const clickedObjectIndex = findObjectAtPosition(x, y);
@@ -229,74 +241,70 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing || !ctx || !canvasRef.current) return;
+    if (!isDrawing || !drawingCtx || !drawingLayerRef.current) return;
     
     const { x, y } = getPointerPosition(e);
     
     if (mode === "shape" && startPointRef.current && canvasStateRef.current) {
       // Restore canvas state before drawing preview
-      ctx.putImageData(canvasStateRef.current, 0, 0);
+      drawingCtx.putImageData(canvasStateRef.current, 0, 0);
       
       const { x: startX, y: startY } = startPointRef.current;
       
       // Set correct drawing style for preview
-      ctx.strokeStyle = color;
-      ctx.globalCompositeOperation = "source-over";
+      drawingCtx.strokeStyle = color;
+      drawingCtx.globalCompositeOperation = "source-over";
       
       // Draw shape preview
       switch (shapeTool) {
         case "rectangle":
-          ctx.beginPath();
-          ctx.rect(startX, startY, x - startX, y - startY);
-          ctx.stroke();
+          drawingCtx.beginPath();
+          drawingCtx.rect(startX, startY, x - startX, y - startY);
+          drawingCtx.stroke();
           break;
         case "circle":
-          ctx.beginPath();
+          drawingCtx.beginPath();
           const radius = Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2));
-          ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
-          ctx.stroke();
+          drawingCtx.arc(startX, startY, radius, 0, 2 * Math.PI);
+          drawingCtx.stroke();
           break;
         case "triangle":
-          ctx.beginPath();
-          ctx.moveTo(startX, startY);
-          ctx.lineTo(x, y);
-          ctx.lineTo(startX - (x - startX), y);
-          ctx.closePath();
-          ctx.stroke();
+          drawingCtx.beginPath();
+          drawingCtx.moveTo(startX, startY);
+          drawingCtx.lineTo(x, y);
+          drawingCtx.lineTo(startX - (x - startX), y);
+          drawingCtx.closePath();
+          drawingCtx.stroke();
           break;
         case "line":
-          ctx.beginPath();
-          ctx.moveTo(startX, startY);
-          ctx.lineTo(x, y);
-          ctx.stroke();
+          drawingCtx.beginPath();
+          drawingCtx.moveTo(startX, startY);
+          drawingCtx.lineTo(x, y);
+          drawingCtx.stroke();
           break;
       }
     } else if (mode === "draw") {
-      ctx.lineTo(x, y);
-      ctx.stroke();
+      drawingCtx.lineTo(x, y);
+      drawingCtx.stroke();
     } else if (mode === "erase") {
       // Draw eraser preview (semi-transparent circle)
       if (lastMousePosRef.current) {
-        // First erase the previous eraser preview by redrawing background and objects
-        drawBackground();
-        redrawObjects();
-        
-        // Draw the path being erased
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.lineTo(x, y);
-        ctx.stroke();
+        // First erase the line being drawn
+        drawingCtx.globalCompositeOperation = "destination-out";
+        drawingCtx.lineTo(x, y);
+        drawingCtx.stroke();
         
         // Draw the eraser preview circle
-        ctx.save();
-        ctx.globalCompositeOperation = "source-over";
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
-        ctx.beginPath();
-        ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
+        drawingCtx.save();
+        drawingCtx.globalCompositeOperation = "source-over";
+        drawingCtx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+        drawingCtx.beginPath();
+        drawingCtx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+        drawingCtx.stroke();
+        drawingCtx.restore();
         
         // Reset to erase mode
-        ctx.globalCompositeOperation = "destination-out";
+        drawingCtx.globalCompositeOperation = "destination-out";
       }
     } else if (mode === "move" && selectedShape !== null) {
       // Move the selected shape
@@ -331,7 +339,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
       setObjects(updatedObjects);
       
       // Redraw everything
-      drawBackground();
       redrawObjects();
     }
     
@@ -339,11 +346,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   };
 
   const stopDrawing = () => {
-    if (!isDrawing || !ctx || !canvasRef.current) return;
+    if (!isDrawing || !drawingCtx || !drawingLayerRef.current) return;
     
     // Reset composite operation after erasing
     if (mode === "erase") {
-      ctx.globalCompositeOperation = "source-over";
+      drawingCtx.globalCompositeOperation = "source-over";
     } else if (mode === "shape" && startPointRef.current) {
       // Add the shape to objects array
       const { x: startX, y: startY } = startPointRef.current;
@@ -412,12 +419,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     lastMousePosRef.current = null;
     
     setIsDrawing(false);
-    ctx.beginPath(); // Reset path
+    drawingCtx.beginPath(); // Reset path
   };
 
   // Helper to get pointer position for both mouse and touch events
   const getPointerPosition = (e: React.MouseEvent | React.TouchEvent) => {
-    const canvas = canvasRef.current;
+    const canvas = drawingLayerRef.current;
     if (!canvas) return { x: 0, y: 0 };
     
     const rect = canvas.getBoundingClientRect();
@@ -438,20 +445,21 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
 
   // Function to clear the canvas - now properly redraws the background
   const clearCanvas = () => {
-    if (!ctx || !canvasRef.current) return;
+    if (!drawingCtx || !drawingLayerRef.current) return;
     setObjects([]);
-    drawBackground();
+    // Only clear the drawing layer, not the background
+    drawingCtx.clearRect(0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height);
   };
 
   // Function to handle solve button click
   const handleSolve = async () => {
-    if (!canvasRef.current) return;
+    if (!drawingLayerRef.current) return;
     
     setIsLoading(true);
     
     try {
       // Convert canvas to image data
-      const imageData = canvasRef.current.toDataURL("image/png");
+      const imageData = drawingLayerRef.current.toDataURL("image/png");
       
       // In a real implementation, you would send this to your server
       await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
@@ -464,13 +472,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
       const newTextObject = {
         type: 'text',
         text: `= ${result}`,
-        x: canvasRef.current.width / 2,
-        y: canvasRef.current.height / 2,
+        x: drawingLayerRef.current.width / 2,
+        y: drawingLayerRef.current.height / 2,
         color: '#FF0000',
         lineWidth: 2
       };
       
       setObjects([...objects, newTextObject]);
+      redrawObjects(); // Make sure to redraw to show the result
       
       // Show toast with result
       toast({
@@ -588,9 +597,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
       </div>
       
       <div className="flex-grow relative">
+        {/* Background canvas (fixed pattern) */}
         <canvas
           ref={canvasRef}
           className="absolute inset-0 bg-white dark:bg-gray-800 canvas-container"
+        />
+        {/* Drawing layer (for actual drawing) */}
+        <canvas
+          ref={drawingLayerRef}
+          className="absolute inset-0 z-10 canvas-container"
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
