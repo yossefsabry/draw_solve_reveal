@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Eraser, Play, Circle, Square, Triangle, RotateCcw } from "lucide-react";
+import { Eraser, Play, Circle, Square, Triangle, RotateCcw, Move } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -24,7 +24,7 @@ const COLORS = [
 type ShapeTool = "rectangle" | "circle" | "triangle" | "line" | "none";
 
 // Available drawing modes
-type DrawingMode = "draw" | "erase" | "shape";
+type DrawingMode = "draw" | "erase" | "shape" | "move";
 
 interface DrawingCanvasProps {
   className?: string;
@@ -40,10 +40,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const [shapeTool, setShapeTool] = useState<ShapeTool>("none");
   const [isLoading, setIsLoading] = useState(false);
   const isMobile = useIsMobile();
+  const [lastResult, setLastResult] = useState<string | null>(null);
+  const [selectedShape, setSelectedShape] = useState<any>(null);
+  const [objects, setObjects] = useState<any[]>([]);
   
   // For shape drawing preview
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const canvasStateRef = useRef<ImageData | null>(null);
+  const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
   
   // Background pattern image
   const [bgPattern, setBgPattern] = useState<HTMLImageElement | null>(null);
@@ -72,6 +76,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         context.strokeStyle = color;
         context.lineWidth = brushSize;
         drawBackground();
+        redrawObjects();
       }
     };
     
@@ -107,6 +112,51 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
       context.fillRect(0, 0, canvas.width, canvas.height);
     }
   };
+
+  // Redraw all objects on the canvas
+  const redrawObjects = () => {
+    if (!ctx) return;
+    
+    objects.forEach(obj => {
+      ctx.save();
+      ctx.strokeStyle = obj.color;
+      ctx.lineWidth = obj.lineWidth;
+      
+      switch (obj.type) {
+        case 'rectangle':
+          ctx.beginPath();
+          ctx.rect(obj.x, obj.y, obj.width, obj.height);
+          ctx.stroke();
+          break;
+        case 'circle':
+          ctx.beginPath();
+          ctx.arc(obj.x, obj.y, obj.radius, 0, 2 * Math.PI);
+          ctx.stroke();
+          break;
+        case 'triangle':
+          ctx.beginPath();
+          ctx.moveTo(obj.x1, obj.y1);
+          ctx.lineTo(obj.x2, obj.y2);
+          ctx.lineTo(obj.x3, obj.y3);
+          ctx.closePath();
+          ctx.stroke();
+          break;
+        case 'line':
+          ctx.beginPath();
+          ctx.moveTo(obj.x1, obj.y1);
+          ctx.lineTo(obj.x2, obj.y2);
+          ctx.stroke();
+          break;
+        case 'text':
+          ctx.font = '24px Arial';
+          ctx.fillStyle = obj.color;
+          ctx.fillText(obj.text, obj.x, obj.y);
+          break;
+      }
+      
+      ctx.restore();
+    });
+  };
   
   // Update context when color or brush size changes
   useEffect(() => {
@@ -122,6 +172,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     setIsDrawing(true);
     
     const { x, y } = getPointerPosition(e);
+    lastMousePosRef.current = { x, y };
     
     if (mode === "shape") {
       // Save the current state of the canvas for shape preview
@@ -136,7 +187,45 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
       ctx.globalCompositeOperation = "destination-out";
       ctx.beginPath();
       ctx.moveTo(x, y);
+    } else if (mode === "move") {
+      // Check if we're clicking on a shape
+      const clickedObjectIndex = findObjectAtPosition(x, y);
+      if (clickedObjectIndex !== -1) {
+        setSelectedShape({
+          index: clickedObjectIndex,
+          offsetX: x - objects[clickedObjectIndex].x,
+          offsetY: y - objects[clickedObjectIndex].y,
+        });
+      }
     }
+  };
+
+  // Find object at position
+  const findObjectAtPosition = (x: number, y: number): number => {
+    // Simple implementation - can be improved with proper hit detection
+    for (let i = objects.length - 1; i >= 0; i--) {
+      const obj = objects[i];
+      
+      // Very basic hit detection - can be improved
+      if (obj.type === 'rectangle') {
+        if (x >= obj.x && x <= obj.x + obj.width && 
+            y >= obj.y && y <= obj.y + obj.height) {
+          return i;
+        }
+      } else if (obj.type === 'circle') {
+        const distance = Math.sqrt(Math.pow(x - obj.x, 2) + Math.pow(y - obj.y, 2));
+        if (distance <= obj.radius) {
+          return i;
+        }
+      } else if (obj.type === 'text') {
+        // Simple rectangle hit box for text
+        if (x >= obj.x && x <= obj.x + 100 && // Approximate text width
+            y >= obj.y - 24 && y <= obj.y) {  // Approximate text height
+          return i;
+        }
+      }
+    }
+    return -1;
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
@@ -182,23 +271,145 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
           ctx.stroke();
           break;
       }
-    } else if (mode === "draw" || mode === "erase") {
+    } else if (mode === "draw") {
       ctx.lineTo(x, y);
       ctx.stroke();
+    } else if (mode === "erase") {
+      // Draw eraser preview (semi-transparent circle)
+      if (lastMousePosRef.current) {
+        // First erase the previous eraser preview by redrawing background and objects
+        drawBackground();
+        redrawObjects();
+        
+        // Draw the path being erased
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        
+        // Draw the eraser preview circle
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.beginPath();
+        ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        
+        // Reset to erase mode
+        ctx.globalCompositeOperation = "destination-out";
+      }
+    } else if (mode === "move" && selectedShape !== null) {
+      // Move the selected shape
+      const newX = x - selectedShape.offsetX;
+      const newY = y - selectedShape.offsetY;
+      
+      const updatedObjects = [...objects];
+      const obj = updatedObjects[selectedShape.index];
+      
+      // Update object position based on type
+      if (obj.type === 'rectangle' || obj.type === 'circle' || obj.type === 'text') {
+        obj.x = newX;
+        obj.y = newY;
+      } else if (obj.type === 'line') {
+        const dx = newX - obj.x1;
+        const dy = newY - obj.y1;
+        obj.x1 = newX;
+        obj.y1 = newY;
+        obj.x2 += dx;
+        obj.y2 += dy;
+      } else if (obj.type === 'triangle') {
+        const dx = newX - obj.x1;
+        const dy = newY - obj.y1;
+        obj.x1 = newX;
+        obj.y1 = newY;
+        obj.x2 += dx;
+        obj.y2 += dy;
+        obj.x3 += dx;
+        obj.y3 += dy;
+      }
+      
+      setObjects(updatedObjects);
+      
+      // Redraw everything
+      drawBackground();
+      redrawObjects();
     }
+    
+    lastMousePosRef.current = { x, y };
   };
 
   const stopDrawing = () => {
-    if (!isDrawing || !ctx) return;
+    if (!isDrawing || !ctx || !canvasRef.current) return;
     
     // Reset composite operation after erasing
     if (mode === "erase") {
       ctx.globalCompositeOperation = "source-over";
+    } else if (mode === "shape" && startPointRef.current) {
+      // Add the shape to objects array
+      const { x: startX, y: startY } = startPointRef.current;
+      const { x: endX, y: endY } = lastMousePosRef.current || { x: 0, y: 0 };
+      
+      let newObject;
+      
+      switch (shapeTool) {
+        case "rectangle":
+          newObject = {
+            type: 'rectangle',
+            x: startX,
+            y: startY,
+            width: endX - startX,
+            height: endY - startY,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case "circle":
+          newObject = {
+            type: 'circle',
+            x: startX,
+            y: startY,
+            radius: Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)),
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case "triangle":
+          newObject = {
+            type: 'triangle',
+            x1: startX,
+            y1: startY,
+            x2: endX,
+            y2: endY,
+            x3: startX - (endX - startX),
+            y3: endY,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case "line":
+          newObject = {
+            type: 'line',
+            x1: startX,
+            y1: startY,
+            x2: endX,
+            y2: endY,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+      }
+      
+      if (newObject) {
+        setObjects([...objects, newObject]);
+      }
+    } else if (mode === "move") {
+      setSelectedShape(null);
     }
     
     // Clear saved canvas state and start point
     canvasStateRef.current = null;
     startPointRef.current = null;
+    lastMousePosRef.current = null;
     
     setIsDrawing(false);
     ctx.beginPath(); // Reset path
@@ -228,6 +439,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   // Function to clear the canvas - now properly redraws the background
   const clearCanvas = () => {
     if (!ctx || !canvasRef.current) return;
+    setObjects([]);
     drawBackground();
   };
 
@@ -244,10 +456,26 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
       // In a real implementation, you would send this to your server
       await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
       
-      // For demo purposes, just show a success message
+      // For demo purposes, generate a result
+      const result = "42";
+      setLastResult(result);
+      
+      // Add the result as text object to the canvas
+      const newTextObject = {
+        type: 'text',
+        text: `= ${result}`,
+        x: canvasRef.current.width / 2,
+        y: canvasRef.current.height / 2,
+        color: '#FF0000',
+        lineWidth: 2
+      };
+      
+      setObjects([...objects, newTextObject]);
+      
+      // Show toast with result
       toast({
         title: "Calculation Result",
-        description: "The drawn equation evaluates to 42",
+        description: `The drawn equation evaluates to ${result}`,
       });
     } catch (error) {
       toast({
@@ -269,6 +497,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const selectShapeTool = (shape: ShapeTool) => {
     setShapeTool(shape);
     setMode("shape");
+  };
+
+  const toggleMoveMode = () => {
+    setMode(mode === "move" ? "draw" : "move");
+    setShapeTool("none");
   };
 
   return (
@@ -310,6 +543,16 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
           >
             <Eraser className="h-5 w-5" />
             {isMobile && <span className="ml-1">Erase</span>}
+          </Button>
+          
+          <Button
+            variant={mode === "move" ? "default" : "outline"}
+            size={isMobile ? "sm" : "icon"}
+            onClick={toggleMoveMode}
+            className={mode === "move" ? "tool-active" : ""}
+          >
+            <Move className="h-5 w-5" />
+            {isMobile && <span className="ml-1">Move</span>}
           </Button>
           
           <Button
