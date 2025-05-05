@@ -11,7 +11,7 @@ import {
   Move, 
   Shapes,
   ArrowRight,
-  LineHorizontal,
+  Line,
   Palette
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -747,7 +747,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
                   onClick={() => selectShapeTool("line")}
                   aria-label="Line shape"
                 >
-                  <LineHorizontal className="h-5 w-5" />
+                  <Line className="h-5 w-5" />
                 </ToggleGroupItem>
                 <ToggleGroupItem 
                   value="arrow" 
