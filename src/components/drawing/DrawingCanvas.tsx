@@ -1,8 +1,7 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "@/hooks/use-toast";
-import { ShapeTool, DrawingMode, AnyDrawingObject, MathResult } from "./types";
+import { ShapeTool, DrawingMode, AnyDrawingObject, MathResult, TextObject } from "./types";
 import ToolBar from "./ToolBar";
 import DrawingArea from "./DrawingArea";
 import CanvasFooter from "./CanvasFooter";
