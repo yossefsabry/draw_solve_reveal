@@ -1,10 +1,35 @@
-
 import React, { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Eraser, Play, Circle, Square, Triangle, RotateCcw, Move } from "lucide-react";
+import { 
+  Eraser, 
+  Play, 
+  Circle, 
+  Square, 
+  Triangle, 
+  RotateCcw, 
+  Move, 
+  Shapes,
+  ArrowRight,
+  LineIcon,
+  Palette
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from "@/components/ui/popover";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
 
 // Available colors for the color picker
 const COLORS = [
@@ -20,8 +45,18 @@ const COLORS = [
   "#0080FF", // Light Blue
 ];
 
+// Gradient colors
+const GRADIENT_COLORS = [
+  "linear-gradient(to right, #ee9ca7, #ffdde1)",
+  "linear-gradient(to right, #c1c161, #d4d4b1)",
+  "linear-gradient(to right, #243949, #517fa4)",
+  "linear-gradient(to top, #e6b980, #eacda3)",
+  "linear-gradient(to top, #d299c2, #fef9d7)",
+  "linear-gradient(to top, #accbee, #e7f0fd)",
+];
+
 // Available shape tools
-type ShapeTool = "rectangle" | "circle" | "triangle" | "line" | "none";
+type ShapeTool = "rectangle" | "circle" | "triangle" | "line" | "arrow" | "none";
 
 // Available drawing modes
 type DrawingMode = "draw" | "erase" | "shape" | "move";
@@ -45,6 +80,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const [lastResult, setLastResult] = useState<string | null>(null);
   const [selectedShape, setSelectedShape] = useState<any>(null);
   const [objects, setObjects] = useState<any[]>([]);
+  const [isShapesOpen, setIsShapesOpen] = useState(false);
   
   // For shape drawing preview
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -157,6 +193,31 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
           drawingCtx.beginPath();
           drawingCtx.moveTo(obj.x1, obj.y1);
           drawingCtx.lineTo(obj.x2, obj.y2);
+          drawingCtx.stroke();
+          break;
+        case 'arrow':
+          // Draw the line
+          drawingCtx.beginPath();
+          drawingCtx.moveTo(obj.x1, obj.y1);
+          drawingCtx.lineTo(obj.x2, obj.y2);
+          drawingCtx.stroke();
+          
+          // Calculate the arrow head
+          const angle = Math.atan2(obj.y2 - obj.y1, obj.x2 - obj.x1);
+          const headLength = 15; // Length of arrow head
+          
+          // Draw the arrow head
+          drawingCtx.beginPath();
+          drawingCtx.moveTo(obj.x2, obj.y2);
+          drawingCtx.lineTo(
+            obj.x2 - headLength * Math.cos(angle - Math.PI / 6),
+            obj.y2 - headLength * Math.sin(angle - Math.PI / 6)
+          );
+          drawingCtx.moveTo(obj.x2, obj.y2);
+          drawingCtx.lineTo(
+            obj.x2 - headLength * Math.cos(angle + Math.PI / 6),
+            obj.y2 - headLength * Math.sin(angle + Math.PI / 6)
+          );
           drawingCtx.stroke();
           break;
         case 'text':
@@ -282,6 +343,31 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
           drawingCtx.lineTo(x, y);
           drawingCtx.stroke();
           break;
+        case "arrow":
+          // Draw the line part
+          drawingCtx.beginPath();
+          drawingCtx.moveTo(startX, startY);
+          drawingCtx.lineTo(x, y);
+          drawingCtx.stroke();
+          
+          // Calculate the arrow head
+          const angle = Math.atan2(y - startY, x - startX);
+          const headLength = 15; // Length of arrow head
+          
+          // Draw the arrow head
+          drawingCtx.beginPath();
+          drawingCtx.moveTo(x, y);
+          drawingCtx.lineTo(
+            x - headLength * Math.cos(angle - Math.PI / 6),
+            y - headLength * Math.sin(angle - Math.PI / 6)
+          );
+          drawingCtx.moveTo(x, y);
+          drawingCtx.lineTo(
+            x - headLength * Math.cos(angle + Math.PI / 6),
+            y - headLength * Math.sin(angle + Math.PI / 6)
+          );
+          drawingCtx.stroke();
+          break;
       }
     } else if (mode === "draw") {
       drawingCtx.lineTo(x, y);
@@ -318,7 +404,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
       if (obj.type === 'rectangle' || obj.type === 'circle' || obj.type === 'text') {
         obj.x = newX;
         obj.y = newY;
-      } else if (obj.type === 'line') {
+      } else if (obj.type === 'line' || obj.type === 'arrow') {
         const dx = newX - obj.x1;
         const dy = newY - obj.y1;
         obj.x1 = newX;
@@ -396,6 +482,17 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         case "line":
           newObject = {
             type: 'line',
+            x1: startX,
+            y1: startY,
+            x2: endX,
+            y2: endY,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case "arrow":
+          newObject = {
+            type: 'arrow',
             x1: startX,
             y1: startY,
             x2: endX,
@@ -506,6 +603,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const selectShapeTool = (shape: ShapeTool) => {
     setShapeTool(shape);
     setMode("shape");
+    setIsShapesOpen(false); // Close the shapes menu after selection
   };
 
   const toggleMoveMode = () => {
@@ -516,20 +614,65 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   return (
     <div className={`flex flex-col h-full ${className}`}>
       <div className={`flex flex-wrap gap-2 p-4 border-b ${isMobile ? 'overflow-x-auto pb-6' : ''}`}>
-        <div className="flex gap-2 mr-4 flex-wrap">
-          {COLORS.map((colorOption) => (
-            <button
-              key={colorOption}
-              className={`color-swatch ${color === colorOption && mode !== "erase" ? "selected" : ""}`}
-              style={{ backgroundColor: colorOption }}
-              onClick={() => {
-                setColor(colorOption);
-                setMode("draw");
-              }}
-              aria-label={`Select ${colorOption} color`}
-            />
-          ))}
-        </div>
+        {/* Color selector with popover for gradient colors */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="outline" 
+              size={isMobile ? "sm" : "icon"}
+              className="relative"
+            >
+              <Palette className="h-5 w-5" />
+              <div 
+                className="absolute bottom-0 right-0 w-3 h-3 rounded-full" 
+                style={{ backgroundColor: color }}
+              />
+              {isMobile && <span className="ml-1">Colors</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64">
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium mb-2">Basic Colors</h4>
+                <div className="flex flex-wrap gap-2">
+                  {COLORS.map((colorOption) => (
+                    <button
+                      key={colorOption}
+                      className={`color-swatch ${color === colorOption && mode !== "erase" ? "selected" : ""}`}
+                      style={{ backgroundColor: colorOption }}
+                      onClick={() => {
+                        setColor(colorOption);
+                        setMode("draw");
+                      }}
+                      aria-label={`Select ${colorOption} color`}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium mb-2">Gradient Palettes</h4>
+                <div className="flex flex-wrap gap-2">
+                  {/* We can't actually use gradients as stroke styles, but showing as options */}
+                  {GRADIENT_COLORS.map((gradientColor, index) => (
+                    <button
+                      key={index}
+                      className="w-full h-8 rounded cursor-pointer transition-transform hover:scale-105"
+                      style={{ background: gradientColor }}
+                      onClick={() => {
+                        // Just use a fixed color for each gradient
+                        const gradientBaseColors = ["#ee9ca7", "#c1c161", "#243949", "#e6b980", "#d299c2", "#accbee"];
+                        setColor(gradientBaseColors[index % gradientBaseColors.length]);
+                        setMode("draw");
+                      }}
+                      aria-label={`Select gradient color ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
         
         <div className="flex items-center gap-2 mr-4">
           <span className="text-sm whitespace-nowrap">Size:</span>
@@ -564,35 +707,58 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
             {isMobile && <span className="ml-1">Move</span>}
           </Button>
           
-          <Button
-            variant={shapeTool === "rectangle" ? "default" : "outline"}
-            size={isMobile ? "sm" : "icon"}
-            onClick={() => selectShapeTool("rectangle")}
-            className={shapeTool === "rectangle" ? "tool-active" : ""}
-          >
-            <Square className="h-5 w-5" />
-            {isMobile && <span className="ml-1">Rect</span>}
-          </Button>
-          
-          <Button
-            variant={shapeTool === "circle" ? "default" : "outline"}
-            size={isMobile ? "sm" : "icon"}
-            onClick={() => selectShapeTool("circle")}
-            className={shapeTool === "circle" ? "tool-active" : ""}
-          >
-            <Circle className="h-5 w-5" />
-            {isMobile && <span className="ml-1">Circle</span>}
-          </Button>
-          
-          <Button
-            variant={shapeTool === "triangle" ? "default" : "outline"}
-            size={isMobile ? "sm" : "icon"}
-            onClick={() => selectShapeTool("triangle")}
-            className={shapeTool === "triangle" ? "tool-active" : ""}
-          >
-            <Triangle className="h-5 w-5" />
-            {isMobile && <span className="ml-1">Triangle</span>}
-          </Button>
+          {/* Shape toggle button that opens the shape menu */}
+          <Popover open={isShapesOpen} onOpenChange={setIsShapesOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={mode === "shape" ? "default" : "outline"}
+                size={isMobile ? "sm" : "icon"}
+                className={mode === "shape" ? "tool-active" : ""}
+              >
+                <Shapes className="h-5 w-5" />
+                {isMobile && <span className="ml-1">Shapes</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2">
+              <ToggleGroup type="single" variant="outline">
+                <ToggleGroupItem 
+                  value="rectangle" 
+                  onClick={() => selectShapeTool("rectangle")}
+                  aria-label="Rectangle shape"
+                >
+                  <Square className="h-5 w-5" />
+                </ToggleGroupItem>
+                <ToggleGroupItem 
+                  value="circle" 
+                  onClick={() => selectShapeTool("circle")}
+                  aria-label="Circle shape"
+                >
+                  <Circle className="h-5 w-5" />
+                </ToggleGroupItem>
+                <ToggleGroupItem 
+                  value="triangle" 
+                  onClick={() => selectShapeTool("triangle")}
+                  aria-label="Triangle shape"
+                >
+                  <Triangle className="h-5 w-5" />
+                </ToggleGroupItem>
+                <ToggleGroupItem 
+                  value="line" 
+                  onClick={() => selectShapeTool("line")}
+                  aria-label="Line shape"
+                >
+                  <LineIcon className="h-5 w-5" />
+                </ToggleGroupItem>
+                <ToggleGroupItem 
+                  value="arrow" 
+                  onClick={() => selectShapeTool("arrow")}
+                  aria-label="Arrow shape"
+                >
+                  <ArrowRight className="h-5 w-5" />
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       
