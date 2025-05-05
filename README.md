@@ -1,3 +1,5 @@
 helllllllllo
 
-[drawslove](https://drawslove.netliy.app) 
+[drawslove](https://drawslove.netlify.app/) 
+
+https://drawslove.netlify.app/
