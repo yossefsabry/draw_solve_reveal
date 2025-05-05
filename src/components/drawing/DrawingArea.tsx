@@ -38,6 +38,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [drawingCtx, setDrawingCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [bgPattern, setBgPattern] = useState<HTMLImageElement | null>(null);
+  const [drawingPath, setDrawingPath] = useState<any[]>([]);
 
   // Initialize canvas
   useEffect(() => {
@@ -102,6 +103,57 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     drawingCtx.lineWidth = brushSize;
   }, [drawingCtx, color, brushSize]);
 
+  // Additional event handlers for improved drawing
+  const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+    if (drawingCtx) {
+      if (mode === "draw") {
+        drawingCtx.beginPath();
+        drawingCtx.globalCompositeOperation = "source-over";
+      } else if (mode === "erase") {
+        drawingCtx.globalCompositeOperation = "destination-out";
+        drawingCtx.beginPath();
+      }
+    }
+    onDrawingStart(e);
+  };
+
+  const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isDrawing && drawingCtx) {
+      const canvas = e.currentTarget as HTMLCanvasElement;
+      const rect = canvas.getBoundingClientRect();
+      let x, y;
+      
+      if ('touches' in e) {
+        x = e.touches[0].clientX - rect.left;
+        y = e.touches[0].clientY - rect.top;
+      } else {
+        x = e.clientX - rect.left;
+        y = e.clientY - rect.top;
+      }
+      
+      if (mode === "draw") {
+        drawingCtx.lineTo(x, y);
+        drawingCtx.stroke();
+        setDrawingPath([...drawingPath, { x, y }]);
+      } else if (mode === "erase") {
+        drawingCtx.lineTo(x, y);
+        drawingCtx.stroke();
+      }
+    }
+    onDrawingMove(e);
+  };
+
+  const handlePointerUp = () => {
+    if (drawingCtx) {
+      drawingCtx.closePath();
+      if (mode === "erase") {
+        drawingCtx.globalCompositeOperation = "source-over";
+      }
+    }
+    onDrawingEnd();
+    setDrawingPath([]);
+  };
+
   // Draw background pattern
   const drawBackground = () => {
     const canvas = canvasRef.current;
@@ -123,13 +175,16 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   const redrawObjects = () => {
     if (!drawingCtx || !drawingLayerRef.current) return;
     
-    // Clear drawing layer
-    drawingCtx.clearRect(0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height);
+    // Don't clear when redrawing objects if we're in the middle of drawing
+    if (!isDrawing) {
+      drawingCtx.clearRect(0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height);
+    }
     
     objects.forEach(obj => {
       drawingCtx.save();
       drawingCtx.strokeStyle = obj.color;
       drawingCtx.lineWidth = obj.lineWidth;
+      drawingCtx.globalCompositeOperation = "source-over"; // Ensure all objects draw normally
       
       switch (obj.type) {
         case 'rectangle':
@@ -208,13 +263,13 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
       <canvas
         ref={drawingLayerRef}
         className="absolute inset-0 z-10 canvas-container"
-        onMouseDown={onDrawingStart}
-        onMouseMove={onDrawingMove}
-        onMouseUp={onDrawingEnd}
-        onMouseLeave={onDrawingEnd}
-        onTouchStart={onDrawingStart}
-        onTouchMove={onDrawingMove}
-        onTouchEnd={onDrawingEnd}
+        onMouseDown={handlePointerDown}
+        onMouseMove={handlePointerMove}
+        onMouseUp={handlePointerUp}
+        onMouseLeave={handlePointerUp}
+        onTouchStart={handlePointerDown}
+        onTouchMove={handlePointerMove}
+        onTouchEnd={handlePointerUp}
       />
     </div>
   );

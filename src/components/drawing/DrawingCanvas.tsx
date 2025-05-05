@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "@/hooks/use-toast";
@@ -5,14 +6,23 @@ import { ShapeTool, DrawingMode, AnyDrawingObject, MathResult, TextObject } from
 import ToolBar from "./ToolBar";
 import DrawingArea from "./DrawingArea";
 import CanvasFooter from "./CanvasFooter";
+import axios from "axios";
+import { SWATCHES } from "@/constants";
 
 interface DrawingCanvasProps {
   className?: string;
 }
 
+// Interface for the server response
+interface CalculationResponse {
+  expr: string;
+  result: string;
+  assign: boolean;
+}
+
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState("#000000");
+  const [color, setColor] = useState(SWATCHES[0]);
   const [brushSize, setBrushSize] = useState(5);
   const [mode, setMode] = useState<DrawingMode>("draw");
   const [shapeTool, setShapeTool] = useState<ShapeTool>("none");
@@ -22,6 +32,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const [objects, setObjects] = useState<AnyDrawingObject[]>([]);
   const [isShapesOpen, setIsShapesOpen] = useState(false);
   const [mathEquations, setMathEquations] = useState<string[]>([]);
+  const [dictOfVars, setDictOfVars] = useState<Record<string, string>>({});
   
   // For shape drawing preview
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -253,6 +264,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     setObjects([]);
     setMathEquations([]);
     setLastResult(null);
+    setDictOfVars({});
   };
 
   // Load MathJax script for rendering LaTeX
@@ -286,35 +298,43 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     }
   }, [mathEquations]);
 
-  // Function to handle solve button click
+  // Function to handle solve button click - updated to match the provided code
   const handleSolve = async () => {
     setIsLoading(true);
     
     try {
       // Get the canvas from the DrawingArea component
-      const canvas = document.querySelector('canvas');
-      
-      if (!canvas) {
+      if (!canvasRef.current) {
         throw new Error("Canvas element not found");
       }
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const canvas = canvasRef.current;
       
-      // Analyze the drawn content and generate a result
-      // In a real implementation, you would send the canvas data to an API
-      const result = {
-        expression: "2 + 2",
-        answer: "4"
-      };
+      // Send image to server using axios
+      const response = await axios({
+        method: 'post',
+        url: 'http://localhost:8900/calculate', // Update this URL if needed
+        data: {
+          image: canvas.toDataURL('image/png'),
+          dict_of_vars: dictOfVars
+        }
+      });
       
-      setLastResult(result);
+      // Process the response
+      const resp = await response.data;
+      console.log('Response', resp);
       
-      // Create LaTeX representation of the result
-      const latex = `\\(\\LARGE{${result.expression} = ${result.answer}}\\)`;
-      setMathEquations([...mathEquations, latex]);
+      // Process variable assignments if any
+      resp.data.forEach((data: CalculationResponse) => {
+        if (data.assign === true) {
+          setDictOfVars({
+            ...dictOfVars,
+            [data.expr]: data.result
+          });
+        }
+      });
       
-      // Find the center of the drawing
+      // Find the center of the drawing (bounding box)
       const ctx = canvas.getContext('2d');
       if (ctx) {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -338,36 +358,37 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
           const centerX = (minX + maxX) / 2;
           const centerY = (minY + maxY) / 2;
           
-          // Add the result as text object to the canvas
-          const newTextObject: TextObject = {
-            type: 'text',
-            text: `= ${result.answer}`,
-            x: centerX,
-            y: centerY + 40, // Position below the drawing
-            color: '#FF0000',
-            lineWidth: 2
-          };
-          
-          setObjects([...objects, newTextObject]);
-        } else {
-          // If no drawing found, just place the result in the center
-          const newTextObject: TextObject = {
-            type: 'text',
-            text: `= ${result.answer}`,
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            color: '#FF0000',
-            lineWidth: 2
-          };
-          
-          setObjects([...objects, newTextObject]);
+          // Process each result and display it
+          resp.data.forEach((data: CalculationResponse) => {
+            // Create LaTeX representation
+            const latex = `\\(\\LARGE{${data.expr} = ${data.result}}\\)`;
+            setMathEquations(prev => [...prev, latex]);
+            
+            // Add text object to canvas
+            const newTextObject: TextObject = {
+              type: 'text',
+              text: `${data.expr} = ${data.result}`,
+              x: centerX,
+              y: centerY + 40, // Position below the drawing
+              color: '#FF0000',
+              lineWidth: 2
+            };
+            
+            setObjects(prev => [...prev, newTextObject]);
+            
+            // Set the last result for reference
+            setLastResult({
+              expression: data.expr,
+              answer: data.result
+            });
+          });
         }
       }
       
       // Show toast with result
       toast({
         title: "Calculation Result",
-        description: `${result.expression} = ${result.answer}`,
+        description: "Successfully processed your drawing",
       });
     } catch (error) {
       console.error("Solve error:", error);
@@ -425,7 +446,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
       />
       
       {mathEquations.length > 0 && (
-        <div className="absolute z-50 p-4">
+        <div className="fixed top-0 left-0 z-50 p-4">
           {mathEquations.map((latex, index) => (
             <div key={index} className="math-result bg-white bg-opacity-75 p-2 rounded-md shadow-md mb-2">
               <div dangerouslySetInnerHTML={{ __html: latex }} />
