@@ -1,7 +1,7 @@
 
 import React from "react";
 import Header from "@/components/Header";
-import DrawingCanvas from "@/components/DrawingCanvas";
+import DrawingCanvas from "@/components/drawing/DrawingCanvas";
 
 const Index = () => {
   return (
