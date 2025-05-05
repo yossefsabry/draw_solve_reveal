@@ -1,69 +1,87 @@
 
-// Available shape tools
+// Shape tools available in the application
 export type ShapeTool = "rectangle" | "circle" | "triangle" | "line" | "arrow" | "none";
 
-// Available drawing modes
+// Drawing modes available in the application
 export type DrawingMode = "draw" | "erase" | "shape" | "move";
 
-// Drawing object interfaces
-export interface DrawingObject {
-  type: string;
-  color: string;
-  lineWidth: number;
-}
-
-export interface RectangleObject extends DrawingObject {
-  type: 'rectangle';
+// Rectangle object
+export interface RectangleObject {
+  type: "rectangle";
   x: number;
   y: number;
   width: number;
   height: number;
+  color: string;
+  lineWidth: number;
 }
 
-export interface CircleObject extends DrawingObject {
-  type: 'circle';
+// Circle object
+export interface CircleObject {
+  type: "circle";
   x: number;
   y: number;
   radius: number;
+  color: string;
+  lineWidth: number;
 }
 
-export interface TriangleObject extends DrawingObject {
-  type: 'triangle';
+// Triangle object
+export interface TriangleObject {
+  type: "triangle";
   x1: number;
   y1: number;
   x2: number;
   y2: number;
   x3: number;
   y3: number;
+  color: string;
+  lineWidth: number;
 }
 
-export interface LineObject extends DrawingObject {
-  type: 'line';
+// Line object
+export interface LineObject {
+  type: "line";
   x1: number;
   y1: number;
   x2: number;
   y2: number;
+  color: string;
+  lineWidth: number;
 }
 
-export interface ArrowObject extends DrawingObject {
-  type: 'arrow';
+// Arrow object
+export interface ArrowObject {
+  type: "arrow";
   x1: number;
   y1: number;
   x2: number;
   y2: number;
+  color: string;
+  lineWidth: number;
 }
 
-export interface TextObject extends DrawingObject {
-  type: 'text';
+// Text object
+export interface TextObject {
+  type: "text";
   text: string;
   x: number;
   y: number;
+  color: string;
+  lineWidth: number;
 }
 
+// Union type for all drawing objects
 export type AnyDrawingObject = 
   | RectangleObject 
   | CircleObject 
   | TriangleObject 
   | LineObject 
-  | ArrowObject 
+  | ArrowObject
   | TextObject;
+
+// Result from math equation solving
+export interface MathResult {
+  expression: string;
+  answer: string;
+}

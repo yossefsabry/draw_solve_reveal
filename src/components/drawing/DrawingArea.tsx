@@ -15,6 +15,7 @@ interface DrawingAreaProps {
   onDrawingStart: (e: React.MouseEvent | React.TouchEvent) => void;
   onDrawingMove: (e: React.MouseEvent | React.TouchEvent) => void;
   onDrawingEnd: () => void;
+  onCanvasRef?: (ref: HTMLCanvasElement | null) => void;
 }
 
 const DrawingArea: React.FC<DrawingAreaProps> = ({
@@ -30,6 +31,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   onDrawingStart,
   onDrawingMove,
   onDrawingEnd,
+  onCanvasRef,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingLayerRef = useRef<HTMLCanvasElement>(null);
@@ -83,6 +85,11 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     resizeCanvas();
     setCtx(context);
     setDrawingCtx(drawingContext);
+    
+    // Pass the canvas reference to the parent if callback provided
+    if (onCanvasRef) {
+      onCanvasRef(drawingLayer);
+    }
     
     window.addEventListener("resize", resizeCanvas);
     return () => window.removeEventListener("resize", resizeCanvas);

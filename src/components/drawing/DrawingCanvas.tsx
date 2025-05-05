@@ -1,8 +1,8 @@
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "@/hooks/use-toast";
-import { ShapeTool, DrawingMode, AnyDrawingObject } from "./types";
+import { ShapeTool, DrawingMode, AnyDrawingObject, MathResult } from "./types";
 import ToolBar from "./ToolBar";
 import DrawingArea from "./DrawingArea";
 import CanvasFooter from "./CanvasFooter";
@@ -18,15 +18,17 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const [mode, setMode] = useState<DrawingMode>("draw");
   const [shapeTool, setShapeTool] = useState<ShapeTool>("none");
   const [isLoading, setIsLoading] = useState(false);
-  const [lastResult, setLastResult] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<MathResult | null>(null);
   const [selectedShape, setSelectedShape] = useState<any>(null);
   const [objects, setObjects] = useState<AnyDrawingObject[]>([]);
   const [isShapesOpen, setIsShapesOpen] = useState(false);
+  const [mathEquations, setMathEquations] = useState<string[]>([]);
   
   // For shape drawing preview
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const canvasStateRef = useRef<ImageData | null>(null);
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   
   const isMobile = useIsMobile();
 
@@ -250,38 +252,126 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   // Function to clear the canvas
   const clearCanvas = () => {
     setObjects([]);
+    setMathEquations([]);
+    setLastResult(null);
   };
+
+  // Load MathJax script for rendering LaTeX
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_CHTML';
+    script.async = true;
+    document.head.appendChild(script);
+
+    script.onload = () => {
+      if (window.MathJax) {
+        window.MathJax.Hub.Config({
+          tex2jax: {inlineMath: [['$', '$'], ['\\(', '\\)']]},
+        });
+      }
+    };
+
+    return () => {
+      if (script.parentNode) {
+        document.head.removeChild(script);
+      }
+    };
+  }, []);
+
+  // Render MathJax when equations change
+  useEffect(() => {
+    if (mathEquations.length > 0 && window.MathJax) {
+      setTimeout(() => {
+        window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub]);
+      }, 100);
+    }
+  }, [mathEquations]);
 
   // Function to handle solve button click
   const handleSolve = async () => {
     setIsLoading(true);
     
     try {
+      // Get the canvas from the DrawingArea component
+      const canvas = document.querySelector('canvas');
+      
+      if (!canvas) {
+        throw new Error("Canvas element not found");
+      }
+      
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // For demo purposes, generate a result
-      const result = "42";
-      setLastResult(result);
-      
-      // Add the result as text object to the canvas
-      const newTextObject = {
-        type: 'text',
-        text: `= ${result}`,
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
-        color: '#FF0000',
-        lineWidth: 2
+      // Analyze the drawn content and generate a result
+      // In a real implementation, you would send the canvas data to an API
+      const result = {
+        expression: "2 + 2",
+        answer: "4"
       };
       
-      setObjects([...objects, newTextObject]);
+      setLastResult(result);
+      
+      // Create LaTeX representation of the result
+      const latex = `\\(\\LARGE{${result.expression} = ${result.answer}}\\)`;
+      setMathEquations([...mathEquations, latex]);
+      
+      // Find the center of the drawing
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+        let hasDrawing = false;
+
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            const i = (y * canvas.width + x) * 4;
+            if (imageData.data[i + 3] > 0) {  // If pixel is not transparent
+              hasDrawing = true;
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            }
+          }
+        }
+
+        if (hasDrawing) {
+          const centerX = (minX + maxX) / 2;
+          const centerY = (minY + maxY) / 2;
+          
+          // Add the result as text object to the canvas
+          const newTextObject: TextObject = {
+            type: 'text',
+            text: `= ${result.answer}`,
+            x: centerX,
+            y: centerY + 40, // Position below the drawing
+            color: '#FF0000',
+            lineWidth: 2
+          };
+          
+          setObjects([...objects, newTextObject]);
+        } else {
+          // If no drawing found, just place the result in the center
+          const newTextObject: TextObject = {
+            type: 'text',
+            text: `= ${result.answer}`,
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            color: '#FF0000',
+            lineWidth: 2
+          };
+          
+          setObjects([...objects, newTextObject]);
+        }
+      }
       
       // Show toast with result
       toast({
         title: "Calculation Result",
-        description: `The drawn equation evaluates to ${result}`,
+        description: `${result.expression} = ${result.answer}`,
       });
     } catch (error) {
+      console.error("Solve error:", error);
       toast({
         title: "Error",
         description: "Failed to process the drawn content",
@@ -297,6 +387,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     setShapeTool(shape);
     setMode("shape");
     setIsShapesOpen(false); // Close the shapes menu after selection
+  };
+
+  // Set canvas reference for the DrawingArea component
+  const setCanvasRef = (ref: HTMLCanvasElement | null) => {
+    canvasRef.current = ref;
   };
 
   return (
@@ -327,7 +422,18 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         onDrawingStart={startDrawing}
         onDrawingMove={draw}
         onDrawingEnd={stopDrawing}
+        onCanvasRef={setCanvasRef}
       />
+      
+      {mathEquations.length > 0 && (
+        <div className="absolute z-50 p-4">
+          {mathEquations.map((latex, index) => (
+            <div key={index} className="math-result bg-white bg-opacity-75 p-2 rounded-md shadow-md mb-2">
+              <div dangerouslySetInnerHTML={{ __html: latex }} />
+            </div>
+          ))}
+        </div>
+      )}
       
       <CanvasFooter
         isLoading={isLoading}
