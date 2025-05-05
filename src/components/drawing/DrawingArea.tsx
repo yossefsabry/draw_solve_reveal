@@ -1,15 +1,16 @@
 
 import React, { useRef, useEffect, useState } from "react";
-import { AnyDrawingObject } from "./types";
+import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
+import { drawShapePreview } from "./ShapeDrawingUtils";
 
 interface DrawingAreaProps {
   isDrawing: boolean;
-  mode: string;
+  mode: DrawingMode;
   color: string;
   brushSize: number;
   objects: AnyDrawingObject[];
   selectedShape: any;
-  shapeTool: string;
+  shapeTool: ShapeTool;
   onObjectsChange: (objects: AnyDrawingObject[]) => void;
   onSelectedShapeChange: (shape: any) => void;
   onDrawingStart: (e: React.MouseEvent | React.TouchEvent) => void;
@@ -39,6 +40,11 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   const [drawingCtx, setDrawingCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [bgPattern, setBgPattern] = useState<HTMLImageElement | null>(null);
   const [drawingPath, setDrawingPath] = useState<any[]>([]);
+  
+  // Store the start point and current mouse position for shape drawing
+  const startPointRef = useRef<{ x: number; y: number } | null>(null);
+  const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
+  const canvasStateRef = useRef<ImageData | null>(null);
 
   // Initialize canvas
   useEffect(() => {
@@ -103,43 +109,87 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     drawingCtx.lineWidth = brushSize;
   }, [drawingCtx, color, brushSize]);
 
+  // Helper to get pointer position for both mouse and touch events
+  const getPointerPosition = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = e.currentTarget as HTMLCanvasElement;
+    if (!canvas) return { x: 0, y: 0 };
+    
+    const rect = canvas.getBoundingClientRect();
+    
+    if ('touches' in e) {
+      const touch = e.touches[0];
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      };
+    } else {
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    }
+  };
+
   // Additional event handlers for improved drawing
   const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
     if (drawingCtx) {
       if (mode === "draw") {
         drawingCtx.beginPath();
         drawingCtx.globalCompositeOperation = "source-over";
+        
+        const pos = getPointerPosition(e);
+        drawingCtx.moveTo(pos.x, pos.y);
+        startPointRef.current = pos;
       } else if (mode === "erase") {
         drawingCtx.globalCompositeOperation = "destination-out";
         drawingCtx.beginPath();
+        
+        const pos = getPointerPosition(e);
+        drawingCtx.moveTo(pos.x, pos.y);
+      } else if (mode === "shape") {
+        const pos = getPointerPosition(e);
+        startPointRef.current = pos;
+        
+        // Save the current canvas state for shape preview
+        if (drawingLayerRef.current) {
+          canvasStateRef.current = drawingCtx.getImageData(
+            0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height
+          );
+        }
       }
     }
     onDrawingStart(e);
   };
 
   const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
+    const pos = getPointerPosition(e);
+    lastMousePosRef.current = pos;
+    
     if (isDrawing && drawingCtx) {
-      const canvas = e.currentTarget as HTMLCanvasElement;
-      const rect = canvas.getBoundingClientRect();
-      let x, y;
-      
-      if ('touches' in e) {
-        x = e.touches[0].clientX - rect.left;
-        y = e.touches[0].clientY - rect.top;
-      } else {
-        x = e.clientX - rect.left;
-        y = e.clientY - rect.top;
-      }
-      
       if (mode === "draw") {
-        drawingCtx.lineTo(x, y);
+        drawingCtx.lineTo(pos.x, pos.y);
         drawingCtx.stroke();
-        setDrawingPath([...drawingPath, { x, y }]);
+        setDrawingPath([...drawingPath, pos]);
       } else if (mode === "erase") {
-        drawingCtx.lineTo(x, y);
+        drawingCtx.lineTo(pos.x, pos.y);
         drawingCtx.stroke();
+      } else if (mode === "shape" && startPointRef.current && canvasStateRef.current) {
+        // Restore the saved canvas state before drawing the preview
+        drawingCtx.putImageData(canvasStateRef.current, 0, 0);
+        
+        // Draw the shape preview
+        drawingCtx.save();
+        drawingCtx.strokeStyle = color;
+        drawingCtx.lineWidth = brushSize;
+        drawingCtx.globalCompositeOperation = "source-over";
+        
+        const { x: startX, y: startY } = startPointRef.current;
+        drawShapePreview(drawingCtx, shapeTool, startX, startY, pos.x, pos.y);
+        
+        drawingCtx.restore();
       }
     }
+    
     onDrawingMove(e);
   };
 
@@ -150,6 +200,11 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
         drawingCtx.globalCompositeOperation = "source-over";
       }
     }
+    
+    // Clear temp references
+    startPointRef.current = null;
+    canvasStateRef.current = null;
+    
     onDrawingEnd();
     setDrawingPath([]);
   };
