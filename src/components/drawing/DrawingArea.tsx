@@ -4,6 +4,7 @@ import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { drawShapePreview } from "./ShapeDrawingUtils";
 import Rulers from "./Rulers";
 import { ZoomIn, ZoomOut, Move } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DrawingAreaProps {
   isDrawing: boolean;
@@ -223,14 +224,6 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
         
         // Store the free-hand drawing
         if (paths.length > 5) { // Wait until we have enough points to represent a meaningful stroke
-          const newPath = {
-            type: "draw" as const, // Fix: use "as const" to ensure type is specifically "draw"
-            points: [...paths],
-            color: color,
-            lineWidth: brushSize
-          };
-          
-          // We'll update the objects at the end of the drawing to avoid unnecessary state updates
           if (!startPointRef.current) {
             startPointRef.current = paths[0];
           }
@@ -325,7 +318,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
       if (mode === "draw" && drawingPath.length > 1) {
         // Save the free-hand drawing to objects
         const newPath = {
-          type: "draw" as const, // Fix: use "as const" to ensure type is specifically "draw"
+          type: "draw" as const,
           points: [...drawingPath],
           color: color,
           lineWidth: brushSize
@@ -525,80 +518,84 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     }
   };
 
+  const RULER_SIZE = 24; // Match the ruler size from Rulers component
+
   return (
-    <div className="flex-grow relative" ref={containerRef}>
-      {/* Zoom/Pan info tooltip */}
-      <div className="absolute bottom-4 right-4 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md text-xs z-30 opacity-70 hover:opacity-100 transition-opacity">
-        <div className="flex items-center gap-1 mb-1">
-          <span className="font-semibold">Zoom:</span> Ctrl + Scroll
+    <ScrollArea className="flex-grow relative h-full">
+      <div className="flex-grow relative h-full" ref={containerRef}>
+        {/* Zoom/Pan info tooltip */}
+        <div className="absolute bottom-4 right-4 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md text-xs z-30 opacity-70 hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 mb-1">
+            <span className="font-semibold">Zoom:</span> Scroll
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="font-semibold">Pan:</span> Space + Drag
+          </div>
+          <div className="flex items-center gap-1 mt-1">
+            <span className="font-semibold">Current zoom:</span> {Math.round(scale * 100)}%
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <span className="font-semibold">Pan:</span> Space + Drag
+        
+        {/* Zoom controls */}
+        <div className="absolute top-24 right-4 flex flex-col gap-2 z-30">
+          <button 
+            className="bg-white dark:bg-gray-700 p-2 rounded-md shadow-md text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+            onClick={zoomIn}
+            aria-label="Zoom in"
+          >
+            <ZoomIn size={18} />
+          </button>
+          <button 
+            className="bg-white dark:bg-gray-700 p-2 rounded-md shadow-md text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+            onClick={zoomOut}
+            aria-label="Zoom out"
+          >
+            <ZoomOut size={18} />
+          </button>
+          <div className="text-center bg-white dark:bg-gray-700 p-2 rounded-md shadow-md text-xs font-mono">
+            {Math.round(scale * 100)}%
+          </div>
         </div>
-        <div className="flex items-center gap-1 mt-1">
-          <span className="font-semibold">Current zoom:</span> {Math.round(scale * 100)}%
-        </div>
+        
+        {/* Show panning indicator when space is pressed */}
+        {isPanning && (
+          <div className="absolute top-4 left-4 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md z-30 flex items-center gap-2">
+            <Move size={16} />
+            <span className="text-sm">Panning</span>
+          </div>
+        )}
+        
+        {/* Rulers */}
+        <Rulers 
+          scale={scale}
+          offset={offset}
+          width={containerSize.width}
+          height={containerSize.height}
+        />
+        
+        {/* Background canvas (fixed pattern) */}
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 bg-white dark:bg-gray-800 canvas-container"
+          style={{ marginTop: RULER_SIZE, marginLeft: RULER_SIZE }}
+        />
+        
+        {/* Drawing layer (for actual drawing) */}
+        <canvas
+          ref={drawingLayerRef}
+          className="absolute inset-0 z-10 canvas-container"
+          style={{ marginTop: RULER_SIZE, marginLeft: RULER_SIZE, cursor: isPanning ? 'grab' : 'crosshair' }}
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={handlePointerUp}
+          onMouseLeave={handlePointerUp}
+          onTouchStart={handlePointerDown}
+          onTouchMove={handlePointerMove}
+          onTouchEnd={handlePointerUp}
+          onWheel={handleWheel}
+        />
       </div>
-      
-      {/* Zoom controls */}
-      <div className="absolute top-24 right-4 flex flex-col gap-2 z-30">
-        <button 
-          className="bg-white dark:bg-gray-700 p-2 rounded-md shadow-md text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
-          onClick={zoomIn}
-          aria-label="Zoom in"
-        >
-          <ZoomIn size={18} />
-        </button>
-        <button 
-          className="bg-white dark:bg-gray-700 p-2 rounded-md shadow-md text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
-          onClick={zoomOut}
-          aria-label="Zoom out"
-        >
-          <ZoomOut size={18} />
-        </button>
-        <div className="text-center bg-white dark:bg-gray-700 p-2 rounded-md shadow-md text-xs font-mono">
-          {Math.round(scale * 100)}%
-        </div>
-      </div>
-      
-      {/* Show panning indicator when space is pressed */}
-      {isPanning && (
-        <div className="absolute top-4 left-4 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md z-30 flex items-center gap-2">
-          <Move size={16} />
-          <span className="text-sm">Panning</span>
-        </div>
-      )}
-      
-      {/* Rulers */}
-      <Rulers 
-        scale={scale}
-        offset={offset}
-        width={containerSize.width}
-        height={containerSize.height}
-      />
-      
-      {/* Background canvas (fixed pattern) */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 bg-white dark:bg-gray-800 canvas-container"
-        style={{ marginTop: '20px', marginLeft: '20px' }}
-      />
-      
-      {/* Drawing layer (for actual drawing) */}
-      <canvas
-        ref={drawingLayerRef}
-        className="absolute inset-0 z-10 canvas-container"
-        style={{ marginTop: '20px', marginLeft: '20px', cursor: isPanning ? 'grab' : 'crosshair' }}
-        onMouseDown={handlePointerDown}
-        onMouseMove={handlePointerMove}
-        onMouseUp={handlePointerUp}
-        onMouseLeave={handlePointerUp}
-        onTouchStart={handlePointerDown}
-        onTouchMove={handlePointerMove}
-        onTouchEnd={handlePointerUp}
-        onWheel={handleWheel}
-      />
-    </div>
+    </ScrollArea>
   );
 };
 

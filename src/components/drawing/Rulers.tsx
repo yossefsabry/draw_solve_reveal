@@ -13,7 +13,11 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
   const verticalRulerRef = useRef<HTMLCanvasElement>(null);
   const cornerRef = useRef<HTMLDivElement>(null);
   
-  const RULER_SIZE = 20; // Width/Height of rulers
+  const RULER_SIZE = 24; // Increased ruler size for better visibility
+  const RULER_BG_COLOR = '#f3f3f3';
+  const RULER_TEXT_COLOR = '#333';
+  const RULER_LINE_COLOR = '#666';
+  const RULER_BORDER_COLOR = '#999';
   
   useEffect(() => {
     const drawHorizontalRuler = () => {
@@ -28,12 +32,12 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       canvas.height = RULER_SIZE;
       
       // Clear the canvas
-      ctx.fillStyle = '#f0f0f0';
+      ctx.fillStyle = RULER_BG_COLOR;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       // Draw ticks and numbers
-      ctx.fillStyle = '#333';
-      ctx.font = '9px Arial';
+      ctx.fillStyle = RULER_TEXT_COLOR;
+      ctx.font = '10px Arial'; // Increased font size
       ctx.textAlign = 'center';
       
       // Calculate the starting position based on offset
@@ -44,21 +48,25 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       const mediumTickInterval = 50 * scale;
       for (let i = startPos; i < width; i += mediumTickInterval) {
         const unit = startUnit + ((i - startPos) / scale);
-        ctx.fillRect(i, RULER_SIZE - 10, 1, 10);
+        ctx.fillStyle = RULER_LINE_COLOR;
+        ctx.fillRect(i, RULER_SIZE - 12, 1, 12);
       }
       
       // Draw large ticks and numbers every 100 units
       const largeTickInterval = 100 * scale;
       for (let i = startPos; i < width; i += largeTickInterval) {
         const unit = startUnit + ((i - startPos) / scale);
-        ctx.fillRect(i, RULER_SIZE - 15, 1, 15);
-        ctx.fillText(Math.abs(unit).toString(), i, RULER_SIZE - 3);
+        ctx.fillStyle = RULER_LINE_COLOR;
+        ctx.fillRect(i, RULER_SIZE - 18, 1, 18);
+        ctx.fillStyle = RULER_TEXT_COLOR;
+        ctx.fillText(Math.abs(unit).toString(), i, RULER_SIZE - 5);
       }
       
       // Draw small ticks every 10 units
       const smallTickInterval = 10 * scale;
       for (let i = startPos; i < width; i += smallTickInterval) {
-        ctx.fillRect(i, RULER_SIZE - 5, 1, 5);
+        ctx.fillStyle = RULER_LINE_COLOR;
+        ctx.fillRect(i, RULER_SIZE - 6, 1, 6);
       }
     };
     
@@ -74,12 +82,12 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       canvas.height = height;
       
       // Clear the canvas
-      ctx.fillStyle = '#f0f0f0';
+      ctx.fillStyle = RULER_BG_COLOR;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       // Draw ticks and numbers
-      ctx.fillStyle = '#333';
-      ctx.font = '9px Arial';
+      ctx.fillStyle = RULER_TEXT_COLOR;
+      ctx.font = '10px Arial'; // Increased font size
       ctx.textAlign = 'right';
       
       // Calculate the starting position based on offset
@@ -90,17 +98,20 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       const mediumTickInterval = 50 * scale;
       for (let i = startPos; i < height; i += mediumTickInterval) {
         const unit = startUnit + ((i - startPos) / scale);
-        ctx.fillRect(RULER_SIZE - 10, i, 10, 1);
+        ctx.fillStyle = RULER_LINE_COLOR;
+        ctx.fillRect(RULER_SIZE - 12, i, 12, 1);
       }
       
       // Draw large ticks and numbers every 100 units
       const largeTickInterval = 100 * scale;
       for (let i = startPos; i < height; i += largeTickInterval) {
         const unit = startUnit + ((i - startPos) / scale);
-        ctx.fillRect(RULER_SIZE - 15, i, 15, 1);
+        ctx.fillStyle = RULER_LINE_COLOR;
+        ctx.fillRect(RULER_SIZE - 18, i, 18, 1);
+        ctx.fillStyle = RULER_TEXT_COLOR;
         // Rotate text for vertical ruler
         ctx.save();
-        ctx.translate(RULER_SIZE - 3, i);
+        ctx.translate(RULER_SIZE - 5, i);
         ctx.rotate(-Math.PI/2);
         ctx.fillText(Math.abs(unit).toString(), 0, 0);
         ctx.restore();
@@ -109,7 +120,8 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       // Draw small ticks every 10 units
       const smallTickInterval = 10 * scale;
       for (let i = startPos; i < height; i += smallTickInterval) {
-        ctx.fillRect(RULER_SIZE - 5, i, 5, 1);
+        ctx.fillStyle = RULER_LINE_COLOR;
+        ctx.fillRect(RULER_SIZE - 6, i, 6, 1);
       }
     };
     
@@ -122,22 +134,35 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       {/* Corner square where rulers meet */}
       <div 
         ref={cornerRef}
-        className="absolute top-0 left-0 z-20 bg-gray-100 border-r border-b border-gray-300"
-        style={{ width: RULER_SIZE, height: RULER_SIZE }}
+        className="absolute top-0 left-0 z-20 bg-gray-100 border-r border-b"
+        style={{ 
+          width: RULER_SIZE, 
+          height: RULER_SIZE,
+          borderColor: RULER_BORDER_COLOR,
+          background: RULER_BG_COLOR
+        }}
       />
       
       {/* Horizontal ruler */}
       <canvas
         ref={horizontalRulerRef}
-        className="absolute top-0 left-0 z-10 border-b border-gray-300"
-        style={{ marginLeft: RULER_SIZE, height: RULER_SIZE }}
+        className="absolute top-0 left-0 z-10 border-b"
+        style={{ 
+          marginLeft: RULER_SIZE, 
+          height: RULER_SIZE,
+          borderColor: RULER_BORDER_COLOR
+        }}
       />
       
       {/* Vertical ruler */}
       <canvas
         ref={verticalRulerRef}
-        className="absolute top-0 left-0 z-10 border-r border-gray-300"
-        style={{ marginTop: RULER_SIZE, width: RULER_SIZE }}
+        className="absolute top-0 left-0 z-10 border-r"
+        style={{ 
+          marginTop: RULER_SIZE, 
+          width: RULER_SIZE,
+          borderColor: RULER_BORDER_COLOR
+        }}
       />
     </>
   );

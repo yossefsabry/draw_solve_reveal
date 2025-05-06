@@ -74,6 +74,13 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Enable scrolling on mobile devices */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  html, body, #root {
+    height: 100%;
   }
 }
 
@@ -100,4 +107,52 @@
 
 .loading-spinner {
   animation: spin 1s linear infinite;
+}
+
+/* Improved Mobile Support */
+@media (max-width: 768px) {
+  .scrollable-canvas {
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .zoom-controls {
+    bottom: 16px;
+    right: 16px;
+    top: auto;
+  }
+}
+
+/* Make sure scrollbars are visible on mobile */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }

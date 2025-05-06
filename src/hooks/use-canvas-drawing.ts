@@ -39,22 +39,12 @@ export const useCanvasDrawing = ({
       if (e.code === 'Space') {
         setKeyPressed(prev => ({ ...prev, space: true }));
       }
-      
-      // Handle Ctrl for zooming
-      if (e.ctrlKey) {
-        setKeyPressed(prev => ({ ...prev, ctrl: true }));
-      }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         setKeyPressed(prev => ({ ...prev, space: false }));
         setIsPanning(false);
-      }
-      
-      // Handle Ctrl for zooming
-      if (!e.ctrlKey) {
-        setKeyPressed(prev => ({ ...prev, ctrl: false }));
       }
     };
     
@@ -67,30 +57,29 @@ export const useCanvasDrawing = ({
     };
   }, []);
   
-  // Handle wheel for zooming with Ctrl key
+  // Handle wheel for zooming - now without requiring the Ctrl key
   const handleWheel = (e: React.WheelEvent) => {
-    if (keyPressed.ctrl) {
-      e.preventDefault();
-      
-      const delta = e.deltaY * -0.01;
-      const newScale = Math.min(Math.max(scale + delta, 0.1), 10);
-      
-      // Get the mouse position relative to the canvas
-      const rect = drawingLayerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      
-      // Adjust offset to zoom toward mouse position
-      const newOffset = {
-        x: offset.x - (mouseX / scale - mouseX / newScale) * newScale,
-        y: offset.y - (mouseY / scale - mouseY / newScale) * newScale
-      };
-      
-      setScale(newScale);
-      setOffset(newOffset);
-    }
+    // Only prevent default if we're zooming
+    e.preventDefault();
+    
+    const delta = e.deltaY * -0.01;
+    const newScale = Math.min(Math.max(scale + delta, 0.1), 10);
+    
+    // Get the mouse position relative to the canvas
+    const rect = drawingLayerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    // Adjust offset to zoom toward mouse position
+    const newOffset = {
+      x: offset.x - (mouseX / scale - mouseX / newScale) * newScale,
+      y: offset.y - (mouseY / scale - mouseY / newScale) * newScale
+    };
+    
+    setScale(newScale);
+    setOffset(newOffset);
   };
 
   // Helper to get pointer position for both mouse and touch events with zoom/pan adjustments
@@ -152,23 +141,27 @@ export const useCanvasDrawing = ({
       const clickedObjectIndex = findObjectAtPosition(objects, x, y);
       if (clickedObjectIndex !== -1) {
         const obj = objects[clickedObjectIndex];
-        setSelectedShape({
-          index: clickedObjectIndex,
-          offsetX: x - (obj.type === 'rectangle' || 
-                        obj.type === 'circle' || 
-                        obj.type === 'text' 
-                        ? obj.x 
-                        : obj.type === 'triangle' || obj.type === 'line' || obj.type === 'arrow'
-                          ? obj.x1
-                          : obj.points[0].x), // Handle DrawObject case with points array
-          offsetY: y - (obj.type === 'rectangle' || 
-                        obj.type === 'circle' || 
-                        obj.type === 'text' 
-                        ? obj.y 
-                        : obj.type === 'triangle' || obj.type === 'line' || obj.type === 'arrow'
-                          ? obj.y1
-                          : obj.points[0].y), // Handle DrawObject case with points array
-        });
+        
+        // Handle different object types
+        if (obj.type === 'triangle' || obj.type === 'line' || obj.type === 'arrow') {
+          setSelectedShape({
+            index: clickedObjectIndex,
+            offsetX: x - obj.x1,
+            offsetY: y - obj.y1,
+          });
+        } else if (obj.type === 'draw') {
+          setSelectedShape({
+            index: clickedObjectIndex,
+            offsetX: x - obj.points[0].x,
+            offsetY: y - obj.points[0].y,
+          });
+        } else {
+          setSelectedShape({
+            index: clickedObjectIndex,
+            offsetX: x - obj.x,
+            offsetY: y - obj.y,
+          });
+        }
       }
     }
   };
