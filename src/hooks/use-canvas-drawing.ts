@@ -81,12 +81,16 @@ export const useCanvasDrawing = ({
                         obj.type === 'circle' || 
                         obj.type === 'text' 
                         ? obj.x 
-                        : obj.x1),
+                        : obj.type === 'triangle' || obj.type === 'line' || obj.type === 'arrow'
+                          ? obj.x1
+                          : obj.points[0].x), // Handle DrawObject case with points array
           offsetY: y - (obj.type === 'rectangle' || 
                         obj.type === 'circle' || 
                         obj.type === 'text' 
                         ? obj.y 
-                        : obj.y1),
+                        : obj.type === 'triangle' || obj.type === 'line' || obj.type === 'arrow'
+                          ? obj.y1
+                          : obj.points[0].y), // Handle DrawObject case with points array
         });
       }
     }

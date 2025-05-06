@@ -36,7 +36,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [drawingCtx, setDrawingCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [bgPattern, setBgPattern] = useState<HTMLImageElement | null>(null);
-  const [drawingPath, setDrawingPath] = useState<any[]>([]);
+  const [drawingPath, setDrawingPath] = useState<{ x: number; y: number }[]>([]);
   
   // Store the start point and current mouse position for shape drawing
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -173,7 +173,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
         // Store the free-hand drawing
         if (paths.length > 5) { // Wait until we have enough points to represent a meaningful stroke
           const newPath = {
-            type: "draw",
+            type: "draw" as const, // Fix: use "as const" to ensure type is specifically "draw"
             points: [...paths],
             color: color,
             lineWidth: brushSize
@@ -265,7 +265,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
       if (mode === "draw" && drawingPath.length > 1) {
         // Save the free-hand drawing to objects
         const newPath = {
-          type: "draw",
+          type: "draw" as const, // Fix: use "as const" to ensure type is specifically "draw"
           points: [...drawingPath],
           color: color,
           lineWidth: brushSize
