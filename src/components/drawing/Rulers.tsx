@@ -13,31 +13,36 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
   const verticalRulerRef = useRef<HTMLCanvasElement>(null);
   const cornerRef = useRef<HTMLDivElement>(null);
   
-  const RULER_SIZE = 24; // Increased ruler size for better visibility
-  const RULER_BG_COLOR = '#f3f3f3';
-  const RULER_TEXT_COLOR = '#333';
-  const RULER_LINE_COLOR = '#666';
-  const RULER_BORDER_COLOR = '#999';
+  const RULER_SIZE = 26; // Increased ruler size for better visibility
+  const RULER_BG_COLOR = '#f1f1f1';
+  const RULER_TEXT_COLOR = '#333333';
+  const RULER_LINE_COLOR = '#555555';
+  const RULER_BORDER_COLOR = '#aaaaaa';
   
   useEffect(() => {
     const drawHorizontalRuler = () => {
       const canvas = horizontalRulerRef.current;
       if (!canvas) return;
       
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
       
       // Set canvas dimensions
-      canvas.width = width;
-      canvas.height = RULER_SIZE;
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      canvas.width = width * devicePixelRatio;
+      canvas.height = RULER_SIZE * devicePixelRatio;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${RULER_SIZE}px`;
+      
+      ctx.scale(devicePixelRatio, devicePixelRatio);
       
       // Clear the canvas
       ctx.fillStyle = RULER_BG_COLOR;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, width, RULER_SIZE);
       
       // Draw ticks and numbers
       ctx.fillStyle = RULER_TEXT_COLOR;
-      ctx.font = '10px Arial'; // Increased font size
+      ctx.font = '11px Arial'; // Increased font size for better visibility
       ctx.textAlign = 'center';
       
       // Calculate the starting position based on offset
@@ -57,7 +62,7 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       for (let i = startPos; i < width; i += largeTickInterval) {
         const unit = startUnit + ((i - startPos) / scale);
         ctx.fillStyle = RULER_LINE_COLOR;
-        ctx.fillRect(i, RULER_SIZE - 18, 1, 18);
+        ctx.fillRect(i, RULER_SIZE - 20, 1, 20);
         ctx.fillStyle = RULER_TEXT_COLOR;
         ctx.fillText(Math.abs(unit).toString(), i, RULER_SIZE - 5);
       }
@@ -66,7 +71,7 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       const smallTickInterval = 10 * scale;
       for (let i = startPos; i < width; i += smallTickInterval) {
         ctx.fillStyle = RULER_LINE_COLOR;
-        ctx.fillRect(i, RULER_SIZE - 6, 1, 6);
+        ctx.fillRect(i, RULER_SIZE - 8, 1, 8);
       }
     };
     
@@ -74,20 +79,25 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       const canvas = verticalRulerRef.current;
       if (!canvas) return;
       
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
       
       // Set canvas dimensions
-      canvas.width = RULER_SIZE;
-      canvas.height = height;
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      canvas.width = RULER_SIZE * devicePixelRatio;
+      canvas.height = height * devicePixelRatio;
+      canvas.style.width = `${RULER_SIZE}px`;
+      canvas.style.height = `${height}px`;
+      
+      ctx.scale(devicePixelRatio, devicePixelRatio);
       
       // Clear the canvas
       ctx.fillStyle = RULER_BG_COLOR;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, RULER_SIZE, height);
       
       // Draw ticks and numbers
       ctx.fillStyle = RULER_TEXT_COLOR;
-      ctx.font = '10px Arial'; // Increased font size
+      ctx.font = '11px Arial'; // Increased font size for better visibility
       ctx.textAlign = 'right';
       
       // Calculate the starting position based on offset
@@ -107,7 +117,7 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       for (let i = startPos; i < height; i += largeTickInterval) {
         const unit = startUnit + ((i - startPos) / scale);
         ctx.fillStyle = RULER_LINE_COLOR;
-        ctx.fillRect(RULER_SIZE - 18, i, 18, 1);
+        ctx.fillRect(RULER_SIZE - 20, i, 20, 1);
         ctx.fillStyle = RULER_TEXT_COLOR;
         // Rotate text for vertical ruler
         ctx.save();
@@ -121,7 +131,7 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       const smallTickInterval = 10 * scale;
       for (let i = startPos; i < height; i += smallTickInterval) {
         ctx.fillStyle = RULER_LINE_COLOR;
-        ctx.fillRect(RULER_SIZE - 6, i, 6, 1);
+        ctx.fillRect(RULER_SIZE - 8, i, 8, 1);
       }
     };
     
@@ -134,11 +144,12 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       {/* Corner square where rulers meet */}
       <div 
         ref={cornerRef}
-        className="absolute top-0 left-0 z-20 bg-gray-100 border-r border-b"
+        className="absolute top-0 left-0 z-20"
         style={{ 
           width: RULER_SIZE, 
           height: RULER_SIZE,
-          borderColor: RULER_BORDER_COLOR,
+          borderRight: `1px solid ${RULER_BORDER_COLOR}`,
+          borderBottom: `1px solid ${RULER_BORDER_COLOR}`,
           background: RULER_BG_COLOR
         }}
       />
@@ -146,22 +157,22 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       {/* Horizontal ruler */}
       <canvas
         ref={horizontalRulerRef}
-        className="absolute top-0 left-0 z-10 border-b"
+        className="absolute top-0 left-0 z-10"
         style={{ 
           marginLeft: RULER_SIZE, 
           height: RULER_SIZE,
-          borderColor: RULER_BORDER_COLOR
+          borderBottom: `1px solid ${RULER_BORDER_COLOR}`
         }}
       />
       
       {/* Vertical ruler */}
       <canvas
         ref={verticalRulerRef}
-        className="absolute top-0 left-0 z-10 border-r"
+        className="absolute top-0 left-0 z-10"
         style={{ 
           marginTop: RULER_SIZE, 
           width: RULER_SIZE,
-          borderColor: RULER_BORDER_COLOR
+          borderRight: `1px solid ${RULER_BORDER_COLOR}`
         }}
       />
     </>

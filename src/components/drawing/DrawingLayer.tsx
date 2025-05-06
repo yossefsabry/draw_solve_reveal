@@ -48,7 +48,7 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
     if (!context) return;
     
     ctx.current = context;
@@ -74,10 +74,15 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    canvas.width = width - rulerSize;
-    canvas.height = height - rulerSize;
+    // Set actual pixel dimensions for canvas (important for high-DPI displays)
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    canvas.width = (width - rulerSize) * devicePixelRatio;
+    canvas.height = (height - rulerSize) * devicePixelRatio;
+    canvas.style.width = `${width - rulerSize}px`;
+    canvas.style.height = `${height - rulerSize}px`;
     
     if (ctx.current) {
+      ctx.current.scale(devicePixelRatio, devicePixelRatio);
       ctx.current.lineCap = "round";
       ctx.current.lineJoin = "round";
       ctx.current.strokeStyle = color;
@@ -97,16 +102,15 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
     const canvas = canvasRef.current;
     if (!canvas || !ctx.current) return;
     
-    // Don't clear when redrawing objects if we're in the middle of drawing
-    if (!isDrawing) {
-      ctx.current.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    // Clear the canvas
+    ctx.current.clearRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
     
     // Apply zoom and pan transformations
     ctx.current.save();
     ctx.current.translate(offset.x, offset.y);
     ctx.current.scale(scale, scale);
     
+    // Draw all objects
     objects.forEach(obj => {
       ctx.current!.save();
       ctx.current!.strokeStyle = obj.color;
@@ -199,7 +203,8 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
         marginLeft: rulerSize,
         width: width - rulerSize,
         height: height - rulerSize,
-        cursor: isPanning ? 'grab' : 'crosshair'
+        cursor: isPanning ? 'grab' : 'crosshair',
+        touchAction: 'none'
       }}
       onMouseDown={onPointerDown}
       onMouseMove={onPointerMove}

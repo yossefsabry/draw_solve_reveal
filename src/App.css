@@ -8,6 +8,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* Prevent unwanted scrolling */
 }
 
 .logo {
@@ -50,9 +51,52 @@
 @media (max-width: 768px) {
   #root {
     padding: 0;
+    overflow: auto; /* Allow scrolling on mobile */
   }
   
   .card {
     padding: 1em;
   }
+  
+  /* Ensure scrolling works on mobile */
+  .h-screen, .h-full {
+    height: 100%;
+    min-height: 100%;
+  }
+  
+  /* Show scrollbars on mobile */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    display: block;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Ensure the canvas takes full available space */
+.canvas-container {
+  touch-action: none; /* Prevent default touch behaviors */
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+/Edge */
+  user-select: none; /* Standard */
+}
+
+/* Tool active state */
+.tool-active {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+/* Ensure shapes properly render */
+canvas {
+  image-rendering: pixelated;
 }

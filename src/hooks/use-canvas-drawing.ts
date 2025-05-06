@@ -26,6 +26,7 @@ export const useCanvasDrawing = ({
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [keyPressed, setKeyPressed] = useState<{ [key: string]: boolean }>({});
+  const [drawingPath, setDrawingPath] = useState<{ x: number; y: number }[]>([]);
   
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingLayerRef = useRef<HTMLCanvasElement | null>(null);
@@ -57,16 +58,15 @@ export const useCanvasDrawing = ({
     };
   }, []);
   
-  // Handle wheel for zooming - now without requiring the Ctrl key
+  // Handle wheel for zooming - no Ctrl key required
   const handleWheel = (e: React.WheelEvent) => {
-    // Only prevent default if we're zooming
     e.preventDefault();
     
     const delta = e.deltaY * -0.01;
     const newScale = Math.min(Math.max(scale + delta, 0.1), 10);
     
     // Get the mouse position relative to the canvas
-    const rect = drawingLayerRef.current?.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
     if (!rect) return;
     
     const mouseX = e.clientX - rect.left;
@@ -91,6 +91,7 @@ export const useCanvasDrawing = ({
     
     let clientX, clientY;
     if ('touches' in e) {
+      if (e.touches.length === 0) return lastMousePosRef.current || { x: 0, y: 0 };
       const touch = e.touches[0];
       clientX = touch.clientX;
       clientY = touch.clientY;
@@ -120,16 +121,18 @@ export const useCanvasDrawing = ({
     
     setIsDrawing(true);
     
-    const { x, y } = getPointerPosition(e);
-    lastMousePosRef.current = { x, y };
+    const pos = getPointerPosition(e);
+    lastMousePosRef.current = pos;
     
-    if (mode === "shape") {
+    if (mode === "draw") {
+      setDrawingPath([pos]);
+    } else if (mode === "shape") {
       // Save the start point for shape drawing
-      startPointRef.current = { x, y };
+      startPointRef.current = pos;
       
       // Save canvas state for preview
       if (drawingLayerRef.current) {
-        const ctx = drawingLayerRef.current.getContext('2d');
+        const ctx = drawingLayerRef.current.getContext('2d', { willReadFrequently: true });
         if (ctx) {
           canvasStateRef.current = ctx.getImageData(
             0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height
@@ -138,7 +141,7 @@ export const useCanvasDrawing = ({
       }
     } else if (mode === "move") {
       // Check if we're clicking on a shape
-      const clickedObjectIndex = findObjectAtPosition(objects, x, y);
+      const clickedObjectIndex = findObjectAtPosition(objects, pos.x, pos.y);
       if (clickedObjectIndex !== -1) {
         const obj = objects[clickedObjectIndex];
         
@@ -146,20 +149,20 @@ export const useCanvasDrawing = ({
         if (obj.type === 'triangle' || obj.type === 'line' || obj.type === 'arrow') {
           setSelectedShape({
             index: clickedObjectIndex,
-            offsetX: x - obj.x1,
-            offsetY: y - obj.y1,
+            offsetX: pos.x - obj.x1,
+            offsetY: pos.y - obj.y1,
           });
         } else if (obj.type === 'draw') {
           setSelectedShape({
             index: clickedObjectIndex,
-            offsetX: x - obj.points[0].x,
-            offsetY: y - obj.points[0].y,
+            offsetX: pos.x - obj.points[0].x,
+            offsetY: pos.y - obj.points[0].y,
           });
         } else {
           setSelectedShape({
             index: clickedObjectIndex,
-            offsetX: x - obj.x,
-            offsetY: y - obj.y,
+            offsetX: pos.x - obj.x,
+            offsetY: pos.y - obj.y,
           });
         }
       }
@@ -169,8 +172,12 @@ export const useCanvasDrawing = ({
   const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
     // Handle panning when space is pressed and mouse is moving
     if (isPanning && lastMousePosRef.current) {
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const clientX = 'touches' in e ? 
+        (e.touches.length > 0 ? e.touches[0].clientX : lastMousePosRef.current.x) : 
+        e.clientX;
+      const clientY = 'touches' in e ? 
+        (e.touches.length > 0 ? e.touches[0].clientY : lastMousePosRef.current.y) : 
+        e.clientY;
       
       const deltaX = clientX - lastMousePosRef.current.x;
       const deltaY = clientY - lastMousePosRef.current.y;
@@ -184,7 +191,103 @@ export const useCanvasDrawing = ({
       return;
     }
     
-    // Regular drawing handling continues...
+    if (!isDrawing) return;
+    
+    const pos = getPointerPosition(e);
+    
+    if (mode === "draw") {
+      // Add to drawing path
+      setDrawingPath(prev => [...prev, pos]);
+      
+      // Draw directly to canvas
+      if (drawingLayerRef.current && lastMousePosRef.current) {
+        const ctx = drawingLayerRef.current.getContext('2d');
+        if (ctx) {
+          ctx.save();
+          ctx.translate(offset.x, offset.y);
+          ctx.scale(scale, scale);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = brushSize;
+          ctx.beginPath();
+          ctx.moveTo(lastMousePosRef.current.x, lastMousePosRef.current.y);
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    } else if (mode === "shape" && startPointRef.current) {
+      // Preview shape drawing
+      const ctx = drawingLayerRef.current?.getContext('2d');
+      if (ctx && canvasStateRef.current) {
+        // Restore the original canvas state
+        ctx.putImageData(canvasStateRef.current, 0, 0);
+        
+        // Draw the shape preview
+        ctx.save();
+        ctx.translate(offset.x, offset.y);
+        ctx.scale(scale, scale);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = brushSize;
+        
+        drawShapePreview(ctx, shapeTool, startPointRef.current.x, startPointRef.current.y, pos.x, pos.y);
+        
+        ctx.restore();
+      }
+    } else if (mode === "move" && selectedShape) {
+      // Handle moving objects
+      const obj = {...objects[selectedShape.index]};
+      const deltaX = pos.x - selectedShape.offsetX;
+      const deltaY = pos.y - selectedShape.offsetY;
+      
+      const updatedObjects = [...objects];
+      
+      if (obj.type === 'rectangle' || obj.type === 'circle') {
+        updatedObjects[selectedShape.index] = {
+          ...obj,
+          x: deltaX,
+          y: deltaY
+        };
+      } else if (obj.type === 'triangle') {
+        const width = obj.x2 - obj.x1;
+        const height = obj.y2 - obj.y1;
+        
+        updatedObjects[selectedShape.index] = {
+          ...obj,
+          x1: deltaX,
+          y1: deltaY,
+          x2: deltaX + width,
+          y2: deltaY + height,
+          x3: deltaX - width,
+          y3: deltaY + height
+        };
+      } else if (obj.type === 'line' || obj.type === 'arrow') {
+        const width = obj.x2 - obj.x1;
+        const height = obj.y2 - obj.y1;
+        
+        updatedObjects[selectedShape.index] = {
+          ...obj,
+          x1: deltaX,
+          y1: deltaY,
+          x2: deltaX + width,
+          y2: deltaY + height
+        };
+      } else if (obj.type === 'draw' && obj.points && obj.points.length > 0) {
+        const offsetX = deltaX - obj.points[0].x;
+        const offsetY = deltaY - obj.points[0].y;
+        
+        updatedObjects[selectedShape.index] = {
+          ...obj,
+          points: obj.points.map(p => ({
+            x: p.x + offsetX,
+            y: p.y + offsetY
+          }))
+        };
+      }
+      
+      setObjects(updatedObjects);
+    }
+    
+    lastMousePosRef.current = pos;
   };
 
   const stopDrawing = () => {
@@ -195,7 +298,18 @@ export const useCanvasDrawing = ({
     
     if (!isDrawing) return;
     
-    if (mode === "shape" && startPointRef.current && lastMousePosRef.current) {
+    if (mode === "draw" && drawingPath.length > 1) {
+      // Add free-hand drawing to objects
+      const newObject = {
+        type: 'draw' as const,
+        points: drawingPath,
+        color,
+        lineWidth: brushSize
+      };
+      
+      setObjects([...objects, newObject]);
+      setDrawingPath([]);
+    } else if (mode === "shape" && startPointRef.current && lastMousePosRef.current) {
       // Add the shape to objects array
       const { x: startX, y: startY } = startPointRef.current;
       const { x: endX, y: endY } = lastMousePosRef.current;
@@ -205,8 +319,6 @@ export const useCanvasDrawing = ({
       if (newObject) {
         setObjects([...objects, newObject]);
       }
-    } else if (mode === "move") {
-      setSelectedShape(null);
     }
     
     // Clear saved canvas state and start point
@@ -215,6 +327,7 @@ export const useCanvasDrawing = ({
     lastMousePosRef.current = null;
     
     setIsDrawing(false);
+    setSelectedShape(null);
   };
 
   return {
@@ -235,6 +348,7 @@ export const useCanvasDrawing = ({
     scale,
     offset,
     isPanning,
-    keyPressed
+    keyPressed,
+    drawingPath
   };
 };
