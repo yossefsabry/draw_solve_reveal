@@ -8,16 +8,19 @@ interface UseCanvasDrawingProps {
   color: string;
   brushSize: number;
   shapeTool: ShapeTool;
+  objects: AnyDrawingObject[];
+  setObjects: (objects: AnyDrawingObject[]) => void;
 }
 
 export const useCanvasDrawing = ({ 
   mode, 
   color, 
   brushSize, 
-  shapeTool 
+  shapeTool,
+  objects,
+  setObjects
 }: UseCanvasDrawingProps) => {
   const [isDrawing, setIsDrawing] = useState(false);
-  const [objects, setObjects] = useState<AnyDrawingObject[]>([]);
   const [selectedShape, setSelectedShape] = useState<any>(null);
   
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -116,7 +119,6 @@ export const useCanvasDrawing = ({
 
   return {
     isDrawing,
-    objects,
     selectedShape,
     canvasRef,
     drawingLayerRef,
@@ -126,7 +128,6 @@ export const useCanvasDrawing = ({
     getPointerPosition,
     startDrawing,
     stopDrawing,
-    setObjects,
     setSelectedShape,
     setIsDrawing
   };

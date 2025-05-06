@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from "react";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { drawShapePreview } from "./ShapeDrawingUtils";
@@ -14,7 +13,6 @@ interface DrawingAreaProps {
   onObjectsChange: (objects: AnyDrawingObject[]) => void;
   onSelectedShapeChange: (shape: any) => void;
   onDrawingStart: (e: React.MouseEvent | React.TouchEvent) => void;
-  onDrawingMove: (e: React.MouseEvent | React.TouchEvent) => void;
   onDrawingEnd: () => void;
   onCanvasRef?: (ref: HTMLCanvasElement | null) => void;
 }
@@ -30,7 +28,6 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   onObjectsChange,
   onSelectedShapeChange,
   onDrawingStart,
-  onDrawingMove,
   onDrawingEnd,
   onCanvasRef,
 }) => {
@@ -169,7 +166,24 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
       if (mode === "draw") {
         drawingCtx.lineTo(pos.x, pos.y);
         drawingCtx.stroke();
-        setDrawingPath([...drawingPath, pos]);
+        
+        const paths = [...drawingPath, pos];
+        setDrawingPath(paths);
+        
+        // Store the free-hand drawing
+        if (paths.length > 5) { // Wait until we have enough points to represent a meaningful stroke
+          const newPath = {
+            type: "draw",
+            points: [...paths],
+            color: color,
+            lineWidth: brushSize
+          };
+          
+          // We'll update the objects at the end of the drawing to avoid unnecessary state updates
+          if (!startPointRef.current) {
+            startPointRef.current = paths[0];
+          }
+        }
       } else if (mode === "erase") {
         drawingCtx.lineTo(pos.x, pos.y);
         drawingCtx.stroke();
@@ -187,16 +201,80 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
         drawShapePreview(drawingCtx, shapeTool, startX, startY, pos.x, pos.y);
         
         drawingCtx.restore();
+      } else if (mode === "move" && selectedShape) {
+        const { index, offsetX, offsetY } = selectedShape;
+        const obj = { ...objects[index] };
+        const dx = pos.x - offsetX;
+        const dy = pos.y - offsetY;
+        
+        // Update object position based on its type
+        if (obj.type === 'rectangle' || obj.type === 'circle' || obj.type === 'text') {
+          obj.x = dx;
+          obj.y = dy;
+        } else if (obj.type === 'line' || obj.type === 'arrow') {
+          const width = obj.x2 - obj.x1;
+          const height = obj.y2 - obj.y1;
+          obj.x1 = dx;
+          obj.y1 = dy;
+          obj.x2 = dx + width;
+          obj.y2 = dy + height;
+        } else if (obj.type === 'triangle') {
+          // Calculate the center of the triangle
+          const centerX = (obj.x1 + obj.x2 + obj.x3) / 3;
+          const centerY = (obj.y1 + obj.y2 + obj.y3) / 3;
+          
+          // Calculate the offsets from center for each point
+          const offset1X = obj.x1 - centerX;
+          const offset1Y = obj.y1 - centerY;
+          const offset2X = obj.x2 - centerX;
+          const offset2Y = obj.y2 - centerY;
+          const offset3X = obj.x3 - centerX;
+          const offset3Y = obj.y3 - centerY;
+          
+          // Apply the new center
+          const newCenterX = dx + (offset1X + offset2X + offset3X) / 3;
+          const newCenterY = dy + (offset1Y + offset2Y + offset3Y) / 3;
+          
+          // Update the triangle points
+          obj.x1 = newCenterX + offset1X;
+          obj.y1 = newCenterY + offset1Y;
+          obj.x2 = newCenterX + offset2X;
+          obj.y2 = newCenterY + offset2Y;
+          obj.x3 = newCenterX + offset3X;
+          obj.y3 = newCenterY + offset3Y;
+        }
+        
+        // Update the objects array with the modified object
+        const updatedObjects = [...objects];
+        updatedObjects[index] = obj;
+        onObjectsChange(updatedObjects);
+        
+        // Update the selected shape with the new offset
+        onSelectedShapeChange({
+          ...selectedShape,
+          offsetX: pos.x - dx,
+          offsetY: pos.y - dy
+        });
       }
     }
-    
-    onDrawingMove(e);
   };
 
   const handlePointerUp = () => {
     if (drawingCtx) {
       drawingCtx.closePath();
-      if (mode === "erase") {
+      if (mode === "draw" && drawingPath.length > 1) {
+        // Save the free-hand drawing to objects
+        const newPath = {
+          type: "draw",
+          points: [...drawingPath],
+          color: color,
+          lineWidth: brushSize
+        };
+        
+        if (drawingPath.length > 5) {
+          onObjectsChange([...objects, newPath]);
+        }
+      } else if (mode === "erase") {
         drawingCtx.globalCompositeOperation = "source-over";
       }
     }
@@ -296,6 +374,19 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
           drawingCtx.fillStyle = obj.color;
           drawingCtx.fillText(obj.text, obj.x, obj.y);
           break;
+        case 'draw':
+          // Draw free-hand paths
+          if (obj.points && obj.points.length > 1) {
+            drawingCtx.beginPath();
+            drawingCtx.moveTo(obj.points[0].x, obj.points[0].y);
+            
+            for (let i = 1; i < obj.points.length; i++) {
+              drawingCtx.lineTo(obj.points[i].x, obj.points[i].y);
+            }
+            
+            drawingCtx.stroke();
+          }
+          break;
       }
       
       drawingCtx.restore();
@@ -306,6 +397,13 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   useEffect(() => {
     redrawObjects();
   }, [objects]);
+
+  // Pass canvas ref to parent
+  useEffect(() => {
+    if (onCanvasRef && drawingLayerRef.current) {
+      onCanvasRef(drawingLayerRef.current);
+    }
+  }, [drawingLayerRef.current, onCanvasRef]);
 
   return (
     <div className="flex-grow relative">

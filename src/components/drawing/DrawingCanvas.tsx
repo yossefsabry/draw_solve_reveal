@@ -9,6 +9,8 @@ import MathResults from "./MathResults";
 import { useCanvasDrawing } from "@/hooks/use-canvas-drawing";
 import { useMathSolver } from "@/hooks/use-math-solver";
 import { SWATCHES } from "@/constants";
+import { useHistoryState } from "@/hooks/use-history-state";
+import UndoRedoToolbar from "./UndoRedoToolbar";
 
 interface DrawingCanvasProps {
   className?: string;
@@ -23,21 +25,31 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   
   const isMobile = useIsMobile();
 
+  // Use history hook for objects
+  const {
+    state: objects,
+    setState: setObjectsWithHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useHistoryState<any[]>([]);
+
   // Use our custom hooks
   const {
     isDrawing,
-    objects,
     selectedShape,
     drawingLayerRef,
     startDrawing,
     stopDrawing,
-    setObjects,
     setSelectedShape,
   } = useCanvasDrawing({
     mode,
     color,
     brushSize,
-    shapeTool
+    shapeTool,
+    objects,
+    setObjects: setObjectsWithHistory
   });
 
   const {
@@ -71,7 +83,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
 
   // Function to clear the canvas
   const clearCanvas = () => {
-    setObjects([]);
+    setObjectsWithHistory([]);
     clearMathResults();
   };
 
@@ -90,29 +102,34 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   // Handle solve button click
   const onSolve = () => {
     if (drawingLayerRef.current) {
-      handleSolve(drawingLayerRef.current, setObjects);
+      handleSolve(drawingLayerRef.current, setObjectsWithHistory);
     }
-  };
-
-  // Handle drawing move
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    // We pass this directly to DrawingArea now
   };
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <ToolBar
-        color={color}
-        brushSize={brushSize}
-        mode={mode}
-        isMobile={isMobile}
-        isShapesOpen={isShapesOpen}
-        onColorChange={setColor}
-        onBrushSizeChange={setBrushSize}
-        onModeChange={setMode}
-        onShapesOpenChange={setIsShapesOpen}
-        onShapeSelect={selectShapeTool}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b">
+        <ToolBar
+          color={color}
+          brushSize={brushSize}
+          mode={mode}
+          isMobile={isMobile}
+          isShapesOpen={isShapesOpen}
+          onColorChange={setColor}
+          onBrushSizeChange={setBrushSize}
+          onModeChange={setMode}
+          onShapesOpenChange={setIsShapesOpen}
+          onShapeSelect={selectShapeTool}
+        />
+        
+        <UndoRedoToolbar
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={undo}
+          onRedo={redo}
+          isMobile={isMobile}
+        />
+      </div>
       
       <DrawingArea
         isDrawing={isDrawing}
@@ -122,10 +139,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         objects={objects}
         selectedShape={selectedShape}
         shapeTool={shapeTool}
-        onObjectsChange={setObjects}
+        onObjectsChange={setObjectsWithHistory}
         onSelectedShapeChange={setSelectedShape}
         onDrawingStart={startDrawing}
-        onDrawingMove={draw}
         onDrawingEnd={stopDrawing}
         onCanvasRef={setCanvasRef}
       />

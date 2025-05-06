@@ -71,6 +71,14 @@ export interface TextObject {
   lineWidth: number;
 }
 
+// Draw object for free-hand drawing
+export interface DrawObject {
+  type: "draw";
+  points: { x: number; y: number }[];
+  color: string;
+  lineWidth: number;
+}
+
 // Union type for all drawing objects
 export type AnyDrawingObject = 
   | RectangleObject 
@@ -78,7 +86,8 @@ export type AnyDrawingObject =
   | TriangleObject 
   | LineObject 
   | ArrowObject
-  | TextObject;
+  | TextObject
+  | DrawObject;
 
 // Result from math equation solving
 export interface MathResult {
