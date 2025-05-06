@@ -22,6 +22,10 @@ export const useCanvasDrawing = ({
 }: UseCanvasDrawingProps) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedShape, setSelectedShape] = useState<any>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [keyPressed, setKeyPressed] = useState<{ [key: string]: boolean }>({});
   
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingLayerRef = useRef<HTMLCanvasElement | null>(null);
@@ -29,29 +33,102 @@ export const useCanvasDrawing = ({
   const canvasStateRef = useRef<ImageData | null>(null);
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Helper to get pointer position for both mouse and touch events
+  // Set up key listeners for handling space+mouse panning
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setKeyPressed(prev => ({ ...prev, space: true }));
+      }
+      
+      // Handle Ctrl for zooming
+      if (e.ctrlKey) {
+        setKeyPressed(prev => ({ ...prev, ctrl: true }));
+      }
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setKeyPressed(prev => ({ ...prev, space: false }));
+        setIsPanning(false);
+      }
+      
+      // Handle Ctrl for zooming
+      if (!e.ctrlKey) {
+        setKeyPressed(prev => ({ ...prev, ctrl: false }));
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+  
+  // Handle wheel for zooming with Ctrl key
+  const handleWheel = (e: React.WheelEvent) => {
+    if (keyPressed.ctrl) {
+      e.preventDefault();
+      
+      const delta = e.deltaY * -0.01;
+      const newScale = Math.min(Math.max(scale + delta, 0.1), 10);
+      
+      // Get the mouse position relative to the canvas
+      const rect = drawingLayerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      // Adjust offset to zoom toward mouse position
+      const newOffset = {
+        x: offset.x - (mouseX / scale - mouseX / newScale) * newScale,
+        y: offset.y - (mouseY / scale - mouseY / newScale) * newScale
+      };
+      
+      setScale(newScale);
+      setOffset(newOffset);
+    }
+  };
+
+  // Helper to get pointer position for both mouse and touch events with zoom/pan adjustments
   const getPointerPosition = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = e.currentTarget as HTMLCanvasElement;
     if (!canvas) return { x: 0, y: 0 };
     
     const rect = canvas.getBoundingClientRect();
     
+    let clientX, clientY;
     if ('touches' in e) {
       const touch = e.touches[0];
-      return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top,
-      };
+      clientX = touch.clientX;
+      clientY = touch.clientY;
     } else {
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
+      clientX = e.clientX;
+      clientY = e.clientY;
     }
+    
+    // Adjust for zoom and pan
+    const x = (clientX - rect.left - offset.x) / scale;
+    const y = (clientY - rect.top - offset.y) / scale;
+    
+    return { x, y };
   };
 
   // Drawing functions
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    // If space key is pressed, start panning instead of drawing
+    if (keyPressed.space) {
+      setIsPanning(true);
+      lastMousePosRef.current = {
+        x: 'touches' in e ? e.touches[0].clientX : e.clientX,
+        y: 'touches' in e ? e.touches[0].clientY : e.clientY
+      };
+      return;
+    }
+    
     setIsDrawing(true);
     
     const { x, y } = getPointerPosition(e);
@@ -95,8 +172,34 @@ export const useCanvasDrawing = ({
       }
     }
   };
+  
+  const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+    // Handle panning when space is pressed and mouse is moving
+    if (isPanning && lastMousePosRef.current) {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      
+      const deltaX = clientX - lastMousePosRef.current.x;
+      const deltaY = clientY - lastMousePosRef.current.y;
+      
+      setOffset(prev => ({
+        x: prev.x + deltaX,
+        y: prev.y + deltaY
+      }));
+      
+      lastMousePosRef.current = { x: clientX, y: clientY };
+      return;
+    }
+    
+    // Regular drawing handling continues...
+  };
 
   const stopDrawing = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
+    
     if (!isDrawing) return;
     
     if (mode === "shape" && startPointRef.current && lastMousePosRef.current) {
@@ -132,7 +235,13 @@ export const useCanvasDrawing = ({
     getPointerPosition,
     startDrawing,
     stopDrawing,
+    handleMove,
+    handleWheel,
     setSelectedShape,
-    setIsDrawing
+    setIsDrawing,
+    scale,
+    offset,
+    isPanning,
+    keyPressed
   };
 };

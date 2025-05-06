@@ -1,6 +1,9 @@
+
 import React, { useRef, useEffect, useState } from "react";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { drawShapePreview } from "./ShapeDrawingUtils";
+import Rulers from "./Rulers";
+import { ZoomIn, ZoomOut, Move } from "lucide-react";
 
 interface DrawingAreaProps {
   isDrawing: boolean;
@@ -15,6 +18,11 @@ interface DrawingAreaProps {
   onDrawingStart: (e: React.MouseEvent | React.TouchEvent) => void;
   onDrawingEnd: () => void;
   onCanvasRef?: (ref: HTMLCanvasElement | null) => void;
+  handleWheel?: (e: React.WheelEvent) => void;
+  handleMove?: (e: React.MouseEvent | React.TouchEvent) => void;
+  scale?: number;
+  offset?: { x: number; y: number };
+  isPanning?: boolean;
 }
 
 const DrawingArea: React.FC<DrawingAreaProps> = ({
@@ -30,13 +38,20 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   onDrawingStart,
   onDrawingEnd,
   onCanvasRef,
+  handleWheel,
+  handleMove,
+  scale = 1,
+  offset = { x: 0, y: 0 },
+  isPanning = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingLayerRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [drawingCtx, setDrawingCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [bgPattern, setBgPattern] = useState<HTMLImageElement | null>(null);
   const [drawingPath, setDrawingPath] = useState<{ x: number; y: number }[]>([]);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   
   // Store the start point and current mouse position for shape drawing
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -47,7 +62,9 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     const drawingLayer = drawingLayerRef.current;
-    if (!canvas || !drawingLayer) return;
+    const container = containerRef.current;
+    
+    if (!canvas || !drawingLayer || !container) return;
     
     const context = canvas.getContext("2d");
     const drawingContext = drawingLayer.getContext("2d");
@@ -55,10 +72,11 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     
     // Set canvas size to match its display size
     const resizeCanvas = () => {
-      const parent = canvas.parentElement;
-      if (!parent) return;
+      if (!container) return;
       
-      const { width, height } = parent.getBoundingClientRect();
+      const { width, height } = container.getBoundingClientRect();
+      setContainerSize({ width, height });
+      
       canvas.width = width;
       canvas.height = height;
       drawingLayer.width = width;
@@ -72,6 +90,15 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
         drawingContext.lineJoin = "round";
         drawingContext.strokeStyle = color;
         drawingContext.lineWidth = brushSize;
+        
+        // Apply the current zoom and pan settings
+        if (scale !== 1 || offset.x !== 0 || offset.y !== 0) {
+          drawingContext.save();
+          drawingContext.translate(offset.x, offset.y);
+          drawingContext.scale(scale, scale);
+          drawingContext.restore();
+        }
+        
         drawBackground();
         redrawObjects();
       }
@@ -105,30 +132,20 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     drawingCtx.strokeStyle = color;
     drawingCtx.lineWidth = brushSize;
   }, [drawingCtx, color, brushSize]);
-
-  // Helper to get pointer position for both mouse and touch events
-  const getPointerPosition = (e: React.MouseEvent | React.TouchEvent) => {
-    const canvas = e.currentTarget as HTMLCanvasElement;
-    if (!canvas) return { x: 0, y: 0 };
-    
-    const rect = canvas.getBoundingClientRect();
-    
-    if ('touches' in e) {
-      const touch = e.touches[0];
-      return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top,
-      };
-    } else {
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
-    }
-  };
+  
+  // Update the canvas when scale or offset changes
+  useEffect(() => {
+    if (!ctx || !drawingCtx) return;
+    redrawObjects();
+  }, [scale, offset]);
 
   // Additional event handlers for improved drawing
   const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isPanning) {
+      e.preventDefault();
+      return;
+    }
+    
     if (drawingCtx) {
       if (mode === "draw") {
         drawingCtx.beginPath();
@@ -158,14 +175,48 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     onDrawingStart(e);
   };
 
+  const getPointerPosition = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = e.currentTarget as HTMLCanvasElement;
+    if (!canvas) return { x: 0, y: 0 };
+    
+    const rect = canvas.getBoundingClientRect();
+    
+    let clientX, clientY;
+    if ('touches' in e) {
+      const touch = e.touches[0];
+      clientX = touch.clientX;
+      clientY = touch.clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    // Adjust for zoom and pan
+    const x = (clientX - rect.left - offset.x) / scale;
+    const y = (clientY - rect.top - offset.y) / scale;
+    
+    return { x, y };
+  };
+
   const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
+    // Call parent handler for panning
+    if (handleMove) {
+      handleMove(e);
+    }
+    
     const pos = getPointerPosition(e);
     lastMousePosRef.current = pos;
     
-    if (isDrawing && drawingCtx) {
+    if (isDrawing && drawingCtx && !isPanning) {
       if (mode === "draw") {
+        drawingCtx.save();
+        drawingCtx.translate(offset.x, offset.y);
+        drawingCtx.scale(scale, scale);
+        
         drawingCtx.lineTo(pos.x, pos.y);
         drawingCtx.stroke();
+        
+        drawingCtx.restore();
         
         const paths = [...drawingPath, pos];
         setDrawingPath(paths);
@@ -185,14 +236,23 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
           }
         }
       } else if (mode === "erase") {
+        drawingCtx.save();
+        drawingCtx.translate(offset.x, offset.y);
+        drawingCtx.scale(scale, scale);
+        
         drawingCtx.lineTo(pos.x, pos.y);
         drawingCtx.stroke();
+        
+        drawingCtx.restore();
       } else if (mode === "shape" && startPointRef.current && canvasStateRef.current) {
         // Restore the saved canvas state before drawing the preview
         drawingCtx.putImageData(canvasStateRef.current, 0, 0);
         
         // Draw the shape preview
         drawingCtx.save();
+        drawingCtx.translate(offset.x, offset.y);
+        drawingCtx.scale(scale, scale);
+        
         drawingCtx.strokeStyle = color;
         drawingCtx.lineWidth = brushSize;
         drawingCtx.globalCompositeOperation = "source-over";
@@ -296,12 +356,25 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     // Clear canvas
     context.clearRect(0, 0, canvas.width, canvas.height);
     
+    // Save context state
+    context.save();
+    
+    // Apply transformations for zoom/pan
+    context.translate(offset.x, offset.y);
+    context.scale(scale, scale);
+    
     // Create pattern and fill
     const pattern = context.createPattern(bgPattern, "repeat");
     if (pattern) {
       context.fillStyle = pattern;
-      context.fillRect(0, 0, canvas.width, canvas.height);
+      // Fill a large area to ensure the pattern covers the viewport even when panned
+      const width = canvas.width / scale;
+      const height = canvas.height / scale;
+      context.fillRect(-width, -height, width * 3, height * 3);
     }
+    
+    // Restore context state
+    context.restore();
   };
 
   // Redraw all objects on the canvas
@@ -312,6 +385,11 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     if (!isDrawing) {
       drawingCtx.clearRect(0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height);
     }
+    
+    // Apply zoom and pan transformations
+    drawingCtx.save();
+    drawingCtx.translate(offset.x, offset.y);
+    drawingCtx.scale(scale, scale);
     
     objects.forEach(obj => {
       drawingCtx.save();
@@ -391,6 +469,9 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
       
       drawingCtx.restore();
     });
+    
+    // Restore the context to its original state
+    drawingCtx.restore();
   };
 
   // Call redrawObjects whenever objects change
@@ -405,17 +486,109 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     }
   }, [drawingLayerRef.current, onCanvasRef]);
 
+  // Add zoom controls
+  const zoomIn = () => {
+    const newScale = Math.min(scale * 1.2, 10);
+    if (scale !== newScale) {
+      // Zoom around the center of the viewport
+      const centerX = containerSize.width / 2;
+      const centerY = containerSize.height / 2;
+      
+      const newOffset = {
+        x: offset.x - (centerX / scale - centerX / newScale) * newScale,
+        y: offset.y - (centerY / scale - centerY / newScale) * newScale
+      };
+      
+      if (drawingCtx) {
+        drawingCtx.scale(newScale / scale, newScale / scale);
+        redrawObjects();
+      }
+    }
+  };
+  
+  const zoomOut = () => {
+    const newScale = Math.max(scale / 1.2, 0.1);
+    if (scale !== newScale) {
+      // Zoom around the center of the viewport
+      const centerX = containerSize.width / 2;
+      const centerY = containerSize.height / 2;
+      
+      const newOffset = {
+        x: offset.x - (centerX / scale - centerX / newScale) * newScale,
+        y: offset.y - (centerY / scale - centerY / newScale) * newScale
+      };
+      
+      if (drawingCtx) {
+        drawingCtx.scale(newScale / scale, newScale / scale);
+        redrawObjects();
+      }
+    }
+  };
+
   return (
-    <div className="flex-grow relative">
+    <div className="flex-grow relative" ref={containerRef}>
+      {/* Zoom/Pan info tooltip */}
+      <div className="absolute bottom-4 right-4 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md text-xs z-30 opacity-70 hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 mb-1">
+          <span className="font-semibold">Zoom:</span> Ctrl + Scroll
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="font-semibold">Pan:</span> Space + Drag
+        </div>
+        <div className="flex items-center gap-1 mt-1">
+          <span className="font-semibold">Current zoom:</span> {Math.round(scale * 100)}%
+        </div>
+      </div>
+      
+      {/* Zoom controls */}
+      <div className="absolute top-24 right-4 flex flex-col gap-2 z-30">
+        <button 
+          className="bg-white dark:bg-gray-700 p-2 rounded-md shadow-md text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+          onClick={zoomIn}
+          aria-label="Zoom in"
+        >
+          <ZoomIn size={18} />
+        </button>
+        <button 
+          className="bg-white dark:bg-gray-700 p-2 rounded-md shadow-md text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+          onClick={zoomOut}
+          aria-label="Zoom out"
+        >
+          <ZoomOut size={18} />
+        </button>
+        <div className="text-center bg-white dark:bg-gray-700 p-2 rounded-md shadow-md text-xs font-mono">
+          {Math.round(scale * 100)}%
+        </div>
+      </div>
+      
+      {/* Show panning indicator when space is pressed */}
+      {isPanning && (
+        <div className="absolute top-4 left-4 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md z-30 flex items-center gap-2">
+          <Move size={16} />
+          <span className="text-sm">Panning</span>
+        </div>
+      )}
+      
+      {/* Rulers */}
+      <Rulers 
+        scale={scale}
+        offset={offset}
+        width={containerSize.width}
+        height={containerSize.height}
+      />
+      
       {/* Background canvas (fixed pattern) */}
       <canvas
         ref={canvasRef}
         className="absolute inset-0 bg-white dark:bg-gray-800 canvas-container"
+        style={{ marginTop: '20px', marginLeft: '20px' }}
       />
+      
       {/* Drawing layer (for actual drawing) */}
       <canvas
         ref={drawingLayerRef}
         className="absolute inset-0 z-10 canvas-container"
+        style={{ marginTop: '20px', marginLeft: '20px', cursor: isPanning ? 'grab' : 'crosshair' }}
         onMouseDown={handlePointerDown}
         onMouseMove={handlePointerMove}
         onMouseUp={handlePointerUp}
@@ -423,6 +596,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
         onTouchStart={handlePointerDown}
         onTouchMove={handlePointerMove}
         onTouchEnd={handlePointerUp}
+        onWheel={handleWheel}
       />
     </div>
   );

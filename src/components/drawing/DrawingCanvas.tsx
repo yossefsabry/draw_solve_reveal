@@ -42,7 +42,13 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     drawingLayerRef,
     startDrawing,
     stopDrawing,
+    handleMove,
+    handleWheel,
     setSelectedShape,
+    scale,
+    offset,
+    isPanning,
+    keyPressed
   } = useCanvasDrawing({
     mode,
     color,
@@ -106,6 +112,16 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     }
   };
 
+  // Add keyboard shortcuts hint on component mount
+  useEffect(() => {
+    const hint = "Drawing Canvas Shortcuts:\n" +
+      "- Zoom: Ctrl + Scroll\n" +
+      "- Pan: Space + Drag\n" +
+      "- Undo: Ctrl + Z\n" +
+      "- Redo: Ctrl + Shift + Z or Ctrl + Y";
+    console.info(hint);
+  }, []);
+
   return (
     <div className={`flex flex-col h-full ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b">
@@ -144,6 +160,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         onDrawingStart={startDrawing}
         onDrawingEnd={stopDrawing}
         onCanvasRef={setCanvasRef}
+        handleWheel={handleWheel}
+        handleMove={handleMove}
+        scale={scale}
+        offset={offset}
+        isPanning={isPanning}
       />
       
       <MathResults mathEquations={mathEquations} />
