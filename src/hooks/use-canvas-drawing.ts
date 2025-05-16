@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "@/components/drawing/types";
 import { findObjectAtPosition, createShapeObject, drawShapePreview } from "@/components/drawing/ShapeDrawingUtils";
@@ -32,6 +33,7 @@ export const useCanvasDrawing = ({
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
   const canvasStateRef = useRef<ImageData | null>(null);
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
+  const zoomIntensityRef = useRef(0.1); // Controls zoom sensitivity
 
   // Set up key listeners for handling space+mouse panning
   useEffect(() => {
@@ -57,12 +59,14 @@ export const useCanvasDrawing = ({
     };
   }, []);
   
-  // Handle wheel for zooming - no Ctrl key required
+  // Handle wheel for improved zooming - smoother and more consistent
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     
-    const delta = e.deltaY * -0.01;
-    const newScale = Math.min(Math.max(scale + delta, 0.1), 10);
+    // Smoother zooming - smaller delta for better control
+    const delta = -e.deltaY * 0.005; 
+    const zoomFactor = Math.exp(delta);
+    const newScale = Math.min(Math.max(scale * zoomFactor, 0.1), 10);
     
     // Get the mouse position relative to the canvas
     const rect = e.currentTarget.getBoundingClientRect();
@@ -71,7 +75,7 @@ export const useCanvasDrawing = ({
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
-    // Adjust offset to zoom toward mouse position
+    // Calculate new offset to zoom toward mouse cursor
     const newOffset = {
       x: offset.x - (mouseX / scale - mouseX / newScale) * newScale,
       y: offset.y - (mouseY / scale - mouseY / newScale) * newScale
@@ -168,6 +172,7 @@ export const useCanvasDrawing = ({
     }
   };
   
+  // Improved handling of panning and drawing with enhanced smoothness
   const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
     // Handle panning when space is pressed and mouse is moving
     if (isPanning && lastMousePosRef.current) {
@@ -198,7 +203,7 @@ export const useCanvasDrawing = ({
       // Add to drawing path
       setDrawingPath(prev => [...prev, pos]);
       
-      // Draw directly to canvas
+      // Draw directly to canvas with improved line smoothing
       if (drawingLayerRef.current && lastMousePosRef.current) {
         const ctx = drawingLayerRef.current.getContext('2d');
         if (ctx) {
@@ -207,9 +212,22 @@ export const useCanvasDrawing = ({
           ctx.scale(scale, scale);
           ctx.strokeStyle = color;
           ctx.lineWidth = brushSize;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          
+          // Improved line drawing with better smoothing
           ctx.beginPath();
           ctx.moveTo(lastMousePosRef.current.x, lastMousePosRef.current.y);
-          ctx.lineTo(pos.x, pos.y);
+          
+          // Simple smoothing for more natural strokes
+          const midX = (lastMousePosRef.current.x + pos.x) / 2;
+          const midY = (lastMousePosRef.current.y + pos.y) / 2;
+          ctx.quadraticCurveTo(
+            lastMousePosRef.current.x, 
+            lastMousePosRef.current.y,
+            midX, midY
+          );
+          
           ctx.stroke();
           ctx.restore();
         }
@@ -281,6 +299,12 @@ export const useCanvasDrawing = ({
             y: p.y + offsetY
           }))
         };
+      } else if (obj.type === 'text') {
+        updatedObjects[selectedShape.index] = {
+          ...obj,
+          x: deltaX,
+          y: deltaY
+        };
       }
       
       setObjects(updatedObjects);
@@ -302,7 +326,7 @@ export const useCanvasDrawing = ({
       const newObject = {
         type: 'draw' as const,
         points: drawingPath,
-        color,
+        color: color || '#ffffff', // Default to white if no color specified
         lineWidth: brushSize
       };
       
@@ -313,7 +337,7 @@ export const useCanvasDrawing = ({
       const { x: startX, y: startY } = startPointRef.current;
       const { x: endX, y: endY } = lastMousePosRef.current;
       
-      const newObject = createShapeObject(shapeTool, startX, startY, endX, endY, color, brushSize);
+      const newObject = createShapeObject(shapeTool, startX, startY, endX, endY, color || '#ffffff', brushSize);
       
       if (newObject) {
         setObjects([...objects, newObject]);

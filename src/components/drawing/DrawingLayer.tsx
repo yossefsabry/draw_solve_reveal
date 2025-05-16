@@ -113,7 +113,7 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
     // Draw all objects
     objects.forEach(obj => {
       ctx.current!.save();
-      ctx.current!.strokeStyle = obj.color;
+      ctx.current!.strokeStyle = obj.color || "#FFFFFF"; // Default to white if no color specified
       ctx.current!.lineWidth = obj.lineWidth;
       ctx.current!.globalCompositeOperation = "source-over"; // Ensure all objects draw normally
       
@@ -169,7 +169,7 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
           break;
         case 'text':
           ctx.current!.font = '24px Arial';
-          ctx.current!.fillStyle = obj.color;
+          ctx.current!.fillStyle = obj.color || "#FFFFFF"; // Default to white for text
           ctx.current!.fillText(obj.text, obj.x, obj.y);
           break;
         case 'draw':
@@ -204,7 +204,8 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
         width: width - rulerSize,
         height: height - rulerSize,
         cursor: isPanning ? 'grab' : 'crosshair',
-        touchAction: 'none'
+        touchAction: 'none',
+        background: 'transparent' // Make the background transparent so it shows the white background underneath
       }}
       onMouseDown={onPointerDown}
       onMouseMove={onPointerMove}

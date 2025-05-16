@@ -132,8 +132,8 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   };
 
   return (
-    <ScrollArea className="flex-grow relative h-full">
-      <div className="flex-grow relative h-full" ref={containerRef}>
+    <ScrollArea className="flex-grow relative h-full w-full overflow-hidden">
+      <div className="flex-grow relative h-full w-full" ref={containerRef}>
         {/* Canvas overlays - zoom info and panning indicator */}
         <CanvasOverlays 
           isPanning={isPanning} 
@@ -155,7 +155,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
           height={containerSize.height}
         />
         
-        {/* Background canvas (fixed pattern) */}
+        {/* Background canvas (white pattern) */}
         <CanvasBackground
           scale={scale}
           offset={offset}
