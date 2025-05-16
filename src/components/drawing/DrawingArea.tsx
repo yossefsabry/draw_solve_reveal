@@ -116,16 +116,14 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
 
   // Zoom control handlers
   const zoomIn = () => {
-    const newScale = Math.min(scale * 1.2, 10);
-    if (scale !== newScale && handleWheel) {
+    if (handleWheel) {
       const wheelEvent = new WheelEvent('wheel', { deltaY: -120 }) as unknown as React.WheelEvent;
       handleWheel(wheelEvent);
     }
   };
   
   const zoomOut = () => {
-    const newScale = Math.max(scale / 1.2, 0.1);
-    if (scale !== newScale && handleWheel) {
+    if (handleWheel) {
       const wheelEvent = new WheelEvent('wheel', { deltaY: 120 }) as unknown as React.WheelEvent;
       handleWheel(wheelEvent);
     }
@@ -147,42 +145,44 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
           onZoomOut={zoomOut}
         />
         
-        {/* Rulers */}
-        <Rulers 
-          scale={scale}
-          offset={offset}
-          width={containerSize.width}
-          height={containerSize.height}
-        />
-        
-        {/* Background canvas (white pattern) */}
-        <CanvasBackground
-          scale={scale}
-          offset={offset}
-          width={containerSize.width}
-          height={containerSize.height}
-          rulerSize={RULER_SIZE}
-        />
-        
-        {/* Drawing layer (for actual drawing) */}
-        <DrawingLayer
-          isDrawing={isDrawing}
-          mode={mode}
-          color={color}
-          brushSize={brushSize}
-          objects={objects}
-          scale={scale}
-          offset={offset}
-          isPanning={isPanning}
-          rulerSize={RULER_SIZE}
-          width={containerSize.width}
-          height={containerSize.height}
-          onCanvasRef={onCanvasRef || (() => {})}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onWheel={handleWheel || (() => {})}
-        />
+        <div className="relative w-full h-full">
+          {/* Rulers */}
+          <Rulers 
+            scale={scale}
+            offset={offset}
+            width={containerSize.width}
+            height={containerSize.height}
+          />
+          
+          {/* Background canvas (white pattern) */}
+          <CanvasBackground
+            scale={scale}
+            offset={offset}
+            width={containerSize.width}
+            height={containerSize.height}
+            rulerSize={RULER_SIZE}
+          />
+          
+          {/* Drawing layer (for actual drawing) */}
+          <DrawingLayer
+            isDrawing={isDrawing}
+            mode={mode}
+            color={color}
+            brushSize={brushSize}
+            objects={objects}
+            scale={scale}
+            offset={offset}
+            isPanning={isPanning}
+            rulerSize={RULER_SIZE}
+            width={containerSize.width}
+            height={containerSize.height}
+            onCanvasRef={onCanvasRef || (() => {})}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onWheel={handleWheel || (() => {})}
+          />
+        </div>
       </div>
     </ScrollArea>
   );

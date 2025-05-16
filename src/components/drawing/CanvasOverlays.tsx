@@ -13,8 +13,8 @@ const CanvasOverlays: React.FC<CanvasOverlaysProps> = ({
 }) => {
   return (
     <>
-      {/* Zoom/Pan info tooltip */}
-      <div className="fixed top-4 left-4 bg-gray-800 p-3 rounded-md shadow-lg text-sm z-30 opacity-80 hover:opacity-100 transition-opacity text-white">
+      {/* Zoom/Pan info tooltip - repositioned to bottom left */}
+      <div className="fixed bottom-20 left-4 bg-gray-800 p-3 rounded-md shadow-lg text-sm z-30 opacity-80 hover:opacity-100 transition-opacity text-white">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-semibold text-white">Zoom:</span> Scroll wheel
         </div>
@@ -28,7 +28,7 @@ const CanvasOverlays: React.FC<CanvasOverlaysProps> = ({
       
       {/* Show panning indicator when space is pressed */}
       {isPanning && (
-        <div className="fixed top-16 left-4 bg-gray-800 p-3 rounded-md shadow-lg z-30 flex items-center gap-3 animate-pulse text-white">
+        <div className="fixed bottom-32 left-4 bg-gray-800 p-3 rounded-md shadow-lg z-30 flex items-center gap-3 animate-pulse text-white">
           <Move size={20} />
           <span className="text-base font-medium">Panning Mode</span>
         </div>

@@ -89,7 +89,7 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       rulerDiv.style.width = `${RULER_SIZE}px`;
       rulerDiv.style.backgroundColor = RULER_BG_COLOR;
       rulerDiv.style.position = "absolute";
-      rulerDiv.style.top = `${RULER_SIZE}px`;
+      rulerDiv.style.top = '0';
       rulerDiv.style.left = '0';
       rulerDiv.style.borderRight = `1px solid ${RULER_BORDER_COLOR}`;
       rulerDiv.style.overflow = 'hidden';
@@ -166,7 +166,7 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       {/* Corner square where rulers meet */}
       <div 
         ref={cornerRef}
-        className="fixed top-0 left-0 z-20"
+        className="absolute top-0 left-0 z-20"
         style={{ 
           width: RULER_SIZE, 
           height: RULER_SIZE,
@@ -179,7 +179,7 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       {/* Horizontal ruler */}
       <canvas
         ref={horizontalRulerRef}
-        className="fixed top-0 left-0 z-10"
+        className="absolute top-0 left-0 z-10"
         style={{ 
           marginLeft: RULER_SIZE, 
           height: RULER_SIZE,
@@ -190,7 +190,7 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       {/* Vertical ruler */}
       <div
         ref={verticalRulerRef}
-        className="fixed top-0 left-0 z-10"
+        className="absolute top-0 left-0 z-10"
       />
     </>
   );
