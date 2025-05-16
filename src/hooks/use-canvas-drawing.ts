@@ -1,7 +1,6 @@
-
 import { useState, useRef, useEffect } from "react";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "@/components/drawing/types";
-import { findObjectAtPosition, createShapeObject } from "@/components/drawing/ShapeDrawingUtils";
+import { findObjectAtPosition, createShapeObject, drawShapePreview } from "@/components/drawing/ShapeDrawingUtils";
 
 interface UseCanvasDrawingProps {
   mode: DrawingMode;
