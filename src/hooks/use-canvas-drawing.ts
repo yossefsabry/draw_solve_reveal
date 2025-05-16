@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "@/components/drawing/types";
 import { findObjectAtPosition, createShapeObject, drawShapePreview } from "@/components/drawing/ShapeDrawingUtils";
@@ -83,6 +82,31 @@ export const useCanvasDrawing = ({
     
     setScale(newScale);
     setOffset(newOffset);
+  };
+
+  // New function to directly set scale
+  const setDirectScale = (newScale: number) => {
+    // Clamp the scale value between 0.1 and 10
+    const clampedScale = Math.min(Math.max(newScale, 0.1), 10);
+    
+    // Preserve the center of the viewport when zooming
+    const canvas = drawingLayerRef.current;
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      
+      // Calculate new offset to zoom toward center
+      const newOffset = {
+        x: offset.x - (centerX / scale - centerX / clampedScale) * clampedScale,
+        y: offset.y - (centerY / scale - centerY / clampedScale) * clampedScale
+      };
+      
+      setScale(clampedScale);
+      setOffset(newOffset);
+    } else {
+      setScale(clampedScale);
+    }
   };
 
   // Helper to get pointer position for both mouse and touch events with zoom/pan adjustments
@@ -372,6 +396,7 @@ export const useCanvasDrawing = ({
     offset,
     isPanning,
     keyPressed,
-    drawingPath
+    drawingPath,
+    setDirectScale
   };
 };

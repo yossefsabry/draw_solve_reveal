@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from "react";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,6 +25,7 @@ interface DrawingAreaProps {
   scale?: number;
   offset?: { x: number; y: number };
   isPanning?: boolean;
+  onSetScale?: (newScale: number) => void;
 }
 
 const DrawingArea: React.FC<DrawingAreaProps> = ({
@@ -46,6 +46,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   scale = 1,
   offset = { x: 0, y: 0 },
   isPanning = false,
+  onSetScale,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -128,6 +129,13 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
       handleWheel(wheelEvent);
     }
   };
+  
+  // New handler for direct scale setting
+  const handleZoomChange = (newScale: number) => {
+    if (onSetScale) {
+      onSetScale(newScale);
+    }
+  };
 
   return (
     <ScrollArea className="flex-grow relative h-full w-full overflow-hidden">
@@ -143,6 +151,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
           scale={scale}
           onZoomIn={zoomIn}
           onZoomOut={zoomOut}
+          onZoomChange={handleZoomChange}
         />
         
         <div className="relative w-full h-full">
