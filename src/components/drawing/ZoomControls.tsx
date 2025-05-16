@@ -1,8 +1,9 @@
 
-import React, { useState, KeyboardEvent } from "react";
+import React, { useState, useEffect, KeyboardEvent } from "react";
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ZoomControlsProps {
   scale: number;
@@ -18,9 +19,10 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({
   onZoomChange
 }) => {
   const [zoomValue, setZoomValue] = useState<string>(Math.round(scale * 100).toString());
+  const isMobile = useIsMobile();
   
   // Update the input field when scale prop changes
-  React.useEffect(() => {
+  useEffect(() => {
     setZoomValue(Math.round(scale * 100).toString());
   }, [scale]);
 
@@ -30,14 +32,18 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      const newZoomValue = parseInt(zoomValue, 10);
-      if (!isNaN(newZoomValue) && newZoomValue > 0) {
-        // Convert percentage to scale factor (e.g., 100% -> 1.0)
-        onZoomChange(newZoomValue / 100);
-      } else {
-        // Reset to current scale if invalid input
-        setZoomValue(Math.round(scale * 100).toString());
-      }
+      applyZoomChange();
+    }
+  };
+  
+  const applyZoomChange = () => {
+    const newZoomValue = parseInt(zoomValue, 10);
+    if (!isNaN(newZoomValue) && newZoomValue > 0) {
+      // Convert percentage to scale factor (e.g., 100% -> 1.0)
+      onZoomChange(newZoomValue / 100);
+    } else {
+      // Reset to current scale if invalid input
+      setZoomValue(Math.round(scale * 100).toString());
     }
   };
 
@@ -50,8 +56,10 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({
     onZoomOut();
   };
 
+  const positionClass = isMobile ? "bottom-24" : "bottom-20";
+
   return (
-    <div className="fixed bottom-20 right-4 flex flex-col gap-2 z-30">
+    <div className={`fixed ${positionClass} left-4 flex flex-col gap-2 z-30`}>
       <Button 
         className="bg-gray-800 p-2 rounded-md shadow-lg text-white hover:bg-gray-700 transition-colors" 
         onClick={handleZoomInClick} 
@@ -78,6 +86,7 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({
         value={zoomValue}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
+        onBlur={applyZoomChange}
         aria-label="Zoom percentage"
       />
     </div>

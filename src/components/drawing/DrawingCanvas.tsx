@@ -48,7 +48,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     scale,
     offset,
     isPanning,
-    keyPressed
+    keyPressed,
+    setDirectScale
   } = useCanvasDrawing({
     mode,
     color,
@@ -124,7 +125,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b">
+      <div className={`flex ${isMobile ? 'flex-col' : 'flex-wrap items-center justify-between'} gap-2 p-4 border-b`}>
         <ToolBar
           color={color}
           brushSize={brushSize}
@@ -165,6 +166,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         scale={scale}
         offset={offset}
         isPanning={isPanning}
+        onSetScale={setDirectScale}
       />
       
       <MathResults mathEquations={mathEquations} />

@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Move } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CanvasOverlaysProps {
   isPanning: boolean;
@@ -11,20 +12,24 @@ const CanvasOverlays: React.FC<CanvasOverlaysProps> = ({
   isPanning,
   scale,
 }) => {
+  const isMobile = useIsMobile();
+  
   return (
     <>
-      {/* Zoom/Pan info tooltip - repositioned to bottom left */}
-      <div className="fixed bottom-20 left-4 bg-gray-800 p-3 rounded-md shadow-lg text-sm z-30 opacity-80 hover:opacity-100 transition-opacity text-white">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="font-semibold text-white">Zoom:</span> Scroll wheel
+      {/* Zoom/Pan info tooltip - only visible on desktop */}
+      {!isMobile && (
+        <div className="fixed bottom-24 left-4 bg-gray-800 p-3 rounded-md shadow-lg text-sm z-30 opacity-80 hover:opacity-100 transition-opacity text-white">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-semibold text-white">Zoom:</span> Scroll wheel
+          </div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-semibold text-white">Pan:</span> Space + Drag
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-white">Current zoom:</span> {Math.round(scale * 100)}%
+          </div>
         </div>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="font-semibold text-white">Pan:</span> Space + Drag
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-white">Current zoom:</span> {Math.round(scale * 100)}%
-        </div>
-      </div>
+      )}
       
       {/* Show panning indicator when space is pressed */}
       {isPanning && (

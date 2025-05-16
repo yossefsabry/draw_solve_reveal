@@ -45,7 +45,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
   };
 
   return (
-    <div className={`flex flex-wrap gap-2 p-4 border-b ${isMobile ? 'overflow-x-auto pb-6' : ''}`}>
+    <div className={`flex flex-wrap gap-2 ${isMobile ? 'w-full justify-center' : 'p-4'}`}>
       <ColorPicker
         color={color}
         mode={mode}
@@ -67,7 +67,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
           className={mode === "erase" ? "tool-active" : ""}
         >
           <Eraser className="h-5 w-5" />
-          {isMobile && <span className="ml-1">Erase</span>}
+          {isMobile && <span className="ml-1 text-white">Erase</span>}
         </Button>
 
         <Button
@@ -77,7 +77,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
           className={mode === "move" ? "tool-active" : ""}
         >
           <Move className="h-5 w-5" />
-          {isMobile && <span className="ml-1">Move</span>}
+          {isMobile && <span className="ml-1 text-white">Move</span>}
         </Button>
 
         <ShapeSelector

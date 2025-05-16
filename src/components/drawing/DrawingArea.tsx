@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from "react";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -117,20 +118,28 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
 
   // Zoom control handlers
   const zoomIn = () => {
-    if (handleWheel) {
+    if (onSetScale) {
+      // Increase zoom by 10%
+      const newScale = Math.min(scale * 1.1, 10);
+      onSetScale(newScale);
+    } else if (handleWheel) {
       const wheelEvent = new WheelEvent('wheel', { deltaY: -120 }) as unknown as React.WheelEvent;
       handleWheel(wheelEvent);
     }
   };
   
   const zoomOut = () => {
-    if (handleWheel) {
+    if (onSetScale) {
+      // Decrease zoom by 10%
+      const newScale = Math.max(scale * 0.9, 0.1);
+      onSetScale(newScale);
+    } else if (handleWheel) {
       const wheelEvent = new WheelEvent('wheel', { deltaY: 120 }) as unknown as React.WheelEvent;
       handleWheel(wheelEvent);
     }
   };
   
-  // New handler for direct scale setting
+  // Direct zoom change handler
   const handleZoomChange = (newScale: number) => {
     if (onSetScale) {
       onSetScale(newScale);
