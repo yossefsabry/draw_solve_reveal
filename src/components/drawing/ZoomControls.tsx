@@ -59,7 +59,7 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({
   const positionClass = isMobile ? "bottom-24" : "bottom-20";
 
   return (
-    <div className={`fixed ${positionClass} left-4 flex flex-col gap-2 z-30`}>
+    <div className={`fixed ${positionClass} right-4 flex flex-col items-center gap-2 z-30`}>
       <Button 
         className="bg-gray-800 p-2 rounded-md shadow-lg text-white hover:bg-gray-700 transition-colors" 
         onClick={handleZoomInClick} 
