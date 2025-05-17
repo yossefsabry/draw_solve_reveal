@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Move } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CanvasOverlaysProps {
   isPanning: boolean;
@@ -12,6 +13,7 @@ const CanvasOverlays: React.FC<CanvasOverlaysProps> = ({
   scale,
 }) => {
   const [orientation, setOrientation] = useState<string | undefined>(undefined);
+  const isMobile = useIsMobile();
   
   // Monitor orientation changes
   useEffect(() => {

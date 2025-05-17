@@ -19,6 +19,7 @@ interface DrawingLayerProps {
   onPointerDown: (e: React.MouseEvent | React.TouchEvent) => void;
   onPointerMove: (e: React.MouseEvent | React.TouchEvent) => void;
   onPointerUp: (e: React.MouseEvent | React.TouchEvent) => void;
+  onPointerLeave: (e: React.MouseEvent | React.TouchEvent) => void;
   onWheel: (e: React.WheelEvent) => void;
 }
 
@@ -38,6 +39,7 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onPointerLeave,
   onWheel,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -205,12 +207,12 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
         height: height - rulerSize,
         cursor: isPanning ? 'grab' : 'crosshair',
         touchAction: 'none',
-        background: 'black' // Change background to black
+        background: 'black' // Black background
       }}
       onMouseDown={onPointerDown}
       onMouseMove={onPointerMove}
       onMouseUp={onPointerUp}
-      onMouseLeave={onPointerUp}
+      onMouseLeave={onPointerLeave}
       onTouchStart={onPointerDown}
       onTouchMove={onPointerMove}
       onTouchEnd={onPointerUp}

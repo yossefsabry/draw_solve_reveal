@@ -44,12 +44,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     stopDrawing,
     handleMove,
     handleWheel,
+    handleMouseLeave,
     setSelectedShape,
     scale,
     offset,
     isPanning,
     keyPressed,
-    setDirectScale
+    setDirectScale,
+    cursorPosition
   } = useCanvasDrawing({
     mode,
     color,
@@ -163,10 +165,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         onCanvasRef={setCanvasRef}
         handleWheel={handleWheel}
         handleMove={handleMove}
+        handleMouseLeave={handleMouseLeave}
         scale={scale}
         offset={offset}
         isPanning={isPanning}
         onSetScale={setDirectScale}
+        cursorPosition={cursorPosition}
       />
       
       <MathResults mathEquations={mathEquations} />

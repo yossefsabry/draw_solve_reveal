@@ -6,18 +6,28 @@ interface RulersProps {
   offset: { x: number; y: number };
   width: number;
   height: number;
+  cursorPosition: { x: number; y: number } | null;
 }
 
-const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
+const Rulers: React.FC<RulersProps> = ({ 
+  scale, 
+  offset, 
+  width, 
+  height, 
+  cursorPosition 
+}) => {
   const horizontalRulerRef = useRef<HTMLCanvasElement>(null);
   const verticalRulerRef = useRef<HTMLDivElement>(null);
   const cornerRef = useRef<HTMLDivElement>(null);
+  const horizontalCursorRef = useRef<HTMLDivElement>(null);
+  const verticalCursorRef = useRef<HTMLDivElement>(null);
   
   const RULER_SIZE = 26; // Ruler size for better visibility
   const RULER_BG_COLOR = '#000000'; // Black background for rulers
   const RULER_TEXT_COLOR = '#ffffff'; // White text for better visibility
   const RULER_LINE_COLOR = '#555555'; // Light gray lines
   const RULER_BORDER_COLOR = '#333333'; // Darker border
+  const CURSOR_MARKER_COLOR = '#ff5555'; // Red marker for cursor position
   
   useEffect(() => {
     const drawHorizontalRuler = () => {
@@ -65,7 +75,7 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
         ctx.fillRect(i, RULER_SIZE - 20, 1, 20);
         ctx.fillStyle = RULER_TEXT_COLOR;
         // Round to integer
-        const unitInt = Math.round(Math.abs(unit));
+        const unitInt = Math.round(unit);
         ctx.fillText(unitInt.toString(), i, RULER_SIZE - 5);
       }
       
@@ -125,7 +135,7 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
         label.style.transform = 'rotate(-90deg)';
         label.style.transformOrigin = 'center right';
         // Round to integer
-        const unitInt = Math.round(Math.abs(unit));
+        const unitInt = Math.round(unit);
         label.textContent = unitInt.toString();
         rulerDiv.appendChild(label);
       }
@@ -164,6 +174,35 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
     drawHorizontalRuler();
     drawVerticalRuler();
   }, [scale, offset, width, height]);
+
+  // Update cursor position markers
+  useEffect(() => {
+    if (cursorPosition) {
+      // Calculate the actual position with transform
+      const actualX = cursorPosition.x * scale + offset.x;
+      const actualY = cursorPosition.y * scale + offset.y;
+
+      // Update horizontal ruler cursor marker
+      if (horizontalCursorRef.current) {
+        horizontalCursorRef.current.style.left = `${actualX}px`;
+        horizontalCursorRef.current.style.display = 'block';
+      }
+
+      // Update vertical ruler cursor marker
+      if (verticalCursorRef.current) {
+        verticalCursorRef.current.style.top = `${actualY}px`;
+        verticalCursorRef.current.style.display = 'block';
+      }
+    } else {
+      // Hide markers if no cursor position
+      if (horizontalCursorRef.current) {
+        horizontalCursorRef.current.style.display = 'none';
+      }
+      if (verticalCursorRef.current) {
+        verticalCursorRef.current.style.display = 'none';
+      }
+    }
+  }, [cursorPosition, scale, offset]);
   
   return (
     <>
@@ -195,6 +234,33 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
       <div
         ref={verticalRulerRef}
         className="absolute top-0 left-0 z-10"
+      />
+
+      {/* Cursor position markers on rulers */}
+      <div
+        ref={horizontalCursorRef}
+        className="absolute z-25"
+        style={{
+          top: 0,
+          height: RULER_SIZE,
+          width: '2px',
+          background: CURSOR_MARKER_COLOR,
+          pointerEvents: 'none',
+          display: 'none'
+        }}
+      />
+      
+      <div
+        ref={verticalCursorRef}
+        className="absolute z-25"
+        style={{
+          left: 0,
+          width: RULER_SIZE,
+          height: '2px',
+          background: CURSOR_MARKER_COLOR,
+          pointerEvents: 'none',
+          display: 'none'
+        }}
       />
     </>
   );

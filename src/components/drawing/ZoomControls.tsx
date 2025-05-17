@@ -40,7 +40,14 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({
     const newZoomValue = parseInt(zoomValue, 10);
     if (!isNaN(newZoomValue) && newZoomValue > 0) {
       // Convert percentage to scale factor (e.g., 100% -> 1.0)
-      onZoomChange(newZoomValue / 100);
+      // Apply limits - 50% to 428%
+      const limitedZoom = Math.min(Math.max(newZoomValue, 50), 428);
+      onZoomChange(limitedZoom / 100);
+      
+      // Update the input value if it was outside limits
+      if (limitedZoom !== newZoomValue) {
+        setZoomValue(limitedZoom.toString());
+      }
     } else {
       // Reset to current scale if invalid input
       setZoomValue(Math.round(scale * 100).toString());
@@ -59,7 +66,7 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({
   const positionClass = isMobile ? "bottom-24" : "bottom-20";
 
   return (
-    <div className={`fixed ${positionClass} right-4 flex flex-col items-center gap-2 z-30`}>
+    <div className={`fixed ${positionClass} right-4 flex flex-col items-center justify-center gap-2 z-30`}>
       <Button 
         className="bg-gray-800 p-2 rounded-md shadow-lg text-white hover:bg-gray-700 transition-colors" 
         onClick={handleZoomInClick} 

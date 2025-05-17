@@ -26,6 +26,11 @@ export const useCanvasDrawing = ({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [keyPressed, setKeyPressed] = useState<{ [key: string]: boolean }>({});
   const [drawingPath, setDrawingPath] = useState<{ x: number; y: number }[]>([]);
+  const [cursorPosition, setCursorPosition] = useState<{ x: number, y: number } | null>(null);
+  
+  // Constants for min and max zoom - updated as requested
+  const MIN_ZOOM = 0.5; // 50%
+  const MAX_ZOOM = 4.28; // 428%
   
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingLayerRef = useRef<HTMLCanvasElement | null>(null);
@@ -65,7 +70,9 @@ export const useCanvasDrawing = ({
     // Smoother zooming - smaller delta for better control
     const delta = -e.deltaY * 0.005; 
     const zoomFactor = Math.exp(delta);
-    const newScale = Math.min(Math.max(scale * zoomFactor, 0.1), 10);
+    
+    // Apply zoom limits
+    const newScale = Math.min(Math.max(scale * zoomFactor, MIN_ZOOM), MAX_ZOOM);
     
     // Get the mouse position relative to the canvas
     const rect = e.currentTarget.getBoundingClientRect();
@@ -86,8 +93,8 @@ export const useCanvasDrawing = ({
 
   // New function to directly set scale
   const setDirectScale = (newScale: number) => {
-    // Clamp the scale value between 0.1 and 10
-    const clampedScale = Math.min(Math.max(newScale, 0.1), 10);
+    // Clamp the scale value between MIN_ZOOM and MAX_ZOOM
+    const clampedScale = Math.min(Math.max(newScale, MIN_ZOOM), MAX_ZOOM);
     
     // Preserve the center of the viewport when zooming
     const canvas = drawingLayerRef.current;
@@ -198,6 +205,10 @@ export const useCanvasDrawing = ({
   
   // Improved handling of panning and drawing with enhanced smoothness
   const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+    // Update cursor position for guidelines
+    const pos = getPointerPosition(e);
+    setCursorPosition(pos);
+    
     // Handle panning when space is pressed and mouse is moving
     if (isPanning && lastMousePosRef.current) {
       const clientX = 'touches' in e ? 
@@ -377,6 +388,11 @@ export const useCanvasDrawing = ({
     setSelectedShape(null);
   };
 
+  // Handle mouse leave events
+  const handleMouseLeave = () => {
+    setCursorPosition(null);
+  };
+
   return {
     isDrawing,
     selectedShape,
@@ -390,6 +406,7 @@ export const useCanvasDrawing = ({
     stopDrawing,
     handleMove,
     handleWheel,
+    handleMouseLeave,
     setSelectedShape,
     setIsDrawing,
     scale,
@@ -397,6 +414,7 @@ export const useCanvasDrawing = ({
     isPanning,
     keyPressed,
     drawingPath,
-    setDirectScale
+    setDirectScale,
+    cursorPosition,
   };
 };

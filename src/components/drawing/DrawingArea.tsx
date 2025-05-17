@@ -7,6 +7,7 @@ import ZoomControls from "./ZoomControls";
 import CanvasBackground from "./CanvasBackground";
 import DrawingLayer from "./DrawingLayer";
 import CanvasOverlays from "./CanvasOverlays";
+import GuideLines from "./GuideLines";
 
 interface DrawingAreaProps {
   isDrawing: boolean;
@@ -23,10 +24,12 @@ interface DrawingAreaProps {
   onCanvasRef?: (ref: HTMLCanvasElement | null) => void;
   handleWheel?: (e: React.WheelEvent) => void;
   handleMove?: (e: React.MouseEvent | React.TouchEvent) => void;
+  handleMouseLeave?: () => void;
   scale?: number;
   offset?: { x: number; y: number };
   isPanning?: boolean;
   onSetScale?: (newScale: number) => void;
+  cursorPosition?: { x: number; y: number } | null;
 }
 
 const DrawingArea: React.FC<DrawingAreaProps> = ({
@@ -44,15 +47,17 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   onCanvasRef,
   handleWheel,
   handleMove,
+  handleMouseLeave,
   scale = 1,
   offset = { x: 0, y: 0 },
   isPanning = false,
   onSetScale,
+  cursorPosition = null,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [drawingPath, setDrawingPath] = useState<{ x: number; y: number }[]>([]);
-  const RULER_SIZE = 24; // Match the ruler size from Rulers component
+  const RULER_SIZE = 26; // Match the ruler size from Rulers component
   
   // Initialize container size
   useEffect(() => {
@@ -92,6 +97,12 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
     setDrawingPath([]);
   };
 
+  const handlePointerLeave = () => {
+    if (handleMouseLeave) {
+      handleMouseLeave();
+    }
+  };
+
   // Helper to get pointer position for both mouse and touch events with zoom/pan adjustments
   const getPointerPosition = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = e.currentTarget as HTMLCanvasElement;
@@ -120,7 +131,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   const zoomIn = () => {
     if (onSetScale) {
       // Increase zoom by 10%
-      const newScale = Math.min(scale * 1.1, 10);
+      const newScale = Math.min(scale * 1.1, 4.28);
       onSetScale(newScale);
     } else if (handleWheel) {
       const wheelEvent = new WheelEvent('wheel', { deltaY: -120 }) as unknown as React.WheelEvent;
@@ -131,7 +142,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   const zoomOut = () => {
     if (onSetScale) {
       // Decrease zoom by 10%
-      const newScale = Math.max(scale * 0.9, 0.1);
+      const newScale = Math.max(scale * 0.9, 0.5);
       onSetScale(newScale);
     } else if (handleWheel) {
       const wheelEvent = new WheelEvent('wheel', { deltaY: 120 }) as unknown as React.WheelEvent;
@@ -170,6 +181,17 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
             offset={offset}
             width={containerSize.width}
             height={containerSize.height}
+            cursorPosition={cursorPosition}
+          />
+          
+          {/* Guide lines */}
+          <GuideLines
+            cursorPosition={cursorPosition}
+            scale={scale}
+            offset={offset}
+            rulerSize={RULER_SIZE}
+            canvasWidth={containerSize.width}
+            canvasHeight={containerSize.height}
           />
           
           {/* Background canvas (white pattern) */}
@@ -198,6 +220,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerLeave}
             onWheel={handleWheel || (() => {})}
           />
         </div>
