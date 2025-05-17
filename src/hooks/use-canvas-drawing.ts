@@ -39,11 +39,14 @@ export const useCanvasDrawing = ({
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
   const zoomIntensityRef = useRef(0.1); // Controls zoom sensitivity
 
-  // Set up key listeners for handling space+mouse panning
+  // Set up key listeners for handling space+mouse panning and ctrl for straight lines
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         setKeyPressed(prev => ({ ...prev, space: true }));
+      }
+      if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+        setKeyPressed(prev => ({ ...prev, ctrl: true }));
       }
     };
     
@@ -51,6 +54,9 @@ export const useCanvasDrawing = ({
       if (e.code === 'Space') {
         setKeyPressed(prev => ({ ...prev, space: false }));
         setIsPanning(false);
+      }
+      if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+        setKeyPressed(prev => ({ ...prev, ctrl: false }));
       }
     };
     
@@ -232,11 +238,20 @@ export const useCanvasDrawing = ({
     
     if (!isDrawing) return;
     
-    // Use the already declared 'pos' variable instead of redeclaring it
+    // For drawing with Ctrl key pressed (straight horizontal line)
+    let currentPos = pos;
+    
+    if (keyPressed.ctrl && lastMousePosRef.current) {
+      // If Ctrl is pressed, maintain the y-coordinate for a horizontal line
+      currentPos = {
+        x: pos.x,
+        y: lastMousePosRef.current.y
+      };
+    }
     
     if (mode === "draw") {
       // Add to drawing path
-      setDrawingPath(prev => [...prev, pos]);
+      setDrawingPath(prev => [...prev, currentPos]);
       
       // Draw directly to canvas with improved line smoothing
       if (drawingLayerRef.current && lastMousePosRef.current) {
@@ -254,14 +269,19 @@ export const useCanvasDrawing = ({
           ctx.beginPath();
           ctx.moveTo(lastMousePosRef.current.x, lastMousePosRef.current.y);
           
-          // Simple smoothing for more natural strokes
-          const midX = (lastMousePosRef.current.x + pos.x) / 2;
-          const midY = (lastMousePosRef.current.y + pos.y) / 2;
-          ctx.quadraticCurveTo(
-            lastMousePosRef.current.x, 
-            lastMousePosRef.current.y,
-            midX, midY
-          );
+          if (keyPressed.ctrl) {
+            // Draw straight horizontal line when Ctrl is pressed
+            ctx.lineTo(currentPos.x, currentPos.y);
+          } else {
+            // Simple smoothing for more natural strokes
+            const midX = (lastMousePosRef.current.x + currentPos.x) / 2;
+            const midY = (lastMousePosRef.current.y + currentPos.y) / 2;
+            ctx.quadraticCurveTo(
+              lastMousePosRef.current.x, 
+              lastMousePosRef.current.y,
+              midX, midY
+            );
+          }
           
           ctx.stroke();
           ctx.restore();
@@ -281,7 +301,16 @@ export const useCanvasDrawing = ({
         ctx.strokeStyle = color;
         ctx.lineWidth = brushSize;
         
-        drawShapePreview(ctx, shapeTool, startPointRef.current.x, startPointRef.current.y, pos.x, pos.y);
+        // If Ctrl is pressed, ensure horizontal line for shape drawing
+        if (keyPressed.ctrl && shapeTool === "line" || shapeTool === "arrow") {
+          const straightPos = {
+            x: currentPos.x,
+            y: startPointRef.current.y
+          };
+          drawShapePreview(ctx, shapeTool, startPointRef.current.x, startPointRef.current.y, straightPos.x, straightPos.y);
+        } else {
+          drawShapePreview(ctx, shapeTool, startPointRef.current.x, startPointRef.current.y, currentPos.x, currentPos.y);
+        }
         
         ctx.restore();
       }
@@ -345,7 +374,7 @@ export const useCanvasDrawing = ({
       setObjects(updatedObjects);
     }
     
-    lastMousePosRef.current = pos;
+    lastMousePosRef.current = currentPos;
   };
 
   const stopDrawing = () => {
@@ -370,7 +399,13 @@ export const useCanvasDrawing = ({
     } else if (mode === "shape" && startPointRef.current && lastMousePosRef.current) {
       // Add the shape to objects array
       const { x: startX, y: startY } = startPointRef.current;
-      const { x: endX, y: endY } = lastMousePosRef.current;
+      let endX = lastMousePosRef.current.x;
+      let endY = lastMousePosRef.current.y;
+      
+      // If Ctrl is pressed and it's a line/arrow, make it horizontal
+      if (keyPressed.ctrl && (shapeTool === "line" || shapeTool === "arrow")) {
+        endY = startY; // Keep the same Y coordinate
+      }
       
       const newObject = createShapeObject(shapeTool, startX, startY, endX, endY, color || '#ffffff', brushSize);
       
