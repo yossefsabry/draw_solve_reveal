@@ -232,7 +232,7 @@ export const useCanvasDrawing = ({
     
     if (!isDrawing) return;
     
-    const pos = getPointerPosition(e);
+    // Use the already declared 'pos' variable instead of redeclaring it
     
     if (mode === "draw") {
       // Add to drawing path
