@@ -31,23 +31,25 @@ const GuideLines: React.FC<GuideLinesProps> = ({
     <>
       {/* Vertical guide line */}
       <div
-        className="absolute pointer-events-none z-15 bg-gray-400 opacity-50"
+        className="absolute pointer-events-none z-15"
         style={{
           left: actualX + rulerSize,
           top: rulerSize,
           width: '1px',
           height: canvasHeight,
+          backgroundColor: 'rgba(255, 100, 100, 0.8)' // Bright red with opacity
         }}
       />
       
       {/* Horizontal guide line */}
       <div
-        className="absolute pointer-events-none z-15 bg-gray-400 opacity-50"
+        className="absolute pointer-events-none z-15"
         style={{
           left: rulerSize,
           top: actualY + rulerSize,
           height: '1px',
           width: canvasWidth,
+          backgroundColor: 'rgba(255, 100, 100, 0.8)' // Bright red with opacity
         }}
       />
     </>
