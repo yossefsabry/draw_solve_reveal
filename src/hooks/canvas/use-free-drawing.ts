@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { AnyDrawingObject, DrawObject } from "@/components/drawing/types";
 
@@ -32,13 +31,26 @@ export const useFreeDrawing = ({
   
   // Add to the current drawing path
   const addToDrawingPath = (pos: { x: number; y: number }, canvas: HTMLCanvasElement | null) => {
-    // If Ctrl is pressed, draw a horizontal line
+    // Handle straight line drawing when ctrl is pressed
     let currentPos = pos;
     if (keyPressed.ctrl && lastPosRef.current) {
-      currentPos = {
-        x: pos.x,
-        y: lastPosRef.current.y // Keep the same Y coordinate for horizontal line
-      };
+      // Calculate the horizontal and vertical distances
+      const deltaX = Math.abs(pos.x - lastPosRef.current.x);
+      const deltaY = Math.abs(pos.y - lastPosRef.current.y);
+      
+      if (deltaX >= deltaY) {
+        // Draw a horizontal line (keep the same Y coordinate)
+        currentPos = {
+          x: pos.x,
+          y: lastPosRef.current.y
+        };
+      } else {
+        // Draw a vertical line (keep the same X coordinate)
+        currentPos = {
+          x: lastPosRef.current.x,
+          y: pos.y
+        };
+      }
     }
     
     setDrawingPath(prev => [...prev, currentPos]);
@@ -60,7 +72,7 @@ export const useFreeDrawing = ({
         ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
         
         if (keyPressed.ctrl) {
-          // Draw straight horizontal line when Ctrl is pressed
+          // Draw straight line when Ctrl is pressed
           ctx.lineTo(currentPos.x, currentPos.y);
         } else {
           // Simple smoothing for more natural strokes

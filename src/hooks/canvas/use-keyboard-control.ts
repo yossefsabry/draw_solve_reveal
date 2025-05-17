@@ -13,6 +13,9 @@ export const useKeyboardControl = () => {
       if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
         setKeyPressed(prev => ({ ...prev, ctrl: true }));
       }
+      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+        setKeyPressed(prev => ({ ...prev, shift: true }));
+      }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -21,6 +24,9 @@ export const useKeyboardControl = () => {
       }
       if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
         setKeyPressed(prev => ({ ...prev, ctrl: false }));
+      }
+      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+        setKeyPressed(prev => ({ ...prev, shift: false }));
       }
     };
     

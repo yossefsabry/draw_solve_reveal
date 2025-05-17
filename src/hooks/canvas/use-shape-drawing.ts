@@ -56,12 +56,25 @@ export const useShapeDrawing = ({
       ctx.strokeStyle = color;
       ctx.lineWidth = brushSize;
       
-      // If Ctrl is pressed, ensure horizontal line for shape drawing
+      // If Ctrl is pressed, ensure straight line for shape drawing
       if (keyPressed.ctrl && (shapeTool === "line" || shapeTool === "arrow")) {
+        // Calculate if horizontal or vertical based on movement
+        const deltaX = Math.abs(pos.x - startPointRef.current.x);
+        const deltaY = Math.abs(pos.y - startPointRef.current.y);
+        
         const straightPos = {
           x: pos.x,
-          y: startPointRef.current.y
+          y: pos.y
         };
+        
+        if (deltaX >= deltaY) {
+          // Horizontal line
+          straightPos.y = startPointRef.current.y;
+        } else {
+          // Vertical line
+          straightPos.x = startPointRef.current.x;
+        }
+        
         drawShapePreview(ctx, shapeTool, startPointRef.current.x, startPointRef.current.y, straightPos.x, straightPos.y);
       } else {
         drawShapePreview(ctx, shapeTool, startPointRef.current.x, startPointRef.current.y, pos.x, pos.y);
@@ -77,12 +90,25 @@ export const useShapeDrawing = ({
     
     let finalEndPos = { ...endPos };
     
-    // If Ctrl is pressed and it's a line/arrow, make it horizontal
+    // If Ctrl is pressed and it's a line/arrow, make it horizontal or vertical
     if (keyPressed.ctrl && (shapeTool === "line" || shapeTool === "arrow")) {
-      finalEndPos = {
-        x: endPos.x,
-        y: startPointRef.current.y // Keep the same Y coordinate
-      };
+      // Calculate if horizontal or vertical based on movement
+      const deltaX = Math.abs(endPos.x - startPointRef.current.x);
+      const deltaY = Math.abs(endPos.y - startPointRef.current.y);
+      
+      if (deltaX >= deltaY) {
+        // Horizontal line
+        finalEndPos = {
+          x: endPos.x,
+          y: startPointRef.current.y
+        };
+      } else {
+        // Vertical line
+        finalEndPos = {
+          x: startPointRef.current.x,
+          y: endPos.y
+        };
+      }
     }
     
     const newObject = createShapeObject(
