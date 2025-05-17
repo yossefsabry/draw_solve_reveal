@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Move } from "lucide-react";
 
 interface CanvasOverlaysProps {
@@ -11,6 +11,37 @@ const CanvasOverlays: React.FC<CanvasOverlaysProps> = ({
   isPanning,
   scale,
 }) => {
+  const [orientation, setOrientation] = useState<string | undefined>(undefined);
+  
+  // Monitor orientation changes
+  useEffect(() => {
+    const updateOrientation = () => {
+      if (window.screen.orientation) {
+        setOrientation(window.screen.orientation.type);
+      } else if (window.orientation !== undefined) {
+        // Fallback for older browsers
+        const angle = window.orientation;
+        if (angle === 0 || angle === 180) {
+          setOrientation('portrait');
+        } else {
+          setOrientation('landscape');
+        }
+      }
+    };
+    
+    // Initial check
+    updateOrientation();
+    
+    // Event listeners
+    window.addEventListener('orientationchange', updateOrientation);
+    window.addEventListener('resize', updateOrientation);
+    
+    return () => {
+      window.removeEventListener('orientationchange', updateOrientation);
+      window.removeEventListener('resize', updateOrientation);
+    };
+  }, []);
+
   return (
     <>
       {/* Only show panning indicator when space is pressed */}

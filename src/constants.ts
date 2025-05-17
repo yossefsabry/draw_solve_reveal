@@ -1,7 +1,7 @@
 
 export const SWATCHES = [
-  "#000000", // Black
-  "#FFFFFF", // White
+  "#FFFFFF", // White (now first in list)
+  "#000000", // Black 
   "#FF0000", // Red
   "#00FF00", // Green
   "#0000FF", // Blue

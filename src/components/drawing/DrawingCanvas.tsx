@@ -17,7 +17,7 @@ interface DrawingCanvasProps {
 }
 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
-  const [color, setColor] = useState(SWATCHES[0]);
+  const [color, setColor] = useState(SWATCHES[0]); // Now white by default
   const [brushSize, setBrushSize] = useState(5);
   const [mode, setMode] = useState<DrawingMode>("draw");
   const [shapeTool, setShapeTool] = useState<ShapeTool>("none");
@@ -125,7 +125,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
-      <div className={`flex ${isMobile ? 'flex-col' : 'flex-wrap items-center justify-between'} gap-2 p-4 border-b`}>
+      <div className={`flex ${isMobile ? 'justify-between items-center' : 'flex-wrap items-center justify-between'} gap-2 p-2 border-b`}>
         <ToolBar
           color={color}
           brushSize={brushSize}

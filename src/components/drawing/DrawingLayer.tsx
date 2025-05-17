@@ -205,7 +205,7 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
         height: height - rulerSize,
         cursor: isPanning ? 'grab' : 'crosshair',
         touchAction: 'none',
-        background: 'transparent' // Make the background transparent so it shows the white background underneath
+        background: 'black' // Change background to black
       }}
       onMouseDown={onPointerDown}
       onMouseMove={onPointerMove}

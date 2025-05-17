@@ -6,6 +6,7 @@ import { DrawingMode } from "./types";
 import ColorPicker from "./ColorPicker";
 import BrushSizeControl from "./BrushSizeControl";
 import ShapeSelector from "./ShapeSelector";
+import MobileToolMenu from "./MobileToolMenu";
 
 interface ToolBarProps {
   color: string;
@@ -44,8 +45,43 @@ const ToolBar: React.FC<ToolBarProps> = ({
     onModeChange("draw");
   };
 
+  // For orientation changes in mobile
+  React.useEffect(() => {
+    const handleOrientationChange = () => {
+      // Force a re-render when orientation changes
+      window.dispatchEvent(new Event('resize'));
+    };
+
+    window.addEventListener('orientationchange', handleOrientationChange);
+    return () => {
+      window.removeEventListener('orientationchange', handleOrientationChange);
+    };
+  }, []);
+
+  if (isMobile) {
+    return (
+      <div className="flex justify-center p-2">
+        <MobileToolMenu
+          color={color}
+          brushSize={brushSize}
+          mode={mode}
+          isShapesOpen={isShapesOpen}
+          onColorChange={onColorChange}
+          onBrushSizeChange={onBrushSizeChange}
+          onModeChange={onModeChange}
+          onShapesOpenChange={onShapesOpenChange}
+          onShapeSelect={onShapeSelect}
+          toggleEraserMode={toggleEraserMode}
+          toggleMoveMode={toggleMoveMode}
+          isEraseActive={mode === "erase"}
+          isMoveActive={mode === "move"}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex flex-wrap gap-2 ${isMobile ? 'w-full justify-center' : 'p-4'}`}>
+    <div className="flex flex-wrap gap-2 p-4">
       <ColorPicker
         color={color}
         mode={mode}
@@ -62,22 +98,20 @@ const ToolBar: React.FC<ToolBarProps> = ({
       <div className="flex gap-2 flex-wrap">
         <Button
           variant={mode === "erase" ? "default" : "outline"}
-          size={isMobile ? "sm" : "icon"}
+          size="icon"
           onClick={toggleEraserMode}
           className={mode === "erase" ? "tool-active" : ""}
         >
           <Eraser className="h-5 w-5" />
-          {isMobile && <span className="ml-1 text-white">Erase</span>}
         </Button>
 
         <Button
           variant={mode === "move" ? "default" : "outline"}
-          size={isMobile ? "sm" : "icon"}
+          size="icon"
           onClick={toggleMoveMode}
           className={mode === "move" ? "tool-active" : ""}
         >
           <Move className="h-5 w-5" />
-          {isMobile && <span className="ml-1 text-white">Move</span>}
         </Button>
 
         <ShapeSelector

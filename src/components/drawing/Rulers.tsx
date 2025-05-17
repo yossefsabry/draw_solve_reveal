@@ -14,10 +14,10 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
   const cornerRef = useRef<HTMLDivElement>(null);
   
   const RULER_SIZE = 26; // Ruler size for better visibility
-  const RULER_BG_COLOR = '#2a2a2a'; // Dark background for rulers
+  const RULER_BG_COLOR = '#000000'; // Black background for rulers
   const RULER_TEXT_COLOR = '#ffffff'; // White text for better visibility
-  const RULER_LINE_COLOR = '#909090'; // Light gray lines
-  const RULER_BORDER_COLOR = '#505050'; // Darker border
+  const RULER_LINE_COLOR = '#555555'; // Light gray lines
+  const RULER_BORDER_COLOR = '#333333'; // Darker border
   
   useEffect(() => {
     const drawHorizontalRuler = () => {
@@ -64,7 +64,9 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
         ctx.fillStyle = RULER_LINE_COLOR;
         ctx.fillRect(i, RULER_SIZE - 20, 1, 20);
         ctx.fillStyle = RULER_TEXT_COLOR;
-        ctx.fillText(Math.abs(unit).toString(), i, RULER_SIZE - 5);
+        // Round to integer
+        const unitInt = Math.round(Math.abs(unit));
+        ctx.fillText(unitInt.toString(), i, RULER_SIZE - 5);
       }
       
       // Draw small ticks every 10 units
@@ -122,7 +124,9 @@ const Rulers: React.FC<RulersProps> = ({ scale, offset, width, height }) => {
         label.style.fontSize = '10px';
         label.style.transform = 'rotate(-90deg)';
         label.style.transformOrigin = 'center right';
-        label.textContent = Math.abs(unit).toString();
+        // Round to integer
+        const unitInt = Math.round(Math.abs(unit));
+        label.textContent = unitInt.toString();
         rulerDiv.appendChild(label);
       }
       
