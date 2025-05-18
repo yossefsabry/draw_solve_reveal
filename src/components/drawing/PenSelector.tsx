@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Brush, PencilLine, Pen, 
-  PaintbrushVertical, Pencil, PaintBrush 
+  PaintbrushVertical, Pencil, Paintbrush 
 } from "lucide-react";
 
 export type PenType = "brush" | "pencil" | "pen" | "marker" | "calligraphy" | "highlighter";
@@ -21,7 +21,7 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
     { type: "pencil" as PenType, icon: <Pencil />, tooltip: "Pencil" },
     { type: "pen" as PenType, icon: <Pen />, tooltip: "Pen" },
     { type: "marker" as PenType, icon: <PencilLine />, tooltip: "Marker" },
-    { type: "calligraphy" as PenType, icon: <PaintBrush />, tooltip: "Calligraphy" },
+    { type: "calligraphy" as PenType, icon: <Paintbrush />, tooltip: "Calligraphy" },
     { type: "highlighter" as PenType, icon: <PaintbrushVertical />, tooltip: "Highlighter" },
   ];
 
