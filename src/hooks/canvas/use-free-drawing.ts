@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { AnyDrawingObject, DrawObject, DrawingMode } from "@/components/drawing/types";
 import { PenType } from "@/components/drawing/PenSelector";
@@ -37,6 +38,8 @@ export const useFreeDrawing = ({
     
     // Reset any previous settings
     ctx.globalAlpha = 1.0;
+    ctx.shadowBlur = 0;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any transforms
     
     // Different pen styles based on pen type
     switch (penType) {
@@ -44,29 +47,30 @@ export const useFreeDrawing = ({
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         // A more "brush-like" effect
-        ctx.shadowBlur = 1;
+        ctx.shadowBlur = 3;
         ctx.shadowColor = color;
+        ctx.lineWidth = brushSize * 1.2;
         break;
         
       case "pencil":
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        // Pencil can have a thinner line
-        ctx.lineWidth = Math.max(1, brushSize * 0.7);
-        ctx.shadowBlur = 0;
+        // Pencil has a thinner line
+        ctx.lineWidth = Math.max(1, brushSize * 0.5);
+        ctx.globalAlpha = 0.8;
         break;
         
       case "pen":
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        ctx.lineWidth = brushSize * 1.2;
-        ctx.shadowBlur = 0;
+        ctx.lineWidth = brushSize;
         break;
         
       case "marker":
         ctx.lineCap = "square";
         ctx.lineJoin = "bevel";
-        ctx.shadowBlur = 0;
+        ctx.lineWidth = brushSize * 1.5;
+        ctx.globalAlpha = 0.7;
         break;
         
       case "calligraphy":
@@ -74,7 +78,6 @@ export const useFreeDrawing = ({
         ctx.lineCap = "butt";
         ctx.lineJoin = "miter";
         ctx.lineWidth = brushSize * 1.5;
-        ctx.shadowBlur = 0;
         
         // Rotate for calligraphy effect
         ctx.setTransform(1, 0, 0.5, 1, 0, 0);
@@ -83,14 +86,13 @@ export const useFreeDrawing = ({
       case "highlighter":
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        ctx.globalAlpha = 0.4; // Semi-transparent
-        ctx.shadowBlur = 0;
+        ctx.lineWidth = brushSize * 2;
+        ctx.globalAlpha = 0.3; // More transparent
         break;
         
       default:
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        ctx.shadowBlur = 0;
     }
     
     // Handle eraser mode
@@ -213,15 +215,15 @@ export const useFreeDrawing = ({
         pathToSave = [startPosRef.current, endPoint];
       }
       
-      // Add free-hand drawing to objects
+      // Create new drawing object
       const newObject: DrawObject = {
         type: 'draw',
         points: pathToSave,
-        color: mode === "erase" ? "#000000" : color, // Use background color for eraser
+        color: mode === "erase" ? "transparent" : color,
         lineWidth: brushSize
       };
       
-      // For eraser, we need to handle it differently, add a flag to identify it
+      // For eraser, mark it as an eraser
       if (mode === "erase") {
         // @ts-ignore - Adding a custom property for eraser identification
         newObject.isEraser = true;

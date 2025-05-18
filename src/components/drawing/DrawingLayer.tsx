@@ -94,10 +94,14 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
       case "brush":
         ctx.current.lineCap = "round";
         ctx.current.lineJoin = "round";
+        ctx.current.shadowBlur = 3;
+        ctx.current.shadowColor = color;
         break;
       case "pencil":
         ctx.current.lineCap = "round";
         ctx.current.lineJoin = "round";
+        ctx.current.lineWidth = Math.max(1, brushSize * 0.5);
+        ctx.current.globalAlpha = 0.8;
         break;
       case "pen":
         ctx.current.lineCap = "round";
@@ -106,6 +110,8 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
       case "marker":
         ctx.current.lineCap = "square";
         ctx.current.lineJoin = "round";
+        ctx.current.lineWidth = brushSize * 1.5;
+        ctx.current.globalAlpha = 0.7;
         break;
       case "calligraphy":
         ctx.current.lineCap = "butt";
@@ -114,7 +120,8 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
       case "highlighter":
         ctx.current.lineCap = "round";
         ctx.current.lineJoin = "round";
-        ctx.current.globalAlpha = 0.5; // Semi-transparent for highlighter
+        ctx.current.lineWidth = brushSize * 2;
+        ctx.current.globalAlpha = 0.3;
         break;
       default:
         ctx.current.lineCap = "round";
@@ -125,6 +132,7 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
     if (mode === "erase") {
       // Set up eraser mode
       ctx.current.globalCompositeOperation = "destination-out";
+      ctx.current.globalAlpha = 1.0; // Full opacity for eraser
     } else {
       // Reset to normal drawing mode
       ctx.current.globalCompositeOperation = "source-over";
@@ -138,8 +146,8 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
     
     // Set actual pixel dimensions for canvas (important for high-DPI displays)
     const devicePixelRatio = window.devicePixelRatio || 1;
-    canvas.width = (width - rulerSize) * devicePixelRatio;
-    canvas.height = (height - rulerSize) * devicePixelRatio;
+    canvas.width = Math.round((width - rulerSize) * devicePixelRatio);
+    canvas.height = Math.round((height - rulerSize) * devicePixelRatio);
     canvas.style.width = `${width - rulerSize}px`;
     canvas.style.height = `${height - rulerSize}px`;
     
@@ -164,10 +172,14 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
     if (!eraserCursorRef.current || !cursorPosition || mode !== "erase") return;
     
     const eraserSize = brushSize * scale;
+    const left = cursorPosition.x * scale + offset.x;
+    const top = cursorPosition.y * scale + offset.y;
+    
+    // Position the cursor centered on the mouse/touch point
     eraserCursorRef.current.style.width = `${eraserSize * 2}px`;
     eraserCursorRef.current.style.height = `${eraserSize * 2}px`;
-    eraserCursorRef.current.style.left = `${cursorPosition.x * scale + offset.x - eraserSize}px`;
-    eraserCursorRef.current.style.top = `${cursorPosition.y * scale + offset.y - eraserSize}px`;
+    eraserCursorRef.current.style.left = `${left}px`;
+    eraserCursorRef.current.style.top = `${top}px`;
   }, [cursorPosition, brushSize, scale, offset, mode]);
 
   // Update the canvas when scale, offset, or objects change
@@ -396,7 +408,7 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
       {mode === "erase" && (
         <div 
           ref={eraserCursorRef}
-          className="absolute pointer-events-none z-20 border-2 border-white rounded-full opacity-50"
+          className="absolute pointer-events-none z-20 border-2 border-white rounded-full opacity-70"
           style={{
             width: brushSize * 2 * scale,
             height: brushSize * 2 * scale,
