@@ -59,24 +59,26 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
         <h4 className="font-medium mb-2">Pen Types</h4>
         <div className="grid grid-cols-3 gap-2">
           {penTypes.map((pen) => (
-            <Tooltip key={pen.type}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={activePenType === pen.type ? "default" : "outline"}
-                  size="icon"
-                  onClick={() => {
-                    onPenTypeChange(pen.type);
-                  }}
-                  className={`${activePenType === pen.type ? "tool-active" : ""} w-full h-14 flex flex-col items-center justify-center gap-1`}
-                >
-                  <div>{pen.icon}</div>
-                  <div className="text-xs">{pen.tooltip}</div>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{pen.tooltip}</p>
-              </TooltipContent>
-            </Tooltip>
+            <TooltipProvider key={pen.type}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activePenType === pen.type ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => {
+                      onPenTypeChange(pen.type);
+                    }}
+                    className={`${activePenType === pen.type ? "tool-active" : ""} w-full h-14 flex flex-col items-center justify-center gap-1`}
+                  >
+                    <div>{pen.icon}</div>
+                    <div className="text-xs">{pen.tooltip}</div>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{pen.tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ))}
         </div>
       </PopoverContent>
