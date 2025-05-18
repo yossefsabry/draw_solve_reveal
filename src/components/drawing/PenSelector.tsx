@@ -36,7 +36,7 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
   return (
     <Popover>
       <TooltipProvider>
-        <Tooltip delayDuration={300}>
+        <Tooltip>
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <Button 
@@ -59,7 +59,7 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
         <h4 className="font-medium mb-2">Pen Types</h4>
         <div className="grid grid-cols-3 gap-2">
           {penTypes.map((pen) => (
-            <Tooltip key={pen.type} delayDuration={300}>
+            <Tooltip key={pen.type}>
               <TooltipTrigger asChild>
                 <Button
                   variant={activePenType === pen.type ? "default" : "outline"}
