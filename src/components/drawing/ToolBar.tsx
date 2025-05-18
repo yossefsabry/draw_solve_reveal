@@ -2,7 +2,7 @@
 import React from "react";
 import { Eraser, Move } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DrawingMode } from "./types";
 import ColorPicker from "./ColorPicker";
 import BrushSizeControl from "./BrushSizeControl";
@@ -128,20 +128,24 @@ const ToolBar: React.FC<ToolBarProps> = ({
 
       <div className="flex gap-2 flex-wrap">
         <Popover>
-          <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
-              <Button
-                variant={mode === "erase" ? "default" : "outline"}
-                size="icon"
-                className={`${mode === "erase" ? "tool-active" : ""} h-10 w-10`}
-              >
-                <Eraser className="h-5 w-5" />
-              </Button>
-            </PopoverTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Eraser Tool</p>
-          </TooltipContent>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={mode === "erase" ? "default" : "outline"}
+                    size="icon"
+                    className={`${mode === "erase" ? "tool-active" : ""} h-10 w-10`}
+                  >
+                    <Eraser className="h-5 w-5" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Eraser Tool</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <PopoverContent className="w-64">
             <div className="space-y-4">
@@ -175,21 +179,23 @@ const ToolBar: React.FC<ToolBarProps> = ({
           </PopoverContent>
         </Popover>
 
-        <Tooltip delayDuration={300}>
-          <TooltipTrigger asChild>
-            <Button
-              variant={mode === "move" ? "default" : "outline"}
-              size="icon"
-              onClick={toggleMoveMode}
-              className={mode === "move" ? "tool-active" : ""}
-            >
-              <Move className="h-5 w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Move Canvas</p>
-          </TooltipContent>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={mode === "move" ? "default" : "outline"}
+                size="icon"
+                onClick={toggleMoveMode}
+                className={mode === "move" ? "tool-active" : ""}
+              >
+                <Move className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Move Canvas</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         <ShapeSelector
           isOpen={isShapesOpen}
