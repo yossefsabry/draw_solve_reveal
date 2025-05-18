@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { AnyDrawingObject, DrawObject, DrawingMode } from "@/components/drawing/types";
 import { PenType } from "@/components/drawing/PenSelector";
@@ -28,6 +27,7 @@ export const useFreeDrawing = ({
 }: UseFreeDrawingProps) => {
   const [drawingPath, setDrawingPath] = useState<{ x: number; y: number }[]>([]);
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
+  const startPosRef = useRef<{ x: number; y: number } | null>(null);
   
   // Handle pen configuration based on pen type
   const configurePenSettings = (ctx: CanvasRenderingContext2D) => {
@@ -43,46 +43,62 @@ export const useFreeDrawing = ({
       case "brush":
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
+        // A more "brush-like" effect
+        ctx.shadowBlur = 1;
+        ctx.shadowColor = color;
         break;
         
       case "pencil":
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         // Pencil can have a thinner line
-        ctx.lineWidth = Math.max(1, brushSize * 0.8);
+        ctx.lineWidth = Math.max(1, brushSize * 0.7);
+        ctx.shadowBlur = 0;
         break;
         
       case "pen":
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
+        ctx.lineWidth = brushSize * 1.2;
+        ctx.shadowBlur = 0;
         break;
         
       case "marker":
         ctx.lineCap = "square";
         ctx.lineJoin = "bevel";
+        ctx.shadowBlur = 0;
         break;
         
       case "calligraphy":
         // Calligraphy has varying line width based on angle
         ctx.lineCap = "butt";
         ctx.lineJoin = "miter";
+        ctx.lineWidth = brushSize * 1.5;
+        ctx.shadowBlur = 0;
+        
+        // Rotate for calligraphy effect
+        ctx.setTransform(1, 0, 0.5, 1, 0, 0);
         break;
         
       case "highlighter":
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        ctx.globalAlpha = 0.5; // Semi-transparent
+        ctx.globalAlpha = 0.4; // Semi-transparent
+        ctx.shadowBlur = 0;
         break;
         
       default:
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
+        ctx.shadowBlur = 0;
     }
     
     // Handle eraser mode
     if (mode === "erase") {
       ctx.globalCompositeOperation = "destination-out";
       ctx.globalAlpha = 1.0; // Ensure full opacity for eraser
+      ctx.shadowBlur = 0;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any transforms
     } else {
       ctx.globalCompositeOperation = "source-over";
     }
@@ -92,6 +108,7 @@ export const useFreeDrawing = ({
   const startDrawingPath = (pos: { x: number; y: number }) => {
     setDrawingPath([pos]);
     lastPosRef.current = pos;
+    startPosRef.current = pos;
   };
   
   // Add to the current drawing path
@@ -99,21 +116,21 @@ export const useFreeDrawing = ({
     // Determine straight line constraints
     let currentPos = pos;
     
-    if (keyPressed.ctrl && lastPosRef.current) {
+    if (keyPressed.ctrl && lastPosRef.current && startPosRef.current) {
       // Calculate the horizontal and vertical distances
-      const deltaX = Math.abs(pos.x - lastPosRef.current.x);
-      const deltaY = Math.abs(pos.y - lastPosRef.current.y);
+      const deltaX = Math.abs(pos.x - startPosRef.current.x);
+      const deltaY = Math.abs(pos.y - startPosRef.current.y);
       
       if (deltaX >= deltaY) {
         // Draw a horizontal line (keep the same Y coordinate)
         currentPos = {
           x: pos.x,
-          y: lastPosRef.current.y
+          y: startPosRef.current.y
         };
       } else {
         // Draw a vertical line (keep the same X coordinate)
         currentPos = {
-          x: lastPosRef.current.x,
+          x: startPosRef.current.x,
           y: pos.y
         };
       }
@@ -138,6 +155,8 @@ export const useFreeDrawing = ({
         
         if (keyPressed.ctrl) {
           // Draw straight line when Ctrl is pressed
+          // Use the start position for better straight lines
+          ctx.moveTo(startPosRef.current!.x, startPosRef.current!.y);
           ctx.lineTo(currentPos.x, currentPos.y);
         } else {
           // Apply different smoothing based on pen type
@@ -170,6 +189,12 @@ export const useFreeDrawing = ({
         }
         
         ctx.stroke();
+        
+        // Reset transform for calligraphy
+        if (penType === "calligraphy" && mode !== "erase") {
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+        
         ctx.restore();
       }
     }
@@ -180,10 +205,18 @@ export const useFreeDrawing = ({
   // Complete the drawing and add it to objects
   const finishDrawingPath = () => {
     if (drawingPath.length > 1) {
+      let pathToSave = drawingPath;
+      
+      // If Ctrl was pressed, only save start and end points for clean straight lines
+      if (keyPressed.ctrl && startPosRef.current) {
+        const endPoint = drawingPath[drawingPath.length - 1];
+        pathToSave = [startPosRef.current, endPoint];
+      }
+      
       // Add free-hand drawing to objects
       const newObject: DrawObject = {
         type: 'draw',
-        points: drawingPath,
+        points: pathToSave,
         color: mode === "erase" ? "#000000" : color, // Use background color for eraser
         lineWidth: brushSize
       };
@@ -197,11 +230,13 @@ export const useFreeDrawing = ({
       setObjects([...objects, newObject]);
       setDrawingPath([]);
       lastPosRef.current = null;
+      startPosRef.current = null;
       return newObject;
     }
     
     setDrawingPath([]);
     lastPosRef.current = null;
+    startPosRef.current = null;
     return null;
   };
 

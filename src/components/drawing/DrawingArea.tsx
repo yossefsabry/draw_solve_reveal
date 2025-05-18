@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from "react";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -226,6 +225,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerLeave}
             onWheel={handleWheel || (() => {})}
+            cursorPosition={cursorPosition}
           />
         </div>
       </div>

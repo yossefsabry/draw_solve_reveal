@@ -23,6 +23,7 @@ interface DrawingLayerProps {
   onPointerUp: (e: React.MouseEvent | React.TouchEvent) => void;
   onPointerLeave: (e: React.MouseEvent | React.TouchEvent) => void;
   onWheel: (e: React.WheelEvent) => void;
+  cursorPosition?: { x: number; y: number } | null;
 }
 
 const DrawingLayer: React.FC<DrawingLayerProps> = ({
@@ -44,10 +45,12 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
   onPointerUp,
   onPointerLeave,
   onWheel,
+  cursorPosition,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctx = useRef<CanvasRenderingContext2D | null>(null);
   const rafId = useRef<number | null>(null);
+  const eraserCursorRef = useRef<HTMLDivElement | null>(null);
 
   // Initialize canvas context with optimized settings
   useEffect(() => {
@@ -155,6 +158,17 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
     if (rafId.current) cancelAnimationFrame(rafId.current);
     rafId.current = requestAnimationFrame(redrawObjects);
   }, [width, height]);
+
+  // Update eraser cursor position
+  useEffect(() => {
+    if (!eraserCursorRef.current || !cursorPosition || mode !== "erase") return;
+    
+    const eraserSize = brushSize * scale;
+    eraserCursorRef.current.style.width = `${eraserSize * 2}px`;
+    eraserCursorRef.current.style.height = `${eraserSize * 2}px`;
+    eraserCursorRef.current.style.left = `${cursorPosition.x * scale + offset.x - eraserSize}px`;
+    eraserCursorRef.current.style.top = `${cursorPosition.y * scale + offset.y - eraserSize}px`;
+  }, [cursorPosition, brushSize, scale, offset, mode]);
 
   // Update the canvas when scale, offset, or objects change
   useEffect(() => {
@@ -355,27 +369,43 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
   };
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 z-10 canvas-container"
-      style={{ 
-        marginTop: rulerSize, 
-        marginLeft: rulerSize,
-        width: width - rulerSize,
-        height: height - rulerSize,
-        cursor: isPanning ? 'grab' : 'crosshair',
-        touchAction: 'none',
-        background: 'black' // Black background
-      }}
-      onMouseDown={onPointerDown}
-      onMouseMove={onPointerMove}
-      onMouseUp={onPointerUp}
-      onMouseLeave={onPointerLeave}
-      onTouchStart={onPointerDown}
-      onTouchMove={onPointerMove}
-      onTouchEnd={onPointerUp}
-      onWheel={onWheel}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 z-10 canvas-container"
+        style={{ 
+          marginTop: rulerSize, 
+          marginLeft: rulerSize,
+          width: width - rulerSize,
+          height: height - rulerSize,
+          cursor: isPanning ? 'grab' : (mode === 'erase' ? 'none' : 'crosshair'),
+          touchAction: 'none',
+          background: 'black' // Black background
+        }}
+        onMouseDown={onPointerDown}
+        onMouseMove={onPointerMove}
+        onMouseUp={onPointerUp}
+        onMouseLeave={onPointerLeave}
+        onTouchStart={onPointerDown}
+        onTouchMove={onPointerMove}
+        onTouchEnd={onPointerUp}
+        onWheel={onWheel}
+      />
+      
+      {/* Eraser cursor indicator */}
+      {mode === "erase" && (
+        <div 
+          ref={eraserCursorRef}
+          className="absolute pointer-events-none z-20 border-2 border-white rounded-full opacity-50"
+          style={{
+            width: brushSize * 2 * scale,
+            height: brushSize * 2 * scale,
+            transform: 'translate(-50%, -50%)',
+            display: cursorPosition ? 'block' : 'none'
+          }}
+        />
+      )}
+    </>
   );
 };
 

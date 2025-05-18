@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Menu } from "lucide-react";
+import { Menu, Eraser, Move } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -68,7 +68,7 @@ const MobileToolMenu: React.FC<MobileToolMenuProps> = ({
           <DrawerTitle>Drawing Tools</DrawerTitle>
         </DrawerHeader>
         <div className="px-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-4">
               <h3 className="font-medium text-sm">Color & Brush</h3>
               <div className="flex flex-col gap-4">
@@ -88,22 +88,51 @@ const MobileToolMenu: React.FC<MobileToolMenuProps> = ({
             
             <div className="space-y-4">
               <h3 className="font-medium text-sm">Tools</h3>
+              
               <div className="flex flex-col gap-4">
-                <Button
-                  variant={isEraseActive ? "default" : "outline"}
-                  onClick={toggleEraserMode}
-                  className="w-full"
-                >
-                  Eraser
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={isEraseActive ? "default" : "outline"}
+                    onClick={toggleEraserMode}
+                    className="flex-1 gap-2"
+                  >
+                    <Eraser className="h-4 w-4" />
+                    Eraser
+                  </Button>
+                  
+                  <Button
+                    variant={isMoveActive ? "default" : "outline"}
+                    onClick={toggleMoveMode}
+                    className="flex-1 gap-2"
+                  >
+                    <Move className="h-4 w-4" />
+                    Move
+                  </Button>
+                </div>
                 
-                <Button
-                  variant={isMoveActive ? "default" : "outline"}
-                  onClick={toggleMoveMode}
-                  className="w-full"
-                >
-                  Move
-                </Button>
+                {isEraseActive && (
+                  <div className="bg-muted p-3 rounded-md">
+                    <h4 className="text-sm font-medium mb-2">Eraser Size</h4>
+                    <input 
+                      type="range" 
+                      min="5" 
+                      max="50" 
+                      value={brushSize} 
+                      onChange={(e) => onBrushSizeChange(Number(e.target.value))}
+                      className="w-full" 
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                      <div 
+                        className="bg-gray-400 rounded-full" 
+                        style={{ 
+                          width: `${brushSize * 2}px`, 
+                          height: `${brushSize * 2}px` 
+                        }}
+                      ></div>
+                      <div className="text-sm">{brushSize}px</div>
+                    </div>
+                  </div>
+                )}
                 
                 <ShapeSelector
                   isOpen={isShapesOpen}

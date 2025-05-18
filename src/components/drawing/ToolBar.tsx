@@ -9,6 +9,19 @@ import BrushSizeControl from "./BrushSizeControl";
 import ShapeSelector from "./ShapeSelector";
 import MobileToolMenu from "./MobileToolMenu";
 import PenSelector, { PenType } from "./PenSelector";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface ToolBarProps {
   color: string;
@@ -114,21 +127,53 @@ const ToolBar: React.FC<ToolBarProps> = ({
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <Tooltip delayDuration={300}>
+        <Popover>
           <TooltipTrigger asChild>
-            <Button
-              variant={mode === "erase" ? "default" : "outline"}
-              size="icon"
-              onClick={toggleEraserMode}
-              className={mode === "erase" ? "tool-active" : ""}
-            >
-              <Eraser className="h-5 w-5" />
-            </Button>
+            <PopoverTrigger asChild>
+              <Button
+                variant={mode === "erase" ? "default" : "outline"}
+                size="icon"
+                className={`${mode === "erase" ? "tool-active" : ""} h-10 w-10`}
+              >
+                <Eraser className="h-5 w-5" />
+              </Button>
+            </PopoverTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Eraser</p>
+            <p>Eraser Tool</p>
           </TooltipContent>
-        </Tooltip>
+          
+          <PopoverContent className="w-64">
+            <div className="space-y-4">
+              <h4 className="font-medium">Eraser Size</h4>
+              <input 
+                type="range" 
+                min="5" 
+                max="50" 
+                value={brushSize} 
+                onChange={(e) => onBrushSizeChange(Number(e.target.value))}
+                className="w-full" 
+              />
+              <div className="flex items-center justify-between">
+                <div 
+                  className="bg-gray-400 rounded-full" 
+                  style={{ 
+                    width: `${brushSize * 2}px`, 
+                    height: `${brushSize * 2}px` 
+                  }}
+                ></div>
+                <div className="text-sm">{brushSize}px</div>
+              </div>
+              <Button 
+                variant="default" 
+                className="w-full" 
+                onClick={toggleEraserMode}
+              >
+                {mode === "erase" ? "Stop Erasing" : "Start Erasing"}
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
 
         <Tooltip delayDuration={300}>
           <TooltipTrigger asChild>
@@ -142,7 +187,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Move</p>
+            <p>Move Canvas</p>
           </TooltipContent>
         </Tooltip>
 
