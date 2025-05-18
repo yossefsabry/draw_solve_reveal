@@ -1,19 +1,22 @@
-
 // Shape tools available in the application
-export type ShapeTool = "rectangle" | "circle" | "triangle" | "line" | "arrow" | "none";
+export type ShapeTool = "none" | "rectangle" | "circle" | "triangle" | "line" | "arrow" | "text";
 
-// Drawing modes available in the application
+// Drawing mode
 export type DrawingMode = "draw" | "erase" | "shape" | "move";
 
+// Base drawing object interface
+interface BaseDrawingObject {
+  color: string;
+  lineWidth: number;
+}
+
 // Rectangle object
-export interface RectangleObject {
-  type: "rectangle";
+export interface RectangleObject extends BaseDrawingObject {
+  type: 'rectangle';
   x: number;
   y: number;
   width: number;
   height: number;
-  color: string;
-  lineWidth: number;
 }
 
 // Circle object
@@ -81,13 +84,16 @@ export interface DrawObject {
 
 // Union type for all drawing objects
 export type AnyDrawingObject = 
-  | RectangleObject 
-  | CircleObject 
-  | TriangleObject 
-  | LineObject 
-  | ArrowObject
-  | TextObject
-  | DrawObject;
+  RectangleObject | 
+  CircleObject |
+  TriangleObject |
+  LineObject |
+  ArrowObject |
+  TextObject |
+  DrawObject;
+  
+// Pen type
+export type PenType = "brush" | "pencil" | "pen" | "marker" | "calligraphy" | "highlighter";
 
 // Result from math equation solving
 export interface MathResult {

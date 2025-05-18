@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { drawShapePreview } from "./ShapeDrawingUtils";
+import { PenType } from "./PenSelector";
 
 interface DrawingLayerProps {
   isDrawing: boolean;
@@ -9,6 +10,7 @@ interface DrawingLayerProps {
   color: string;
   brushSize: number;
   objects: AnyDrawingObject[];
+  penType: PenType;
   scale: number;
   offset: { x: number; y: number };
   isPanning: boolean;
@@ -29,6 +31,7 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
   color,
   brushSize,
   objects,
+  penType,
   scale,
   offset,
   isPanning,
@@ -44,32 +47,86 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctx = useRef<CanvasRenderingContext2D | null>(null);
+  const rafId = useRef<number | null>(null);
 
-  // Initialize canvas context
+  // Initialize canvas context with optimized settings
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const context = canvas.getContext("2d", { willReadFrequently: true });
+    // Use willReadFrequently: true for better performance
+    const context = canvas.getContext("2d", { 
+      willReadFrequently: true,
+      alpha: true, // Enable transparency
+    });
+    
     if (!context) return;
     
     ctx.current = context;
+    
+    // Set high-quality rendering defaults
     context.lineCap = "round";
     context.lineJoin = "round";
     context.strokeStyle = color;
     context.lineWidth = brushSize;
+    
+    // Enable image smoothing for better quality
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
     
     if (onCanvasRef) {
       onCanvasRef(canvas);
     }
   }, []);
 
-  // Update drawing context when color or brush size changes
+  // Update drawing context when color, brush size, or pen type changes
   useEffect(() => {
     if (!ctx.current) return;
+    
     ctx.current.strokeStyle = color;
     ctx.current.lineWidth = brushSize;
-  }, [color, brushSize]);
+    
+    // Configure pen styles based on pen type
+    switch (penType) {
+      case "brush":
+        ctx.current.lineCap = "round";
+        ctx.current.lineJoin = "round";
+        break;
+      case "pencil":
+        ctx.current.lineCap = "round";
+        ctx.current.lineJoin = "round";
+        break;
+      case "pen":
+        ctx.current.lineCap = "round";
+        ctx.current.lineJoin = "round";
+        break;
+      case "marker":
+        ctx.current.lineCap = "square";
+        ctx.current.lineJoin = "round";
+        break;
+      case "calligraphy":
+        ctx.current.lineCap = "butt";
+        ctx.current.lineJoin = "miter";
+        break;
+      case "highlighter":
+        ctx.current.lineCap = "round";
+        ctx.current.lineJoin = "round";
+        ctx.current.globalAlpha = 0.5; // Semi-transparent for highlighter
+        break;
+      default:
+        ctx.current.lineCap = "round";
+        ctx.current.lineJoin = "round";
+        ctx.current.globalAlpha = 1.0;
+    }
+    
+    if (mode === "erase") {
+      // Set up eraser mode
+      ctx.current.globalCompositeOperation = "destination-out";
+    } else {
+      // Reset to normal drawing mode
+      ctx.current.globalCompositeOperation = "source-over";
+    }
+  }, [color, brushSize, penType, mode]);
   
   // Update canvas dimensions when container size changes
   useEffect(() => {
@@ -84,41 +141,70 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
     canvas.style.height = `${height - rulerSize}px`;
     
     if (ctx.current) {
+      // Scale context for high DPI displays
       ctx.current.scale(devicePixelRatio, devicePixelRatio);
+      
+      // Restore defaults
       ctx.current.lineCap = "round";
       ctx.current.lineJoin = "round";
       ctx.current.strokeStyle = color;
       ctx.current.lineWidth = brushSize;
     }
     
-    redrawObjects();
+    // Use requestAnimationFrame for smoother redrawing
+    if (rafId.current) cancelAnimationFrame(rafId.current);
+    rafId.current = requestAnimationFrame(redrawObjects);
   }, [width, height]);
 
-  // Update the canvas when scale or offset changes
+  // Update the canvas when scale, offset, or objects change
   useEffect(() => {
-    redrawObjects();
+    // Use requestAnimationFrame for smoother updates
+    if (rafId.current) cancelAnimationFrame(rafId.current);
+    rafId.current = requestAnimationFrame(redrawObjects);
   }, [scale, offset, objects]);
 
-  // Redraw all objects on the canvas
+  // Clean up any animation frames on unmount
+  useEffect(() => {
+    return () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
+  }, []);
+
+  // Optimized redraw function for better performance
   const redrawObjects = () => {
     const canvas = canvasRef.current;
     if (!canvas || !ctx.current) return;
     
-    // Clear the canvas
-    ctx.current.clearRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+    // Get the visible canvas dimensions
+    const visibleWidth = canvas.width / (window.devicePixelRatio || 1);
+    const visibleHeight = canvas.height / (window.devicePixelRatio || 1);
+    
+    // Clear only the visible area
+    ctx.current.clearRect(0, 0, visibleWidth, visibleHeight);
     
     // Apply zoom and pan transformations
     ctx.current.save();
     ctx.current.translate(offset.x, offset.y);
     ctx.current.scale(scale, scale);
     
-    // Draw all objects
+    // Draw all objects with optimized rendering
     objects.forEach(obj => {
-      ctx.current!.save();
-      ctx.current!.strokeStyle = obj.color || "#FFFFFF"; // Default to white if no color specified
-      ctx.current!.lineWidth = obj.lineWidth;
-      ctx.current!.globalCompositeOperation = "source-over"; // Ensure all objects draw normally
+      // Skip rendering objects that are completely outside the visible area
+      // This is a simple optimization that avoids unnecessary drawing
+      if (!isObjectVisible(obj, visibleWidth, visibleHeight, scale, offset)) {
+        return;
+      }
       
+      ctx.current!.save();
+      
+      // Set object-specific properties
+      ctx.current!.strokeStyle = obj.color || "#FFFFFF";
+      ctx.current!.lineWidth = obj.lineWidth;
+      
+      // Set drawing mode based on object type
+      ctx.current!.globalCompositeOperation = "source-over";
+      
+      // Apply specific rendering based on object type
       switch (obj.type) {
         case 'rectangle':
           ctx.current!.beginPath();
@@ -171,17 +257,33 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
           break;
         case 'text':
           ctx.current!.font = '24px Arial';
-          ctx.current!.fillStyle = obj.color || "#FFFFFF"; // Default to white for text
+          ctx.current!.fillStyle = obj.color || "#FFFFFF";
           ctx.current!.fillText(obj.text, obj.x, obj.y);
           break;
         case 'draw':
-          // Draw free-hand paths
+          // Draw free-hand paths with optimized algorithm
           if (obj.points && obj.points.length > 1) {
             ctx.current!.beginPath();
             ctx.current!.moveTo(obj.points[0].x, obj.points[0].y);
             
-            for (let i = 1; i < obj.points.length; i++) {
-              ctx.current!.lineTo(obj.points[i].x, obj.points[i].y);
+            // Use optimized path rendering for better performance
+            // When there are many points, we can skip some for better performance
+            const stride = obj.points.length > 100 ? 2 : 1;
+            
+            for (let i = stride; i < obj.points.length; i += stride) {
+              // Use quadratic curves for smoother lines
+              if (i < obj.points.length - 1) {
+                const xc = (obj.points[i].x + obj.points[i + 1].x) / 2;
+                const yc = (obj.points[i].y + obj.points[i + 1].y) / 2;
+                ctx.current!.quadraticCurveTo(
+                  obj.points[i].x, 
+                  obj.points[i].y, 
+                  xc, 
+                  yc
+                );
+              } else {
+                ctx.current!.lineTo(obj.points[i].x, obj.points[i].y);
+              }
             }
             
             ctx.current!.stroke();
@@ -194,6 +296,62 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
     
     // Restore the context to its original state
     ctx.current.restore();
+  };
+  
+  // Helper function to determine if an object is visible in the current viewport
+  const isObjectVisible = (
+    obj: AnyDrawingObject, 
+    visibleWidth: number, 
+    visibleHeight: number, 
+    scale: number, 
+    offset: {x: number, y: number}
+  ) => {
+    // Simple bounding box check
+    let objX = 0, objY = 0, objWidth = 0, objHeight = 0;
+    
+    switch (obj.type) {
+      case 'rectangle':
+        objX = obj.x * scale + offset.x;
+        objY = obj.y * scale + offset.y;
+        objWidth = obj.width * scale;
+        objHeight = obj.height * scale;
+        break;
+      case 'circle':
+        objX = (obj.x - obj.radius) * scale + offset.x;
+        objY = (obj.y - obj.radius) * scale + offset.y;
+        objWidth = obj.radius * 2 * scale;
+        objHeight = obj.radius * 2 * scale;
+        break;
+      case 'draw':
+        if (!obj.points || obj.points.length === 0) return false;
+        
+        // Find bounding box of the drawing
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        obj.points.forEach(point => {
+          minX = Math.min(minX, point.x);
+          minY = Math.min(minY, point.y);
+          maxX = Math.max(maxX, point.x);
+          maxY = Math.max(maxY, point.y);
+        });
+        
+        objX = minX * scale + offset.x;
+        objY = minY * scale + offset.y;
+        objWidth = (maxX - minX) * scale;
+        objHeight = (maxY - minY) * scale;
+        break;
+      // Handle other shape types as needed
+      default:
+        // For other shapes, assume they're visible
+        return true;
+    }
+    
+    // Check if the object is within the visible canvas area
+    return (
+      objX + objWidth >= 0 &&
+      objY + objHeight >= 0 &&
+      objX <= visibleWidth &&
+      objY <= visibleHeight
+    );
   };
 
   return (

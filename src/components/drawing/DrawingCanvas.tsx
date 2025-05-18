@@ -11,17 +11,19 @@ import { useMathSolver } from "@/hooks/use-math-solver";
 import { SWATCHES } from "@/constants";
 import { useHistoryState } from "@/hooks/use-history-state";
 import UndoRedoToolbar from "./UndoRedoToolbar";
+import { PenType } from "./PenSelector";
 
 interface DrawingCanvasProps {
   className?: string;
 }
 
 const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
-  const [color, setColor] = useState(SWATCHES[0]); // Now white by default
+  const [color, setColor] = useState("#FFFFFF"); // White by default
   const [brushSize, setBrushSize] = useState(5);
   const [mode, setMode] = useState<DrawingMode>("draw");
   const [shapeTool, setShapeTool] = useState<ShapeTool>("none");
   const [isShapesOpen, setIsShapesOpen] = useState(false);
+  const [penType, setPenType] = useState<PenType>("brush");
   
   const isMobile = useIsMobile();
 
@@ -57,6 +59,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     color,
     brushSize,
     shapeTool,
+    penType,
     objects,
     setObjects: setObjectsWithHistory
   });
@@ -134,11 +137,13 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
           mode={mode}
           isMobile={isMobile}
           isShapesOpen={isShapesOpen}
+          penType={penType}
           onColorChange={setColor}
           onBrushSizeChange={setBrushSize}
           onModeChange={setMode}
           onShapesOpenChange={setIsShapesOpen}
           onShapeSelect={selectShapeTool}
+          onPenTypeChange={setPenType}
         />
         
         <UndoRedoToolbar
@@ -158,6 +163,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         objects={objects}
         selectedShape={selectedShape}
         shapeTool={shapeTool}
+        penType={penType}
         onObjectsChange={setObjectsWithHistory}
         onSelectedShapeChange={setSelectedShape}
         onDrawingStart={startDrawing}

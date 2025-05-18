@@ -14,17 +14,20 @@ import { DrawingMode, ShapeTool } from "./types";
 import ColorPicker from "./ColorPicker";
 import BrushSizeControl from "./BrushSizeControl";
 import ShapeSelector from "./ShapeSelector";
+import PenSelector, { PenType } from "./PenSelector";
 
 interface MobileToolMenuProps {
   color: string;
   brushSize: number;
   mode: DrawingMode;
   isShapesOpen: boolean;
+  penType: PenType;
   onColorChange: (color: string) => void;
   onBrushSizeChange: (size: number) => void;
   onModeChange: (mode: DrawingMode) => void;
   onShapesOpenChange: (open: boolean) => void;
   onShapeSelect: (shape: ShapeTool) => void;
+  onPenTypeChange: (penType: PenType) => void;
   toggleEraserMode: () => void;
   toggleMoveMode: () => void;
   isEraseActive: boolean;
@@ -36,11 +39,13 @@ const MobileToolMenu: React.FC<MobileToolMenuProps> = ({
   brushSize,
   mode,
   isShapesOpen,
+  penType,
   onColorChange,
   onBrushSizeChange,
   onModeChange,
   onShapesOpenChange,
   onShapeSelect,
+  onPenTypeChange,
   toggleEraserMode,
   toggleMoveMode,
   isEraseActive,
@@ -109,6 +114,14 @@ const MobileToolMenu: React.FC<MobileToolMenuProps> = ({
                 />
               </div>
             </div>
+          </div>
+          
+          <div className="mt-6">
+            <h3 className="font-medium text-sm mb-3">Pen Types</h3>
+            <PenSelector 
+              activePenType={penType} 
+              onPenTypeChange={onPenTypeChange} 
+            />
           </div>
         </div>
         <div className="flex justify-center mt-6">

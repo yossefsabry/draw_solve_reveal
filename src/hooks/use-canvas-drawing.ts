@@ -7,12 +7,14 @@ import { usePointerPosition } from "./canvas/use-pointer-position";
 import { useShapeDrawing } from "./canvas/use-shape-drawing";
 import { useFreeDrawing } from "./canvas/use-free-drawing";
 import { useObjectManipulation } from "./canvas/use-object-manipulation";
+import { PenType } from "@/components/drawing/PenSelector";
 
 interface UseCanvasDrawingProps {
   mode: DrawingMode;
   color: string;
   brushSize: number;
   shapeTool: ShapeTool;
+  penType: PenType;
   objects: AnyDrawingObject[];
   setObjects: (objects: AnyDrawingObject[]) => void;
 }
@@ -22,6 +24,7 @@ export const useCanvasDrawing = ({
   color, 
   brushSize, 
   shapeTool,
+  penType,
   objects,
   setObjects
 }: UseCanvasDrawingProps) => {
@@ -41,12 +44,27 @@ export const useCanvasDrawing = ({
   const { 
     drawingPath, startDrawingPath, addToDrawingPath, finishDrawingPath 
   } = useFreeDrawing({
-    color, brushSize, scale, offset, objects, setObjects, keyPressed
+    color: mode === "erase" ? "#000000" : color, // Use background color for eraser
+    brushSize,
+    scale,
+    offset,
+    objects,
+    setObjects,
+    keyPressed,
+    penType,
+    mode
   });
   const { 
     startShapeDrawing, previewShape, finishShapeDrawing, canvasStateRef, startPointRef 
   } = useShapeDrawing({
-    shapeTool, color, brushSize, scale, offset, objects, setObjects, keyPressed
+    shapeTool,
+    color,
+    brushSize,
+    scale,
+    offset,
+    objects,
+    setObjects,
+    keyPressed
   });
   const { 
     selectedShape, setSelectedShape, startMovingObject, moveSelectedObject, stopMovingObject 
@@ -67,7 +85,7 @@ export const useCanvasDrawing = ({
     const pos = getPointerPosition(e, lastMousePosRef.current);
     lastMousePosRef.current = pos;
     
-    if (mode === "draw") {
+    if (mode === "draw" || mode === "erase") {
       startDrawingPath(pos);
     } else if (mode === "shape") {
       startShapeDrawing(pos, drawingLayerRef.current);
@@ -100,7 +118,7 @@ export const useCanvasDrawing = ({
     // Get current position
     const currentPos = getPointerPosition(e, lastMousePosRef.current);
     
-    if (mode === "draw") {
+    if (mode === "draw" || mode === "erase") {
       addToDrawingPath(currentPos, drawingLayerRef.current);
     } else if (mode === "shape") {
       previewShape(currentPos, drawingLayerRef.current);
@@ -120,7 +138,7 @@ export const useCanvasDrawing = ({
     
     if (!isDrawing) return;
     
-    if (mode === "draw") {
+    if (mode === "draw" || mode === "erase") {
       finishDrawingPath();
     } else if (mode === "shape") {
       finishShapeDrawing(lastMousePosRef.current);

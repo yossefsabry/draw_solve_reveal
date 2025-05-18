@@ -8,6 +8,7 @@ import CanvasBackground from "./CanvasBackground";
 import DrawingLayer from "./DrawingLayer";
 import CanvasOverlays from "./CanvasOverlays";
 import GuideLines from "./GuideLines";
+import { PenType } from "./PenSelector";
 
 interface DrawingAreaProps {
   isDrawing: boolean;
@@ -17,6 +18,7 @@ interface DrawingAreaProps {
   objects: AnyDrawingObject[];
   selectedShape: any;
   shapeTool: ShapeTool;
+  penType: PenType;
   onObjectsChange: (objects: AnyDrawingObject[]) => void;
   onSelectedShapeChange: (shape: any) => void;
   onDrawingStart: (e: React.MouseEvent | React.TouchEvent) => void;
@@ -40,6 +42,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   objects,
   selectedShape,
   shapeTool,
+  penType,
   onObjectsChange,
   onSelectedShapeChange,
   onDrawingStart,
@@ -194,7 +197,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
             canvasHeight={containerSize.height}
           />
           
-          {/* Background canvas (white pattern) */}
+          {/* Background canvas (black pattern) */}
           <CanvasBackground
             scale={scale}
             offset={offset}
@@ -210,6 +213,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
             color={color}
             brushSize={brushSize}
             objects={objects}
+            penType={penType}
             scale={scale}
             offset={offset}
             isPanning={isPanning}
