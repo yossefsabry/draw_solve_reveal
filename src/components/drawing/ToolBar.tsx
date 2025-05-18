@@ -117,13 +117,10 @@ const ToolBar: React.FC<ToolBarProps> = ({
       />
       
       <div className="flex gap-2 items-center">
-        <div className="flex-col">
-          <div className="text-xs text-muted-foreground mb-1">Pen Types</div>
-          <PenSelector 
-            activePenType={penType} 
-            onPenTypeChange={onPenTypeChange} 
-          />
-        </div>
+        <PenSelector 
+          activePenType={penType} 
+          onPenTypeChange={onPenTypeChange} 
+        />
       </div>
 
       <div className="flex gap-2 flex-wrap">

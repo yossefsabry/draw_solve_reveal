@@ -146,7 +146,6 @@ const MobileToolMenu: React.FC<MobileToolMenuProps> = ({
           </div>
           
           <div className="mt-6">
-            <h3 className="font-medium text-sm mb-3">Pen Types</h3>
             <PenSelector 
               activePenType={penType} 
               onPenTypeChange={onPenTypeChange} 

@@ -16,6 +16,7 @@ const EraserCursor: React.FC<EraserCursorProps> = ({
 }) => {
   if (!cursorPosition) return null;
   
+  // Calculate the centered position
   const left = cursorPosition.x * scale + offset.x;
   const top = cursorPosition.y * scale + offset.y;
   
@@ -27,7 +28,8 @@ const EraserCursor: React.FC<EraserCursorProps> = ({
         height: brushSize * 2 * scale,
         transform: 'translate(-50%, -50%)',
         left: `${left}px`,
-        top: `${top}px`
+        top: `${top}px`,
+        boxShadow: '0 0 3px rgba(0,0,0,0.5)' // Add slight shadow for better visibility
       }}
     />
   );
