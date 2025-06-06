@@ -1,8 +1,7 @@
 
 import React, { useRef, useEffect } from "react";
 import { AnyDrawingObject } from "../types";
-import { PenType } from "../PenSelector";
-import { configurePenStyle, drawObjects, drawGrid } from "../utils/CanvasRenderingUtils";
+import { drawObjects, drawGrid } from "../utils/CanvasRenderingUtils";
 
 interface CanvasRendererProps {
   width: number;
@@ -12,7 +11,6 @@ interface CanvasRendererProps {
   offset: { x: number; y: number };
   color: string;
   brushSize: number;
-  penType: PenType;
   mode: string;
   showGrid?: boolean;
   onCanvasRef: (ref: HTMLCanvasElement | null) => void;
@@ -26,7 +24,6 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   offset,
   color,
   brushSize,
-  penType,
   mode,
   showGrid = false,
   onCanvasRef
@@ -51,7 +48,11 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
     ctx.current = context;
     
     // Apply initial pen settings
-    configurePenStyle(context, penType, color, brushSize, mode === "erase");
+    context.strokeStyle = color;
+    context.lineWidth = brushSize;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.globalAlpha = 1.0;
     
     // Pass the reference up
     onCanvasRef(canvas);
@@ -64,8 +65,12 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   // Update pen style when relevant props change
   useEffect(() => {
     if (!ctx.current) return;
-    configurePenStyle(ctx.current, penType, color, brushSize, mode === "erase");
-  }, [penType, color, brushSize, mode]);
+    ctx.current.strokeStyle = color;
+    ctx.current.lineWidth = brushSize;
+    ctx.current.lineCap = "round";
+    ctx.current.lineJoin = "round";
+    ctx.current.globalAlpha = 1.0;
+  }, [color, brushSize, mode]);
 
   // Update canvas dimensions
   useEffect(() => {
@@ -84,7 +89,11 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
       ctx.current.scale(devicePixelRatio, devicePixelRatio);
       
       // Restore pen settings after resize
-      configurePenStyle(ctx.current, penType, color, brushSize, mode === "erase");
+      ctx.current.strokeStyle = color;
+      ctx.current.lineWidth = brushSize;
+      ctx.current.lineCap = "round";
+      ctx.current.lineJoin = "round";
+      ctx.current.globalAlpha = 1.0;
     }
     
     // Redraw after resize

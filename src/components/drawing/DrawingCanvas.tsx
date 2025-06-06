@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ShapeTool, DrawingMode } from "./types";
+import { DrawingMode } from "./types";
 import ToolBar from "./ToolBar";
 import DrawingArea from "./DrawingArea";
 import CanvasFooter from "./CanvasFooter";
@@ -11,7 +11,6 @@ import { useMathSolver } from "@/hooks/use-math-solver";
 import { useHistoryState } from "@/hooks/use-history-state";
 import UndoRedoToolbar from "./UndoRedoToolbar";
 import GridToggle from "./GridToggle";
-import { PenType } from "./PenSelector";
 
 interface DrawingCanvasProps {
   className?: string;
@@ -21,9 +20,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const [color, setColor] = useState("#FFFFFF"); // White by default
   const [brushSize, setBrushSize] = useState(5);
   const [mode, setMode] = useState<DrawingMode>("draw");
-  const [shapeTool, setShapeTool] = useState<ShapeTool>("none");
-  const [isShapesOpen, setIsShapesOpen] = useState(false);
-  const [penType, setPenType] = useState<PenType>("brush");
   const [showGrid, setShowGrid] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -60,8 +56,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     mode,
     color,
     brushSize,
-    shapeTool,
-    penType,
     objects,
     setObjects: setObjectsWithHistory
   });
@@ -112,13 +106,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     }
   };
 
-  // Shape tool selection handler
-  const selectShapeTool = (shape: ShapeTool) => {
-    setShapeTool(shape);
-    setMode("shape");
-    setIsShapesOpen(false); // Close the shapes menu after selection
-  };
-
   // Set canvas reference for the DrawingArea component
   const setCanvasRef = (ref: HTMLCanvasElement | null) => {
     drawingLayerRef.current = ref;
@@ -150,14 +137,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
           brushSize={brushSize}
           mode={mode}
           isMobile={isMobile}
-          isShapesOpen={isShapesOpen}
-          penType={penType}
           onColorChange={setColor}
           onBrushSizeChange={setBrushSize}
           onModeChange={setMode}
-          onShapesOpenChange={setIsShapesOpen}
-          onShapeSelect={selectShapeTool}
-          onPenTypeChange={setPenType}
         />
         
         <div className="flex items-center gap-2">
@@ -179,8 +161,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         brushSize={brushSize}
         objects={objects}
         selectedShape={selectedShape}
-        shapeTool={shapeTool}
-        penType={penType}
         showGrid={showGrid}
         onObjectsChange={setObjectsWithHistory}
         onSelectedShapeChange={setSelectedShape}

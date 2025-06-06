@@ -1,7 +1,6 @@
 
 import React from "react";
 import { AnyDrawingObject, DrawingMode } from "./types";
-import { PenType } from "./PenSelector";
 import CanvasElement from "./layers/CanvasElement";
 import EraserCursor from "./layers/EraserCursor";
 import CanvasRenderer from "./layers/CanvasRenderer";
@@ -12,7 +11,6 @@ interface DrawingLayerProps {
   color: string;
   brushSize: number;
   objects: AnyDrawingObject[];
-  penType: PenType;
   showGrid?: boolean;
   scale: number;
   offset: { x: number; y: number };
@@ -35,7 +33,6 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
   color,
   brushSize,
   objects,
-  penType,
   showGrid = false,
   scale,
   offset,
@@ -81,7 +78,6 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
         offset={offset}
         color={color}
         brushSize={brushSize}
-        penType={penType}
         mode={mode}
         showGrid={showGrid}
         onCanvasRef={() => {}} // This renderer doesn't need the ref

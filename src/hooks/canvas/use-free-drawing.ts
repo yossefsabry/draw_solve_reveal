@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { AnyDrawingObject, DrawObject, DrawingMode } from "@/components/drawing/types";
-import { PenType } from "@/components/drawing/PenSelector";
 
 interface UseFreeDrawingProps {
   color: string;
@@ -10,7 +9,6 @@ interface UseFreeDrawingProps {
   objects: AnyDrawingObject[];
   setObjects: (objects: AnyDrawingObject[]) => void;
   keyPressed: { [key: string]: boolean };
-  penType: PenType;
   mode: DrawingMode;
 }
 
@@ -22,81 +20,11 @@ export const useFreeDrawing = ({
   objects,
   setObjects,
   keyPressed,
-  penType,
   mode
 }: UseFreeDrawingProps) => {
   const [drawingPath, setDrawingPath] = useState<{ x: number; y: number }[]>([]);
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
-  
-  // Handle pen configuration based on pen type with better performance
-  const configurePenSettings = (ctx: CanvasRenderingContext2D) => {
-    // Set basic properties
-    ctx.strokeStyle = color;
-    ctx.lineWidth = brushSize;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.globalAlpha = 1.0;
-    ctx.shadowBlur = 0;
-    
-    // Different pen styles based on pen type
-    switch (penType) {
-      case "brush":
-        ctx.shadowBlur = 2;
-        ctx.shadowColor = color;
-        ctx.lineWidth = brushSize * 1.1;
-        break;
-        
-      case "pencil":
-        ctx.lineWidth = Math.max(1, brushSize * 0.6);
-        ctx.globalAlpha = 0.9;
-        break;
-        
-      case "pen":
-        ctx.lineWidth = brushSize;
-        break;
-        
-      case "marker":
-        ctx.lineCap = "square";
-        ctx.lineWidth = brushSize * 1.4;
-        ctx.globalAlpha = 0.8;
-        break;
-        
-      case "calligraphy":
-        ctx.lineCap = "butt";
-        ctx.lineJoin = "miter";
-        ctx.lineWidth = brushSize * 1.3;
-        break;
-        
-      case "highlighter":
-        ctx.lineWidth = brushSize * 2;
-        ctx.globalAlpha = 0.4;
-        break;
-        
-      case "spray":
-        ctx.shadowBlur = brushSize * 0.5;
-        ctx.shadowColor = color;
-        ctx.lineWidth = brushSize * 0.8;
-        ctx.globalAlpha = 0.7;
-        break;
-        
-      case "charcoal":
-        ctx.shadowBlur = 1;
-        ctx.shadowColor = color;
-        ctx.lineWidth = brushSize * 1.2;
-        ctx.globalAlpha = 0.85;
-        break;
-    }
-    
-    // Handle eraser mode
-    if (mode === "erase") {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.globalAlpha = 1.0;
-      ctx.shadowBlur = 0;
-    } else {
-      ctx.globalCompositeOperation = "source-over";
-    }
-  };
   
   // Start a new drawing path
   const startDrawingPath = (pos: { x: number; y: number }) => {
@@ -140,8 +68,19 @@ export const useFreeDrawing = ({
         ctx.translate(offset.x, offset.y);
         ctx.scale(scale, scale);
         
-        // Configure pen settings based on pen type
-        configurePenSettings(ctx);
+        // Basic pen settings
+        ctx.strokeStyle = color;
+        ctx.lineWidth = brushSize;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.globalAlpha = 1.0;
+        
+        // Handle eraser mode
+        if (mode === "erase") {
+          ctx.globalCompositeOperation = "destination-out";
+        } else {
+          ctx.globalCompositeOperation = "source-over";
+        }
         
         // Optimized line drawing
         ctx.beginPath();

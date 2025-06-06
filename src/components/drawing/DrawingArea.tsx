@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState } from "react";
-import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
+import { AnyDrawingObject, DrawingMode } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Rulers from "./Rulers";
 import ZoomControls from "./ZoomControls";
@@ -8,7 +8,6 @@ import CanvasBackground from "./CanvasBackground";
 import DrawingLayer from "./DrawingLayer";
 import CanvasOverlays from "./CanvasOverlays";
 import GuideLines from "./GuideLines";
-import { PenType } from "./PenSelector";
 
 interface DrawingAreaProps {
   isDrawing: boolean;
@@ -17,8 +16,6 @@ interface DrawingAreaProps {
   brushSize: number;
   objects: AnyDrawingObject[];
   selectedShape: any;
-  shapeTool: ShapeTool;
-  penType: PenType;
   showGrid?: boolean;
   onObjectsChange: (objects: AnyDrawingObject[]) => void;
   onSelectedShapeChange: (shape: any) => void;
@@ -42,8 +39,6 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   brushSize,
   objects,
   selectedShape,
-  shapeTool,
-  penType,
   showGrid = false,
   onObjectsChange,
   onSelectedShapeChange,
@@ -206,7 +201,6 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
             color={color}
             brushSize={brushSize}
             objects={objects}
-            penType={penType}
             showGrid={showGrid}
             scale={scale}
             offset={offset}

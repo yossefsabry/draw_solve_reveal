@@ -1,20 +1,16 @@
 
 import { useState, useRef } from "react";
-import { AnyDrawingObject, DrawingMode, ShapeTool } from "@/components/drawing/types";
+import { AnyDrawingObject, DrawingMode } from "@/components/drawing/types";
 import { useZoomPan } from "./canvas/use-zoom-pan";
 import { useKeyboardControl } from "./canvas/use-keyboard-control";
 import { usePointerPosition } from "./canvas/use-pointer-position";
-import { useShapeDrawing } from "./canvas/use-shape-drawing";
 import { useFreeDrawing } from "./canvas/use-free-drawing";
 import { useObjectManipulation } from "./canvas/use-object-manipulation";
-import { PenType } from "@/components/drawing/PenSelector";
 
 interface UseCanvasDrawingProps {
   mode: DrawingMode;
   color: string;
   brushSize: number;
-  shapeTool: ShapeTool;
-  penType: PenType;
   objects: AnyDrawingObject[];
   setObjects: (objects: AnyDrawingObject[]) => void;
 }
@@ -23,8 +19,6 @@ export const useCanvasDrawing = ({
   mode, 
   color, 
   brushSize, 
-  shapeTool,
-  penType,
   objects,
   setObjects
 }: UseCanvasDrawingProps) => {
@@ -51,20 +45,7 @@ export const useCanvasDrawing = ({
     objects,
     setObjects,
     keyPressed,
-    penType,
     mode
-  });
-  const { 
-    startShapeDrawing, previewShape, finishShapeDrawing, canvasStateRef, startPointRef 
-  } = useShapeDrawing({
-    shapeTool,
-    color,
-    brushSize,
-    scale,
-    offset,
-    objects,
-    setObjects,
-    keyPressed
   });
   const { 
     selectedShape, setSelectedShape, startMovingObject, moveSelectedObject, stopMovingObject 
@@ -87,8 +68,6 @@ export const useCanvasDrawing = ({
     
     if (mode === "draw" || mode === "erase") {
       startDrawingPath(pos);
-    } else if (mode === "shape") {
-      startShapeDrawing(pos, drawingLayerRef.current);
     } else if (mode === "move") {
       startMovingObject(pos);
     }
@@ -120,8 +99,6 @@ export const useCanvasDrawing = ({
     
     if (mode === "draw" || mode === "erase") {
       addToDrawingPath(currentPos, drawingLayerRef.current);
-    } else if (mode === "shape") {
-      previewShape(currentPos, drawingLayerRef.current);
     } else if (mode === "move") {
       moveSelectedObject(currentPos);
     }
@@ -140,8 +117,6 @@ export const useCanvasDrawing = ({
     
     if (mode === "draw" || mode === "erase") {
       finishDrawingPath();
-    } else if (mode === "shape") {
-      finishShapeDrawing(lastMousePosRef.current);
     }
     
     // Reset references and state
