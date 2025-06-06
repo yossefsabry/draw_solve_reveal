@@ -14,11 +14,16 @@ export const isObjectVisible = (
   
   switch (obj.type) {
     case 'rectangle':
-    case 'ellipse':
       objX = obj.x * scale + offset.x;
       objY = obj.y * scale + offset.y;
       objWidth = obj.width * scale;
       objHeight = obj.height * scale;
+      break;
+    case 'ellipse':
+      objX = (obj.x - obj.radiusX) * scale + offset.x;
+      objY = (obj.y - obj.radiusY) * scale + offset.y;
+      objWidth = obj.radiusX * 2 * scale;
+      objHeight = obj.radiusY * 2 * scale;
       break;
     case 'circle':
       objX = (obj.x - obj.radius) * scale + offset.x;
@@ -282,10 +287,10 @@ function drawEllipse(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   
   ctx.beginPath();
   ctx.ellipse(
-    obj.x + obj.width / 2, 
-    obj.y + obj.height / 2, 
-    obj.width / 2, 
-    obj.height / 2, 
+    obj.x + obj.radiusX, 
+    obj.y + obj.radiusY, 
+    obj.radiusX, 
+    obj.radiusY, 
     0, 0, 2 * Math.PI
   );
   ctx.stroke();

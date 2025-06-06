@@ -42,8 +42,8 @@ export const createShapeObject = (
         type: 'ellipse',
         x: Math.min(startX, endX),
         y: Math.min(startY, endY),
-        width: width,
-        height: height,
+        radiusX: width / 2,
+        radiusY: height / 2,
         color,
         lineWidth: brushSize
       };
