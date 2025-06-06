@@ -21,55 +21,55 @@ interface PenSelectorProps {
 }
 
 const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChange }) => {
-  // Enhanced pen types with more options like GIMP
+  // Simplified pen types with shorter names
   const penTypes = [
     { 
       type: "brush" as PenType, 
       icon: <Brush />, 
       tooltip: "Brush", 
-      description: "Soft artistic brush"
+      description: "Soft brush"
     },
     { 
       type: "pencil" as PenType, 
       icon: <Pencil />, 
       tooltip: "Pencil", 
-      description: "Precise thin lines"
+      description: "Thin lines"
     },
     { 
       type: "pen" as PenType, 
       icon: <Pen />, 
       tooltip: "Pen", 
-      description: "Clean consistent ink"
+      description: "Clean ink"
     },
     { 
       type: "marker" as PenType, 
       icon: <PencilLine />, 
       tooltip: "Marker", 
-      description: "Bold thick strokes"
+      description: "Bold strokes"
     },
     { 
       type: "calligraphy" as PenType, 
       icon: <Paintbrush />, 
-      tooltip: "Calligraphy", 
-      description: "Angled artistic pen"
+      tooltip: "Calli", 
+      description: "Angled pen"
     },
     { 
       type: "highlighter" as PenType, 
       icon: <PaintbrushVertical />, 
-      tooltip: "Highlighter", 
-      description: "Transparent overlay"
+      tooltip: "Light", 
+      description: "Transparent"
     },
     { 
       type: "spray" as PenType, 
       icon: <Pipette />, 
       tooltip: "Spray", 
-      description: "Airbrush effect"
+      description: "Airbrush"
     },
     { 
       type: "charcoal" as PenType, 
       icon: <Eraser />, 
-      tooltip: "Charcoal", 
-      description: "Textured artistic tool"
+      tooltip: "Coal", 
+      description: "Textured"
     },
   ];
 
@@ -99,7 +99,7 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
       </TooltipProvider>
       
       <PopoverContent className="w-80 p-3">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {penTypes.map((pen) => (
             <TooltipProvider key={pen.type}>
               <Tooltip>
@@ -112,13 +112,10 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
                       activePenType === pen.type 
                         ? "bg-primary text-primary-foreground ring-2 ring-primary shadow-md" 
                         : "hover:bg-secondary"
-                    } w-full h-20 flex flex-col items-center justify-center gap-1 p-2 transition-all`}
+                    } w-full h-16 flex flex-col items-center justify-center gap-1 p-1 transition-all`}
                   >
-                    <div className="text-lg">{pen.icon}</div>
+                    <div className="text-base">{pen.icon}</div>
                     <div className="text-xs font-medium">{pen.tooltip}</div>
-                    <div className="text-[10px] text-muted-foreground text-center leading-tight">
-                      {pen.description}
-                    </div>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>

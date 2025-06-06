@@ -11,23 +11,39 @@ export const createShapeObject = (
   color: string,
   brushSize: number
 ): AnyDrawingObject | null => {
+  // Ensure minimum size for shapes
+  const minSize = 50;
+  const width = Math.max(Math.abs(endX - startX), minSize);
+  const height = Math.max(Math.abs(endY - startY), minSize);
+  
   switch (shapeTool) {
     case "rectangle":
       return {
         type: 'rectangle',
-        x: startX,
-        y: startY,
-        width: endX - startX,
-        height: endY - startY,
+        x: Math.min(startX, endX),
+        y: Math.min(startY, endY),
+        width: width,
+        height: height,
         color,
         lineWidth: brushSize
       };
     case "circle":
+      const radius = Math.max(Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)), minSize / 2);
       return {
         type: 'circle',
         x: startX,
         y: startY,
-        radius: Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)),
+        radius: radius,
+        color,
+        lineWidth: brushSize
+      };
+    case "ellipse":
+      return {
+        type: 'ellipse',
+        x: Math.min(startX, endX),
+        y: Math.min(startY, endY),
+        width: width,
+        height: height,
         color,
         lineWidth: brushSize
       };
@@ -63,6 +79,36 @@ export const createShapeObject = (
         color,
         lineWidth: brushSize
       };
+    case "polygon":
+      // Simple hexagon
+      const centerX = (startX + endX) / 2;
+      const centerY = (startY + endY) / 2;
+      const hexRadius = Math.max(Math.abs(endX - startX) / 2, minSize / 2);
+      const points = [];
+      
+      for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3;
+        points.push({
+          x: centerX + hexRadius * Math.cos(angle),
+          y: centerY + hexRadius * Math.sin(angle)
+        });
+      }
+      
+      return {
+        type: 'polygon',
+        points: points,
+        color,
+        lineWidth: brushSize
+      };
+    case "text":
+      return {
+        type: 'text',
+        x: startX,
+        y: startY,
+        text: "Sample Text",
+        color,
+        lineWidth: brushSize
+      };
     default:
       return null;
   }
@@ -77,16 +123,31 @@ export const drawShapePreview = (
   endX: number,
   endY: number
 ) => {
+  const minSize = 50;
+  const width = Math.max(Math.abs(endX - startX), minSize);
+  const height = Math.max(Math.abs(endY - startY), minSize);
+  
   switch (shapeTool) {
     case "rectangle":
       ctx.beginPath();
-      ctx.rect(startX, startY, endX - startX, endY - startY);
+      ctx.rect(Math.min(startX, endX), Math.min(startY, endY), width, height);
       ctx.stroke();
       break;
     case "circle":
       ctx.beginPath();
-      const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+      const radius = Math.max(Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)), minSize / 2);
       ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+      ctx.stroke();
+      break;
+    case "ellipse":
+      ctx.beginPath();
+      ctx.ellipse(
+        (startX + endX) / 2, 
+        (startY + endY) / 2, 
+        width / 2, 
+        height / 2, 
+        0, 0, 2 * Math.PI
+      );
       ctx.stroke();
       break;
     case "triangle":
@@ -112,7 +173,7 @@ export const drawShapePreview = (
       
       // Calculate the arrow head
       const angle = Math.atan2(endY - startY, endX - startX);
-      const headLength = 15; // Length of arrow head
+      const headLength = 20;
       
       // Draw the arrow head
       ctx.beginPath();
@@ -127,6 +188,32 @@ export const drawShapePreview = (
         endY - headLength * Math.sin(angle + Math.PI / 6)
       );
       ctx.stroke();
+      break;
+    case "polygon":
+      // Simple hexagon preview
+      const centerX = (startX + endX) / 2;
+      const centerY = (startY + endY) / 2;
+      const hexRadius = Math.max(Math.abs(endX - startX) / 2, minSize / 2);
+      
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const hexAngle = (i * Math.PI) / 3;
+        const x = centerX + hexRadius * Math.cos(hexAngle);
+        const y = centerY + hexRadius * Math.sin(hexAngle);
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.closePath();
+      ctx.stroke();
+      break;
+    case "text":
+      ctx.font = '24px Arial';
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fillText("Sample Text", startX, startY);
       break;
   }
 };

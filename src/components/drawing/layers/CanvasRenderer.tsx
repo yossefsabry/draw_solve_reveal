@@ -2,7 +2,7 @@
 import React, { useRef, useEffect } from "react";
 import { AnyDrawingObject } from "../types";
 import { PenType } from "../PenSelector";
-import { configurePenStyle, drawObjects } from "../utils/CanvasRenderingUtils";
+import { configurePenStyle, drawObjects, drawGrid } from "../utils/CanvasRenderingUtils";
 
 interface CanvasRendererProps {
   width: number;
@@ -14,6 +14,7 @@ interface CanvasRendererProps {
   brushSize: number;
   penType: PenType;
   mode: string;
+  showGrid?: boolean;
   onCanvasRef: (ref: HTMLCanvasElement | null) => void;
 }
 
@@ -27,6 +28,7 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   brushSize,
   penType,
   mode,
+  showGrid = false,
   onCanvasRef
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -40,8 +42,8 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
     
     // Use optimized context settings
     const context = canvas.getContext("2d", { 
-      willReadFrequently: true,
-      alpha: true, // Enable transparency
+      willReadFrequently: false,
+      alpha: true,
     });
     
     if (!context) return;
@@ -90,11 +92,11 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
     rafId.current = requestAnimationFrame(redrawObjects);
   }, [width, height]);
 
-  // Update rendering when objects, scale or offset change
+  // Update rendering when objects, scale, offset, or grid change
   useEffect(() => {
     if (rafId.current) cancelAnimationFrame(rafId.current);
     rafId.current = requestAnimationFrame(redrawObjects);
-  }, [objects, scale, offset]);
+  }, [objects, scale, offset, showGrid]);
 
   // Clean up animation frames on unmount
   useEffect(() => {
@@ -115,6 +117,15 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
     // Clear the canvas
     ctx.current.clearRect(0, 0, visibleWidth, visibleHeight);
     
+    // Draw black background
+    ctx.current.fillStyle = "#000000";
+    ctx.current.fillRect(0, 0, visibleWidth, visibleHeight);
+    
+    // Draw grid if enabled
+    if (showGrid) {
+      drawGrid(ctx.current, visibleWidth, visibleHeight, scale, offset);
+    }
+    
     // Draw all objects
     drawObjects(ctx.current, objects, visibleWidth, visibleHeight, scale, offset);
   };
@@ -122,8 +133,10 @@ const CanvasRenderer: React.FC<CanvasRendererProps> = ({
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0"
+      className="absolute inset-0 pointer-events-none"
       style={{
+        marginTop: 26, // Ruler size
+        marginLeft: 26, // Ruler size
         width: '100%',
         height: '100%'
       }}

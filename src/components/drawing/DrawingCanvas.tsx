@@ -10,6 +10,7 @@ import { useCanvasDrawing } from "@/hooks/use-canvas-drawing";
 import { useMathSolver } from "@/hooks/use-math-solver";
 import { useHistoryState } from "@/hooks/use-history-state";
 import UndoRedoToolbar from "./UndoRedoToolbar";
+import GridToggle from "./GridToggle";
 import { PenType } from "./PenSelector";
 
 interface DrawingCanvasProps {
@@ -23,6 +24,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const [shapeTool, setShapeTool] = useState<ShapeTool>("none");
   const [isShapesOpen, setIsShapesOpen] = useState(false);
   const [penType, setPenType] = useState<PenType>("brush");
+  const [showGrid, setShowGrid] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMobile = useIsMobile();
@@ -158,13 +160,16 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
           onPenTypeChange={setPenType}
         />
         
-        <UndoRedoToolbar
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={undo}
-          onRedo={redo}
-          isMobile={isMobile}
-        />
+        <div className="flex items-center gap-2">
+          <GridToggle showGrid={showGrid} onToggle={setShowGrid} />
+          <UndoRedoToolbar
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={undo}
+            onRedo={redo}
+            isMobile={isMobile}
+          />
+        </div>
       </div>
       
       <DrawingArea
@@ -176,6 +181,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         selectedShape={selectedShape}
         shapeTool={shapeTool}
         penType={penType}
+        showGrid={showGrid}
         onObjectsChange={setObjectsWithHistory}
         onSelectedShapeChange={setSelectedShape}
         onDrawingStart={startDrawing}

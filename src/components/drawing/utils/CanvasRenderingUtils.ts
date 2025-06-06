@@ -9,11 +9,12 @@ export const isObjectVisible = (
   scale: number, 
   offset: {x: number, y: number}
 ): boolean => {
-  // Simple bounding box check
+  // Simple bounding box check for performance
   let objX = 0, objY = 0, objWidth = 0, objHeight = 0;
   
   switch (obj.type) {
     case 'rectangle':
+    case 'ellipse':
       objX = obj.x * scale + offset.x;
       objY = obj.y * scale + offset.y;
       objWidth = obj.width * scale;
@@ -42,9 +43,7 @@ export const isObjectVisible = (
       objWidth = (maxX - minX) * scale;
       objHeight = (maxY - minY) * scale;
       break;
-    // Handle other shape types as needed
     default:
-      // For other shapes, assume they're visible
       return true;
   }
   
@@ -57,7 +56,7 @@ export const isObjectVisible = (
   );
 };
 
-// Configure pen settings based on pen type with enhanced effects
+// Configure pen settings with optimized performance
 export const configurePenStyle = (ctx: CanvasRenderingContext2D, penType: string, color: string, brushSize: number, isEraser: boolean = false): void => {
   // Reset context to defaults
   ctx.lineCap = "round";
@@ -66,51 +65,46 @@ export const configurePenStyle = (ctx: CanvasRenderingContext2D, penType: string
   ctx.lineWidth = brushSize;
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1.0;
-  ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any transforms
   
   // Apply specific pen type settings if not in eraser mode
   if (!isEraser) {
     switch (penType) {
       case "brush":
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = 2;
         ctx.shadowColor = color;
-        ctx.lineWidth = brushSize * 1.2;
+        ctx.lineWidth = brushSize * 1.1;
         break;
       case "pencil":
-        ctx.lineWidth = Math.max(1, brushSize * 0.4);
+        ctx.lineWidth = Math.max(1, brushSize * 0.6);
         ctx.globalAlpha = 0.9;
         break;
       case "pen":
         ctx.lineWidth = brushSize;
-        ctx.shadowBlur = 1;
-        ctx.shadowColor = color;
         break;
       case "marker":
         ctx.lineCap = "square";
-        ctx.lineJoin = "round";
-        ctx.lineWidth = brushSize * 1.8;
-        ctx.globalAlpha = 0.6;
+        ctx.lineWidth = brushSize * 1.4;
+        ctx.globalAlpha = 0.8;
         break;
       case "calligraphy":
         ctx.lineCap = "butt";
         ctx.lineJoin = "miter";
-        ctx.lineWidth = brushSize * 1.5;
-        ctx.setTransform(1, 0, 0.3, 1, 0, 0);
+        ctx.lineWidth = brushSize * 1.3;
         break;
       case "highlighter":
-        ctx.lineWidth = brushSize * 3;
-        ctx.globalAlpha = 0.2;
+        ctx.lineWidth = brushSize * 2;
+        ctx.globalAlpha = 0.4;
         break;
       case "spray":
-        ctx.lineWidth = brushSize * 2;
-        ctx.shadowBlur = brushSize;
+        ctx.shadowBlur = brushSize * 0.5;
         ctx.shadowColor = color;
-        ctx.globalAlpha = 0.8;
+        ctx.lineWidth = brushSize * 0.8;
+        ctx.globalAlpha = 0.7;
         break;
       case "charcoal":
-        ctx.lineWidth = brushSize * 1.5;
-        ctx.shadowBlur = 2;
+        ctx.shadowBlur = 1;
         ctx.shadowColor = color;
+        ctx.lineWidth = brushSize * 1.2;
         ctx.globalAlpha = 0.85;
         break;
     }
@@ -125,7 +119,7 @@ export const configurePenStyle = (ctx: CanvasRenderingContext2D, penType: string
   }
 }
 
-// Draw all objects to the canvas
+// Draw all objects to the canvas with optimized performance
 export const drawObjects = (
   ctx: CanvasRenderingContext2D,
   objects: AnyDrawingObject[],
@@ -165,6 +159,9 @@ export const drawObjects = (
       case 'circle':
         drawCircle(ctx, obj);
         break;
+      case 'ellipse':
+        drawEllipse(ctx, obj);
+        break;
       case 'triangle':
         drawTriangle(ctx, obj);
         break;
@@ -177,6 +174,9 @@ export const drawObjects = (
       case 'text':
         drawText(ctx, obj);
         break;
+      case 'polygon':
+        drawPolygon(ctx, obj);
+        break;
       case 'draw':
         drawPath(ctx, obj);
         break;
@@ -186,6 +186,40 @@ export const drawObjects = (
   });
   
   // Restore the context to its original state
+  ctx.restore();
+};
+
+// Draw simple grid overlay
+export const drawGrid = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  scale: number,
+  offset: {x: number, y: number}
+): void => {
+  const gridSize = 20;
+  
+  ctx.save();
+  ctx.strokeStyle = '#333333';
+  ctx.lineWidth = 0.5;
+  ctx.globalAlpha = 0.3;
+  
+  // Vertical lines
+  for (let x = 0; x <= width; x += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  
+  // Horizontal lines
+  for (let y = 0; y <= height; y += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+  
   ctx.restore();
 };
 
@@ -243,6 +277,26 @@ function drawCircle(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   ctx.globalAlpha = 1.0;
 }
 
+function drawEllipse(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'ellipse') return;
+  
+  ctx.beginPath();
+  ctx.ellipse(
+    obj.x + obj.width / 2, 
+    obj.y + obj.height / 2, 
+    obj.width / 2, 
+    obj.height / 2, 
+    0, 0, 2 * Math.PI
+  );
+  ctx.stroke();
+  
+  // Add subtle fill for better visibility
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+}
+
 function drawTriangle(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   if (obj.type !== 'triangle') return;
   
@@ -250,6 +304,26 @@ function drawTriangle(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   ctx.moveTo(obj.x1, obj.y1);
   ctx.lineTo(obj.x2, obj.y2);
   ctx.lineTo(obj.x3, obj.y3);
+  ctx.closePath();
+  ctx.stroke();
+  
+  // Add subtle fill for better visibility
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+}
+
+function drawPolygon(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'polygon' || !obj.points || obj.points.length === 0) return;
+  
+  ctx.beginPath();
+  ctx.moveTo(obj.points[0].x, obj.points[0].y);
+  
+  for (let i = 1; i < obj.points.length; i++) {
+    ctx.lineTo(obj.points[i].x, obj.points[i].y);
+  }
+  
   ctx.closePath();
   ctx.stroke();
   
@@ -280,7 +354,7 @@ function drawArrow(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   
   // Calculate the arrow head
   const angle = Math.atan2(obj.y2 - obj.y1, obj.x2 - obj.x1);
-  const headLength = 20; // Slightly larger arrow head
+  const headLength = 20;
   
   // Draw the arrow head
   ctx.beginPath();
@@ -311,23 +385,9 @@ function drawPath(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   ctx.beginPath();
   ctx.moveTo(obj.points[0].x, obj.points[0].y);
   
-  // Use optimized path rendering for better performance
-  const stride = obj.points.length > 100 ? 2 : 1;
-  
-  for (let i = stride; i < obj.points.length; i += stride) {
-    // Use quadratic curves for smoother lines
-    if (i < obj.points.length - 1) {
-      const xc = (obj.points[i].x + obj.points[i + 1].x) / 2;
-      const yc = (obj.points[i].y + obj.points[i + 1].y) / 2;
-      ctx.quadraticCurveTo(
-        obj.points[i].x, 
-        obj.points[i].y, 
-        xc, 
-        yc
-      );
-    } else {
-      ctx.lineTo(obj.points[i].x, obj.points[i].y);
-    }
+  // Optimized path rendering for better performance
+  for (let i = 1; i < obj.points.length; i++) {
+    ctx.lineTo(obj.points[i].x, obj.points[i].y);
   }
   
   ctx.stroke();

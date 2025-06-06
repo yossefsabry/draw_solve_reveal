@@ -13,6 +13,7 @@ interface DrawingLayerProps {
   brushSize: number;
   objects: AnyDrawingObject[];
   penType: PenType;
+  showGrid?: boolean;
   scale: number;
   offset: { x: number; y: number };
   isPanning: boolean;
@@ -35,6 +36,7 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
   brushSize,
   objects,
   penType,
+  showGrid = false,
   scale,
   offset,
   isPanning,
@@ -68,6 +70,21 @@ const DrawingLayer: React.FC<DrawingLayerProps> = ({
         onMouseUp={onPointerUp}
         onMouseLeave={onPointerLeave}
         onWheel={onWheel}
+      />
+      
+      {/* Canvas renderer with grid support */}
+      <CanvasRenderer
+        width={canvasWidth}
+        height={canvasHeight}
+        objects={objects}
+        scale={scale}
+        offset={offset}
+        color={color}
+        brushSize={brushSize}
+        penType={penType}
+        mode={mode}
+        showGrid={showGrid}
+        onCanvasRef={() => {}} // This renderer doesn't need the ref
       />
       
       {/* Eraser cursor indicator */}

@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from "react";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,6 +19,7 @@ interface DrawingAreaProps {
   selectedShape: any;
   shapeTool: ShapeTool;
   penType: PenType;
+  showGrid?: boolean;
   onObjectsChange: (objects: AnyDrawingObject[]) => void;
   onSelectedShapeChange: (shape: any) => void;
   onDrawingStart: (e: React.MouseEvent | React.TouchEvent) => void;
@@ -42,6 +44,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   selectedShape,
   shapeTool,
   penType,
+  showGrid = false,
   onObjectsChange,
   onSelectedShapeChange,
   onDrawingStart,
@@ -59,7 +62,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [drawingPath, setDrawingPath] = useState<{ x: number; y: number }[]>([]);
-  const RULER_SIZE = 26; // Match the ruler size from Rulers component
+  const RULER_SIZE = 26;
   
   // Initialize container size
   useEffect(() => {
@@ -132,27 +135,18 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
   // Zoom control handlers
   const zoomIn = () => {
     if (onSetScale) {
-      // Increase zoom by 10%
       const newScale = Math.min(scale * 1.1, 4.28);
       onSetScale(newScale);
-    } else if (handleWheel) {
-      const wheelEvent = new WheelEvent('wheel', { deltaY: -120 }) as unknown as React.WheelEvent;
-      handleWheel(wheelEvent);
     }
   };
   
   const zoomOut = () => {
     if (onSetScale) {
-      // Decrease zoom by 10%
       const newScale = Math.max(scale * 0.9, 0.5);
       onSetScale(newScale);
-    } else if (handleWheel) {
-      const wheelEvent = new WheelEvent('wheel', { deltaY: 120 }) as unknown as React.WheelEvent;
-      handleWheel(wheelEvent);
     }
   };
   
-  // Direct zoom change handler
   const handleZoomChange = (newScale: number) => {
     if (onSetScale) {
       onSetScale(newScale);
@@ -213,6 +207,7 @@ const DrawingArea: React.FC<DrawingAreaProps> = ({
             brushSize={brushSize}
             objects={objects}
             penType={penType}
+            showGrid={showGrid}
             scale={scale}
             offset={offset}
             isPanning={isPanning}

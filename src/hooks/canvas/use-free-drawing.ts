@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { AnyDrawingObject, DrawObject, DrawingMode } from "@/components/drawing/types";
 import { PenType } from "@/components/drawing/PenSelector";
@@ -30,77 +29,70 @@ export const useFreeDrawing = ({
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
   
-  // Handle pen configuration based on pen type
+  // Handle pen configuration based on pen type with better performance
   const configurePenSettings = (ctx: CanvasRenderingContext2D) => {
     // Set basic properties
     ctx.strokeStyle = color;
     ctx.lineWidth = brushSize;
-    
-    // Reset any previous settings
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.globalAlpha = 1.0;
     ctx.shadowBlur = 0;
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any transforms
     
     // Different pen styles based on pen type
     switch (penType) {
       case "brush":
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        // A more "brush-like" effect
-        ctx.shadowBlur = 3;
+        ctx.shadowBlur = 2;
         ctx.shadowColor = color;
-        ctx.lineWidth = brushSize * 1.2;
+        ctx.lineWidth = brushSize * 1.1;
         break;
         
       case "pencil":
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        // Pencil has a thinner line
-        ctx.lineWidth = Math.max(1, brushSize * 0.5);
-        ctx.globalAlpha = 0.8;
+        ctx.lineWidth = Math.max(1, brushSize * 0.6);
+        ctx.globalAlpha = 0.9;
         break;
         
       case "pen":
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
         ctx.lineWidth = brushSize;
         break;
         
       case "marker":
         ctx.lineCap = "square";
-        ctx.lineJoin = "bevel";
-        ctx.lineWidth = brushSize * 1.5;
-        ctx.globalAlpha = 0.7;
+        ctx.lineWidth = brushSize * 1.4;
+        ctx.globalAlpha = 0.8;
         break;
         
       case "calligraphy":
-        // Calligraphy has varying line width based on angle
         ctx.lineCap = "butt";
         ctx.lineJoin = "miter";
-        ctx.lineWidth = brushSize * 1.5;
-        
-        // Rotate for calligraphy effect
-        ctx.setTransform(1, 0, 0.5, 1, 0, 0);
+        ctx.lineWidth = brushSize * 1.3;
         break;
         
       case "highlighter":
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
         ctx.lineWidth = brushSize * 2;
-        ctx.globalAlpha = 0.3; // More transparent
+        ctx.globalAlpha = 0.4;
         break;
         
-      default:
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
+      case "spray":
+        ctx.shadowBlur = brushSize * 0.5;
+        ctx.shadowColor = color;
+        ctx.lineWidth = brushSize * 0.8;
+        ctx.globalAlpha = 0.7;
+        break;
+        
+      case "charcoal":
+        ctx.shadowBlur = 1;
+        ctx.shadowColor = color;
+        ctx.lineWidth = brushSize * 1.2;
+        ctx.globalAlpha = 0.85;
+        break;
     }
     
     // Handle eraser mode
     if (mode === "erase") {
       ctx.globalCompositeOperation = "destination-out";
-      ctx.globalAlpha = 1.0; // Ensure full opacity for eraser
+      ctx.globalAlpha = 1.0;
       ctx.shadowBlur = 0;
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any transforms
     } else {
       ctx.globalCompositeOperation = "source-over";
     }
@@ -113,7 +105,7 @@ export const useFreeDrawing = ({
     startPosRef.current = pos;
   };
   
-  // Add to the current drawing path
+  // Add to the current drawing path with improved performance
   const addToDrawingPath = (pos: { x: number; y: number }, canvas: HTMLCanvasElement | null) => {
     // Determine straight line constraints
     let currentPos = pos;
@@ -140,9 +132,9 @@ export const useFreeDrawing = ({
     
     setDrawingPath(prev => [...prev, currentPos]);
     
-    // Draw directly to canvas with improved line smoothing
+    // Draw directly to canvas with optimized performance
     if (canvas && lastPosRef.current) {
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: false });
       if (ctx) {
         ctx.save();
         ctx.translate(offset.x, offset.y);
@@ -151,52 +143,20 @@ export const useFreeDrawing = ({
         // Configure pen settings based on pen type
         configurePenSettings(ctx);
         
-        // Improved line drawing with better smoothing
+        // Optimized line drawing
         ctx.beginPath();
         ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
         
-        if (keyPressed.ctrl) {
+        if (keyPressed.ctrl && startPosRef.current) {
           // Draw straight line when Ctrl is pressed
-          // Use the start position for better straight lines
-          ctx.moveTo(startPosRef.current!.x, startPosRef.current!.y);
+          ctx.moveTo(startPosRef.current.x, startPosRef.current.y);
           ctx.lineTo(currentPos.x, currentPos.y);
         } else {
-          // Apply different smoothing based on pen type
-          if (penType === "calligraphy") {
-            // Calligraphy pen has no smoothing
-            ctx.lineTo(currentPos.x, currentPos.y);
-          } else {
-            // Enhanced smoothing for most pen types
-            const midX = (lastPosRef.current.x + currentPos.x) / 2;
-            const midY = (lastPosRef.current.y + currentPos.y) / 2;
-            
-            // For better performance on high-speed movements, use simple lines
-            const distance = Math.sqrt(
-              Math.pow(currentPos.x - lastPosRef.current.x, 2) + 
-              Math.pow(currentPos.y - lastPosRef.current.y, 2)
-            );
-            
-            if (distance > 20) {
-              // For fast movements, use simple line
-              ctx.lineTo(currentPos.x, currentPos.y);
-            } else {
-              // For careful drawing, use quadratic curve for smoother lines
-              ctx.quadraticCurveTo(
-                lastPosRef.current.x, 
-                lastPosRef.current.y,
-                midX, midY
-              );
-            }
-          }
+          // Simple line to for better performance
+          ctx.lineTo(currentPos.x, currentPos.y);
         }
         
         ctx.stroke();
-        
-        // Reset transform for calligraphy
-        if (penType === "calligraphy" && mode !== "erase") {
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-        }
-        
         ctx.restore();
       }
     }
