@@ -34,7 +34,16 @@ export const useObjectManipulation = ({
           offsetX: pos.x - obj.points[0].x,
           offsetY: pos.y - obj.points[0].y,
         });
+      } else if (obj.type === 'polygon') {
+        // For polygons, use the first point as reference
+        const firstPoint = obj.points[0];
+        setSelectedShape({
+          index: clickedObjectIndex,
+          offsetX: pos.x - firstPoint.x,
+          offsetY: pos.y - firstPoint.y,
+        });
       } else {
+        // For objects with x, y properties (rectangle, circle, ellipse, text)
         setSelectedShape({
           index: clickedObjectIndex,
           offsetX: pos.x - obj.x,
@@ -58,7 +67,7 @@ export const useObjectManipulation = ({
     
     const updatedObjects = [...objects];
     
-    if (obj.type === 'rectangle' || obj.type === 'circle') {
+    if (obj.type === 'rectangle' || obj.type === 'circle' || obj.type === 'ellipse') {
       updatedObjects[selectedShape.index] = {
         ...obj,
         x: deltaX,
@@ -91,6 +100,19 @@ export const useObjectManipulation = ({
     } else if (obj.type === 'draw' && obj.points && obj.points.length > 0) {
       const offsetX = deltaX - obj.points[0].x;
       const offsetY = deltaY - obj.points[0].y;
+      
+      updatedObjects[selectedShape.index] = {
+        ...obj,
+        points: obj.points.map(p => ({
+          x: p.x + offsetX,
+          y: p.y + offsetY
+        }))
+      };
+    } else if (obj.type === 'polygon') {
+      // For polygons, move all points relative to the first point
+      const firstPoint = obj.points[0];
+      const offsetX = deltaX - firstPoint.x;
+      const offsetY = deltaY - firstPoint.y;
       
       updatedObjects[selectedShape.index] = {
         ...obj,

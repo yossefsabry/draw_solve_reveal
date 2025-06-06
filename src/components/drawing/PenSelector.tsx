@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { 
   Brush, PencilLine, Pen, 
   PaintbrushVertical, Pencil, Paintbrush,
-  Pipette, Eraser2
+  Pipette, Eraser
 } from "lucide-react";
 import { 
   Popover, 
@@ -67,7 +67,7 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
     },
     { 
       type: "charcoal" as PenType, 
-      icon: <Eraser2 />, 
+      icon: <Eraser />, 
       tooltip: "Charcoal", 
       description: "Textured artistic tool"
     },
@@ -99,7 +99,6 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
       </TooltipProvider>
       
       <PopoverContent className="w-80 p-3">
-        <h4 className="font-medium mb-3">Drawing Tools</h4>
         <div className="grid grid-cols-2 gap-2">
           {penTypes.map((pen) => (
             <TooltipProvider key={pen.type}>
