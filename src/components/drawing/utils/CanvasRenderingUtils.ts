@@ -57,7 +57,7 @@ export const isObjectVisible = (
   );
 };
 
-// Configure pen settings based on pen type
+// Configure pen settings based on pen type with enhanced effects
 export const configurePenStyle = (ctx: CanvasRenderingContext2D, penType: string, color: string, brushSize: number, isEraser: boolean = false): void => {
   // Reset context to defaults
   ctx.lineCap = "round";
@@ -72,27 +72,46 @@ export const configurePenStyle = (ctx: CanvasRenderingContext2D, penType: string
   if (!isEraser) {
     switch (penType) {
       case "brush":
-        ctx.shadowBlur = 3;
+        ctx.shadowBlur = 4;
         ctx.shadowColor = color;
+        ctx.lineWidth = brushSize * 1.2;
         break;
       case "pencil":
-        ctx.lineWidth = Math.max(1, brushSize * 0.5);
-        ctx.globalAlpha = 0.8;
+        ctx.lineWidth = Math.max(1, brushSize * 0.4);
+        ctx.globalAlpha = 0.9;
+        break;
+      case "pen":
+        ctx.lineWidth = brushSize;
+        ctx.shadowBlur = 1;
+        ctx.shadowColor = color;
         break;
       case "marker":
         ctx.lineCap = "square";
         ctx.lineJoin = "round";
-        ctx.lineWidth = brushSize * 1.5;
-        ctx.globalAlpha = 0.7;
+        ctx.lineWidth = brushSize * 1.8;
+        ctx.globalAlpha = 0.6;
         break;
       case "calligraphy":
         ctx.lineCap = "butt";
         ctx.lineJoin = "miter";
-        ctx.setTransform(1, 0, 0.5, 1, 0, 0);
+        ctx.lineWidth = brushSize * 1.5;
+        ctx.setTransform(1, 0, 0.3, 1, 0, 0);
         break;
       case "highlighter":
+        ctx.lineWidth = brushSize * 3;
+        ctx.globalAlpha = 0.2;
+        break;
+      case "spray":
         ctx.lineWidth = brushSize * 2;
-        ctx.globalAlpha = 0.3;
+        ctx.shadowBlur = brushSize;
+        ctx.shadowColor = color;
+        ctx.globalAlpha = 0.8;
+        break;
+      case "charcoal":
+        ctx.lineWidth = brushSize * 1.5;
+        ctx.shadowBlur = 2;
+        ctx.shadowColor = color;
+        ctx.globalAlpha = 0.85;
         break;
     }
   }
@@ -115,6 +134,10 @@ export const drawObjects = (
   scale: number,
   offset: {x: number, y: number}
 ): void => {
+  // Clear canvas with black background
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, visibleWidth, visibleHeight);
+  
   // Apply zoom and pan transformations
   ctx.save();
   ctx.translate(offset.x, offset.y);
@@ -166,13 +189,44 @@ export const drawObjects = (
   ctx.restore();
 };
 
-// Individual shape drawing functions
+// Export function for saving canvas as image with black background
+export const saveCanvasAsImage = (canvas: HTMLCanvasElement, filename: string = 'drawing.png') => {
+  // Create a temporary canvas for export
+  const exportCanvas = document.createElement('canvas');
+  const exportCtx = exportCanvas.getContext('2d');
+  
+  if (!exportCtx) return;
+  
+  exportCanvas.width = canvas.width;
+  exportCanvas.height = canvas.height;
+  
+  // Fill with black background
+  exportCtx.fillStyle = '#000000';
+  exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+  
+  // Draw the original canvas content on top
+  exportCtx.drawImage(canvas, 0, 0);
+  
+  // Create download link
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = exportCanvas.toDataURL('image/png');
+  link.click();
+};
+
+// Individual shape drawing functions with improved styling
 function drawRectangle(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   if (obj.type !== 'rectangle') return;
   
   ctx.beginPath();
   ctx.rect(obj.x, obj.y, obj.width, obj.height);
   ctx.stroke();
+  
+  // Add subtle fill for better visibility
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
 }
 
 function drawCircle(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
@@ -181,6 +235,12 @@ function drawCircle(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   ctx.beginPath();
   ctx.arc(obj.x, obj.y, obj.radius, 0, 2 * Math.PI);
   ctx.stroke();
+  
+  // Add subtle fill for better visibility
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
 }
 
 function drawTriangle(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
@@ -192,6 +252,12 @@ function drawTriangle(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   ctx.lineTo(obj.x3, obj.y3);
   ctx.closePath();
   ctx.stroke();
+  
+  // Add subtle fill for better visibility
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
 }
 
 function drawLine(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
@@ -214,7 +280,7 @@ function drawArrow(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   
   // Calculate the arrow head
   const angle = Math.atan2(obj.y2 - obj.y1, obj.x2 - obj.x1);
-  const headLength = 15; // Length of arrow head
+  const headLength = 20; // Slightly larger arrow head
   
   // Draw the arrow head
   ctx.beginPath();
@@ -246,7 +312,6 @@ function drawPath(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   ctx.moveTo(obj.points[0].x, obj.points[0].y);
   
   // Use optimized path rendering for better performance
-  // When there are many points, we can skip some for better performance
   const stride = obj.points.length > 100 ? 2 : 1;
   
   for (let i = stride; i < obj.points.length; i += stride) {

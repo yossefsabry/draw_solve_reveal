@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ShapeTool, DrawingMode } from "./types";
 import ToolBar from "./ToolBar";
@@ -8,7 +8,6 @@ import CanvasFooter from "./CanvasFooter";
 import MathResults from "./MathResults";
 import { useCanvasDrawing } from "@/hooks/use-canvas-drawing";
 import { useMathSolver } from "@/hooks/use-math-solver";
-import { SWATCHES } from "@/constants";
 import { useHistoryState } from "@/hooks/use-history-state";
 import UndoRedoToolbar from "./UndoRedoToolbar";
 import { PenType } from "./PenSelector";
@@ -25,6 +24,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   const [isShapesOpen, setIsShapesOpen] = useState(false);
   const [penType, setPenType] = useState<PenType>("brush");
   
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMobile = useIsMobile();
 
   // Use history hook for objects
@@ -93,10 +93,21 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
     };
   }, []);
 
-  // Function to clear the canvas
+  // Function to clear the canvas - now properly clears all objects
   const clearCanvas = () => {
     setObjectsWithHistory([]);
     clearMathResults();
+    
+    // Also clear the canvas visually
+    if (drawingLayerRef.current) {
+      const ctx = drawingLayerRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height);
+        // Set black background
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height);
+      }
+    }
   };
 
   // Shape tool selection handler
@@ -109,6 +120,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
   // Set canvas reference for the DrawingArea component
   const setCanvasRef = (ref: HTMLCanvasElement | null) => {
     drawingLayerRef.current = ref;
+    canvasRef.current = ref;
   };
 
   // Handle solve button click
@@ -185,6 +197,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
         isLoading={isLoading}
         onClear={clearCanvas}
         onSolve={onSolve}
+        canvasRef={canvasRef}
       />
     </div>
   );

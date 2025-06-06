@@ -1,8 +1,9 @@
+
 // Shape tools available in the application
-export type ShapeTool = "none" | "rectangle" | "circle" | "triangle" | "line" | "arrow" | "text";
+export type ShapeTool = "none" | "rectangle" | "circle" | "triangle" | "line" | "arrow" | "text" | "ellipse" | "polygon";
 
 // Drawing mode
-export type DrawingMode = "draw" | "erase" | "shape" | "move";
+export type DrawingMode = "draw" | "erase" | "shape" | "move" | "select";
 
 // Base drawing object interface
 interface BaseDrawingObject {
@@ -25,6 +26,17 @@ export interface CircleObject {
   x: number;
   y: number;
   radius: number;
+  color: string;
+  lineWidth: number;
+}
+
+// Ellipse object
+export interface EllipseObject {
+  type: "ellipse";
+  x: number;
+  y: number;
+  radiusX: number;
+  radiusY: number;
   color: string;
   lineWidth: number;
 }
@@ -74,26 +86,37 @@ export interface TextObject {
   lineWidth: number;
 }
 
+// Polygon object
+export interface PolygonObject {
+  type: "polygon";
+  points: { x: number; y: number }[];
+  color: string;
+  lineWidth: number;
+}
+
 // Draw object for free-hand drawing
 export interface DrawObject {
   type: "draw";
   points: { x: number; y: number }[];
   color: string;
   lineWidth: number;
+  penType?: string;
 }
 
 // Union type for all drawing objects
 export type AnyDrawingObject = 
   RectangleObject | 
   CircleObject |
+  EllipseObject |
   TriangleObject |
   LineObject |
   ArrowObject |
   TextObject |
+  PolygonObject |
   DrawObject;
   
-// Pen type
-export type PenType = "brush" | "pencil" | "pen" | "marker" | "calligraphy" | "highlighter";
+// Pen type with enhanced options
+export type PenType = "brush" | "pencil" | "pen" | "marker" | "calligraphy" | "highlighter" | "spray" | "charcoal";
 
 // Result from math equation solving
 export interface MathResult {

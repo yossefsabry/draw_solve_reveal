@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Brush, PencilLine, Pen, 
-  PaintbrushVertical, Pencil, Paintbrush 
+  PaintbrushVertical, Pencil, Paintbrush,
+  Pipette, Eraser2
 } from "lucide-react";
 import { 
   Popover, 
@@ -12,7 +13,7 @@ import {
   PopoverContent 
 } from "@/components/ui/popover";
 
-export type PenType = "brush" | "pencil" | "pen" | "marker" | "calligraphy" | "highlighter";
+export type PenType = "brush" | "pencil" | "pen" | "marker" | "calligraphy" | "highlighter" | "spray" | "charcoal";
 
 interface PenSelectorProps {
   activePenType: PenType;
@@ -20,43 +21,55 @@ interface PenSelectorProps {
 }
 
 const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChange }) => {
-  // Pen type configuration with icons, tooltips and descriptions
+  // Enhanced pen types with more options like GIMP
   const penTypes = [
     { 
       type: "brush" as PenType, 
       icon: <Brush />, 
       tooltip: "Brush", 
-      description: "Soft edges with pressure sensitivity"
+      description: "Soft artistic brush"
     },
     { 
       type: "pencil" as PenType, 
       icon: <Pencil />, 
       tooltip: "Pencil", 
-      description: "Thin, light strokes"
+      description: "Precise thin lines"
     },
     { 
       type: "pen" as PenType, 
       icon: <Pen />, 
       tooltip: "Pen", 
-      description: "Clean, consistent lines"
+      description: "Clean consistent ink"
     },
     { 
       type: "marker" as PenType, 
       icon: <PencilLine />, 
       tooltip: "Marker", 
-      description: "Thick, bold strokes"
+      description: "Bold thick strokes"
     },
     { 
       type: "calligraphy" as PenType, 
       icon: <Paintbrush />, 
       tooltip: "Calligraphy", 
-      description: "Angled strokes with varying width"
+      description: "Angled artistic pen"
     },
     { 
       type: "highlighter" as PenType, 
       icon: <PaintbrushVertical />, 
       tooltip: "Highlighter", 
-      description: "Semi-transparent wide strokes"
+      description: "Transparent overlay"
+    },
+    { 
+      type: "spray" as PenType, 
+      icon: <Pipette />, 
+      tooltip: "Spray", 
+      description: "Airbrush effect"
+    },
+    { 
+      type: "charcoal" as PenType, 
+      icon: <Eraser2 />, 
+      tooltip: "Charcoal", 
+      description: "Textured artistic tool"
     },
   ];
 
@@ -70,8 +83,8 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <Button 
-                variant="outline" 
-                className="flex items-center gap-2 h-10"
+                variant={activePenType ? "default" : "outline"}
+                className={`flex items-center gap-2 h-10 ${activePenType ? "bg-primary text-primary-foreground ring-2 ring-primary" : ""}`}
                 size="sm"
               >
                 {activePen.icon}
@@ -80,13 +93,13 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
             </PopoverTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Select Pen Type</p>
+            <p>Select Drawing Tool</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
       
-      <PopoverContent className="w-64 p-3">
-        <h4 className="font-medium mb-2">Pen Types</h4>
+      <PopoverContent className="w-80 p-3">
+        <h4 className="font-medium mb-3">Drawing Tools</h4>
         <div className="grid grid-cols-2 gap-2">
           {penTypes.map((pen) => (
             <TooltipProvider key={pen.type}>
@@ -96,7 +109,11 @@ const PenSelector: React.FC<PenSelectorProps> = ({ activePenType, onPenTypeChang
                     variant={activePenType === pen.type ? "default" : "outline"}
                     size="sm"
                     onClick={() => onPenTypeChange(pen.type)}
-                    className={`${activePenType === pen.type ? "tool-active" : ""} w-full h-20 flex flex-col items-center justify-center gap-1 p-2`}
+                    className={`${
+                      activePenType === pen.type 
+                        ? "bg-primary text-primary-foreground ring-2 ring-primary shadow-md" 
+                        : "hover:bg-secondary"
+                    } w-full h-20 flex flex-col items-center justify-center gap-1 p-2 transition-all`}
                   >
                     <div className="text-lg">{pen.icon}</div>
                     <div className="text-xs font-medium">{pen.tooltip}</div>
