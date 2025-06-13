@@ -1,190 +1,143 @@
-
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { DrawingMode } from "./types";
-import ToolBar from "./ToolBar";
-import DrawingArea from "./DrawingArea";
-import CanvasFooter from "./CanvasFooter";
-import MathResults from "./MathResults";
-import { useCanvasDrawing } from "@/hooks/use-canvas-drawing";
-import { useMathSolver } from "@/hooks/use-math-solver";
-import { useHistoryState } from "@/hooks/use-history-state";
-import UndoRedoToolbar from "./UndoRedoToolbar";
-import GridToggle from "./GridToggle";
+import DrawingCanvasArea from "./DrawingCanvasArea";
+import { Button } from "@/components/ui/button";
+import { Pencil, Eraser, Square, Circle, Minus, Palette, Download, ZoomIn, ZoomOut } from "lucide-react";
 
-interface DrawingCanvasProps {
-  className?: string;
-}
+const tools = [
+  { name: "Draw", icon: <Pencil />, mode: "draw" },
+  { name: "Erase", icon: <Eraser />, mode: "erase" },
+  { name: "Rectangle", icon: <Square />, mode: "rectangle" },
+  { name: "Circle", icon: <Circle />, mode: "circle" },
+  { name: "Line", icon: <Minus />, mode: "line" },
+];
 
-const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ className }) => {
-  const [color, setColor] = useState("#FFFFFF"); // White by default
+const DrawingCanvas: React.FC = () => {
+  const [color, setColor] = useState("#FFFFFF");
   const [brushSize, setBrushSize] = useState(5);
-  const [mode, setMode] = useState<DrawingMode>("draw");
+  const [mode, setMode] = useState("draw");
   const [showGrid, setShowGrid] = useState(false);
-  
+  const [zoom, setZoom] = useState(1);
+  const [objects, setObjects] = useState<any[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isMobile = useIsMobile();
 
-  // Use history hook for objects
-  const {
-    state: objects,
-    setState: setObjectsWithHistory,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-  } = useHistoryState<any[]>([]);
-
-  // Use our custom hooks
-  const {
-    isDrawing,
-    selectedShape,
-    drawingLayerRef,
-    startDrawing,
-    stopDrawing,
-    handleMove,
-    handleWheel,
-    handleMouseLeave,
-    setSelectedShape,
-    scale,
-    offset,
-    isPanning,
-    keyPressed,
-    setDirectScale,
-    cursorPosition
-  } = useCanvasDrawing({
-    mode,
-    color,
-    brushSize,
-    objects,
-    setObjects: setObjectsWithHistory
-  });
-
-  const {
-    isLoading,
-    mathEquations,
-    handleSolve,
-    clearMathResults
-  } = useMathSolver();
-
-  // Load MathJax script for rendering LaTeX
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_CHTML';
-    script.async = true;
-    document.head.appendChild(script);
-
-    script.onload = () => {
-      if (window.MathJax) {
-        window.MathJax.Hub.Config({
-          tex2jax: {inlineMath: [['$', '$'], ['\\(', '\\)']]},
-        });
-      }
-    };
-
-    return () => {
-      if (script.parentNode) {
-        document.head.removeChild(script);
-      }
-    };
-  }, []);
-
-  // Function to clear the canvas - now properly clears all objects
-  const clearCanvas = () => {
-    setObjectsWithHistory([]);
-    clearMathResults();
-    
-    // Also clear the canvas visually
-    if (drawingLayerRef.current) {
-      const ctx = drawingLayerRef.current.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height);
-        // Set black background
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, drawingLayerRef.current.width, drawingLayerRef.current.height);
-      }
-    }
+  // Export as image
+  const handleExport = () => {
+    if (!canvasRef.current) return;
+    const link = document.createElement('a');
+    link.download = 'drawing.png';
+    link.href = canvasRef.current.toDataURL('image/png');
+    link.click();
   };
 
-  // Set canvas reference for the DrawingArea component
-  const setCanvasRef = (ref: HTMLCanvasElement | null) => {
-    drawingLayerRef.current = ref;
-    canvasRef.current = ref;
-  };
-
-  // Handle solve button click
-  const onSolve = () => {
-    if (drawingLayerRef.current) {
-      handleSolve(drawingLayerRef.current, setObjectsWithHistory);
-    }
-  };
-
-  // Add keyboard shortcuts hint on component mount
-  useEffect(() => {
-    const hint = "Drawing Canvas Shortcuts:\n" +
-      "- Zoom: Ctrl + Scroll\n" +
-      "- Pan: Space + Drag\n" +
-      "- Undo: Ctrl + Z\n" +
-      "- Redo: Ctrl + Shift + Z or Ctrl + Y";
-    console.info(hint);
-  }, []);
+  // Zoom controls
+  const handleZoomIn = () => setZoom(z => Math.min(z + 0.1, 4.0));
+  const handleZoomOut = () => setZoom(z => Math.max(z - 0.1, 0.5));
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
-      <div className={`flex ${isMobile ? 'justify-between items-center' : 'flex-wrap items-center justify-between'} gap-2 p-2 border-b`}>
-        <ToolBar
-          color={color}
-          brushSize={brushSize}
-          mode={mode}
-          isMobile={isMobile}
-          onColorChange={setColor}
-          onBrushSizeChange={setBrushSize}
-          onModeChange={setMode}
-        />
-        
-        <div className="flex items-center gap-2">
-          <GridToggle showGrid={showGrid} onToggle={setShowGrid} />
-          <UndoRedoToolbar
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onUndo={undo}
-            onRedo={redo}
-            isMobile={isMobile}
+    <div className="flex flex-col h-screen bg-[#232323] text-white">
+      {/* Top Bar */}
+      <div className="flex items-center h-10 bg-[#181818] border-b border-neutral-800 px-4">
+        <span className="font-bold text-lg mr-8">Draw & Solve</span>
+      </div>
+      <div className="flex flex-1 min-h-0">
+        {/* Left Sidebar */}
+        <div className="flex flex-col items-center gap-2 w-16 bg-[#181818] border-r border-neutral-800 py-4">
+          {tools.map(tool => (
+            <Button
+              key={tool.name}
+              variant={mode === tool.mode ? "default" : "outline"}
+              size="icon"
+              className={`mb-2 ${mode === tool.mode ? "bg-primary text-primary-foreground ring-2 ring-primary" : ""}`}
+              onClick={() => setMode(tool.mode)}
+              title={tool.name}
+            >
+              {tool.icon}
+            </Button>
+          ))}
+          <Button
+            variant={showGrid ? "default" : "outline"}
+            size="icon"
+            className="mb-2"
+            onClick={() => setShowGrid(g => !g)}
+            title="Toggle Grid"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="16" height="16" rx="2"/><path d="M2 7h16M2 13h16M7 2v16M13 2v16"/></svg>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="mb-2"
+            onClick={handleExport}
+            title="Export as Image"
+          >
+            <Download />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="mb-2"
+            onClick={handleZoomIn}
+            title="Zoom In"
+          >
+            <ZoomIn />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="mb-2"
+            onClick={handleZoomOut}
+            title="Zoom Out"
+          >
+            <ZoomOut />
+          </Button>
+        </div>
+        {/* Main Canvas Area */}
+        <div className="flex-1 flex flex-col items-center justify-center bg-[#232323] relative overflow-hidden">
+          <DrawingCanvasArea
+            color={color}
+            brushSize={brushSize}
+            mode={mode}
+            showGrid={showGrid}
+            objects={objects}
+            setObjects={setObjects}
+            canvasRef={canvasRef}
+            zoom={zoom}
           />
         </div>
+        {/* Right Sidebar */}
+        <div className="flex flex-col w-56 bg-[#181818] border-l border-neutral-800 p-4 gap-6">
+          <div>
+            <label className="block mb-2 text-sm font-medium">Brush/Eraser Size</label>
+            <input
+              type="range"
+              min={1}
+              max={50}
+              value={brushSize}
+              onChange={e => setBrushSize(Number(e.target.value))}
+              className="w-full"
+            />
+            <div className="text-xs mt-1">{brushSize}px</div>
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">Color</label>
+            <input
+              type="color"
+              value={color}
+              onChange={e => setColor(e.target.value)}
+              className="w-10 h-10 p-0 border-none bg-transparent cursor-pointer"
+              disabled={mode === "erase"}
+            />
+          </div>
+        </div>
       </div>
-      
-      <DrawingArea
-        isDrawing={isDrawing}
-        mode={mode}
-        color={color}
-        brushSize={brushSize}
-        objects={objects}
-        selectedShape={selectedShape}
-        showGrid={showGrid}
-        onObjectsChange={setObjectsWithHistory}
-        onSelectedShapeChange={setSelectedShape}
-        onDrawingStart={startDrawing}
-        onDrawingEnd={stopDrawing}
-        onCanvasRef={setCanvasRef}
-        handleWheel={handleWheel}
-        handleMove={handleMove}
-        handleMouseLeave={handleMouseLeave}
-        scale={scale}
-        offset={offset}
-        isPanning={isPanning}
-        onSetScale={setDirectScale}
-        cursorPosition={cursorPosition}
-      />
-      
-      <MathResults mathEquations={mathEquations} />
-      
-      <CanvasFooter
-        isLoading={isLoading}
-        onClear={clearCanvas}
-        onSolve={onSolve}
-        canvasRef={canvasRef}
-      />
+      {/* Bottom Status Bar */}
+      <div className="h-8 bg-[#181818] border-t border-neutral-800 flex items-center px-4 text-xs">
+        <span>Mode: {mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
+        <span className="ml-6">Brush Size: {brushSize}px</span>
+        <span className="ml-6">Color: {color}</span>
+        <span className="ml-6">Zoom: {Math.round(zoom * 100)}%</span>
+      </div>
     </div>
   );
 };
