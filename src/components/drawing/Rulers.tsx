@@ -1,58 +1,66 @@
+
 import React from "react";
-import DrawingCanvasArea from "./DrawingCanvasArea";
 
 interface RulersProps {
   width: number;
   height: number;
   zoom: number;
-  rulerSize?: number; // thickness of the ruler in px
-  gridSize?: number; // base grid size in px
+  offset: { x: number; y: number };
+  rulerSize?: number;
+  gridSize?: number;
 }
 
-const RULER_BG = "000000"; // light blue-gray for high contrast
-const RULER_FG = "#acacac"; // cyan-300 for minor ticks
-const RULER_MAJOR = "#ffffff"; // sky-700 for major ticks
+const RULER_BG = "#2a2a2a";
+const RULER_FG = "#666666";
+const RULER_MAJOR = "#ffffff";
+const RULER_TEXT = "#cccccc";
 
 export const Rulers: React.FC<RulersProps> = ({
   width,
   height,
   zoom,
-  rulerSize = 48, // much larger for clarity
-  gridSize = 10,
+  offset,
+  rulerSize = 30,
+  gridSize = 20,
 }) => {
-  // Calculate tick intervals based on zoom
-  const scaledGrid = gridSize * zoom;
-  // Major tick every 5 grid lines
-  const majorTick = scaledGrid * 5;
+  // Calculate the start position based on offset and zoom
+  const startX = Math.floor(-offset.x / zoom / gridSize) * gridSize;
+  const startY = Math.floor(-offset.y / zoom / gridSize) * gridSize;
 
-  // Helper to render ticks and labels
+  // Helper to render horizontal ruler ticks and labels
   const renderHorizontalTicks = () => {
     const ticks = [];
-    const showLabels = (scaledGrid * 5) >= 30;
-    for (let x = 0; x < width; x += scaledGrid) {
-      const isMajor = Math.round(x / scaledGrid) % 5 === 0;
+    const step = gridSize;
+    const majorStep = step * 5; // Major tick every 5 grid units
+    
+    for (let x = startX; x <= startX + width / zoom + step; x += step) {
+      const screenX = x * zoom + offset.x;
+      
+      if (screenX < 0 || screenX > width) continue;
+      
+      const isMajor = Math.abs(x % majorStep) < 0.01;
+      const tickHeight = isMajor ? rulerSize * 0.6 : rulerSize * 0.3;
+      
       ticks.push(
         <g key={x}>
           <line
-            x1={x}
+            x1={screenX}
             y1={rulerSize}
-            x2={x}
-            y2={isMajor ? 0 : rulerSize * 0.5}
+            x2={screenX}
+            y2={rulerSize - tickHeight}
             stroke={isMajor ? RULER_MAJOR : RULER_FG}
-            strokeWidth={isMajor ? 3 : 1}
+            strokeWidth={isMajor ? 1 : 0.5}
           />
-          {isMajor && x > 0 && showLabels && (
+          {isMajor && (
             <text
-              x={x + 4}
-              y={rulerSize / 2 + 7}
-              fontSize={20}
-              fill={RULER_MAJOR}
-              fontWeight="bold"
+              x={screenX}
+              y={rulerSize - tickHeight - 4}
+              fontSize={10}
+              fill={RULER_TEXT}
               textAnchor="middle"
-              alignmentBaseline="middle"
               style={{ userSelect: "none" }}
             >
-              {Math.round(x / zoom)}
+              {Math.round(x)}
             </text>
           )}
         </g>
@@ -61,33 +69,42 @@ export const Rulers: React.FC<RulersProps> = ({
     return ticks;
   };
 
+  // Helper to render vertical ruler ticks and labels
   const renderVerticalTicks = () => {
     const ticks = [];
-    const showLabels = (scaledGrid * 5) >= 30;
-    for (let y = 0; y < height; y += scaledGrid) {
-      const isMajor = Math.round(y / scaledGrid) % 5 === 0;
+    const step = gridSize;
+    const majorStep = step * 5; // Major tick every 5 grid units
+    
+    for (let y = startY; y <= startY + height / zoom + step; y += step) {
+      const screenY = y * zoom + offset.y;
+      
+      if (screenY < 0 || screenY > height) continue;
+      
+      const isMajor = Math.abs(y % majorStep) < 0.01;
+      const tickWidth = isMajor ? rulerSize * 0.6 : rulerSize * 0.3;
+      
       ticks.push(
         <g key={y}>
           <line
-            x1={isMajor ? rulerSize : rulerSize * 0.5}
-            y1={y}
-            x2={0}
-            y2={y}
+            x1={rulerSize}
+            y1={screenY}
+            x2={rulerSize - tickWidth}
+            y2={screenY}
             stroke={isMajor ? RULER_MAJOR : RULER_FG}
-            strokeWidth={isMajor ? 3 : 1}
+            strokeWidth={isMajor ? 1 : 0.5}
           />
-          {isMajor && y > 0 && showLabels && (
+          {isMajor && (
             <text
-              x={rulerSize / 2}
-              y={y + 7}
-              fontSize={20}
-              fill={RULER_MAJOR}
-              fontWeight="bold"
+              x={rulerSize - tickWidth - 4}
+              y={screenY}
+              fontSize={10}
+              fill={RULER_TEXT}
               textAnchor="middle"
-              alignmentBaseline="middle"
+              dominantBaseline="middle"
+              transform={`rotate(-90, ${rulerSize - tickWidth - 4}, ${screenY})`}
               style={{ userSelect: "none" }}
             >
-              {Math.round(y / zoom)}
+              {Math.round(y)}
             </text>
           )}
         </g>
@@ -100,22 +117,38 @@ export const Rulers: React.FC<RulersProps> = ({
     <>
       {/* Top ruler */}
       <svg
-        width={width * 20}
-        height={rulerSize * 50}
-        style={{ position: "absolute", top: 0, left: rulerSize, zIndex: 10, background: RULER_BG, pointerEvents: "none" }}
+        width={width}
+        height={rulerSize}
+        style={{ 
+          position: "absolute", 
+          top: 0, 
+          left: rulerSize, 
+          zIndex: 10, 
+          background: RULER_BG,
+          pointerEvents: "none" 
+        }}
       >
         <rect width={width} height={rulerSize} fill={RULER_BG} />
         {renderHorizontalTicks()}
       </svg>
+      
       {/* Left ruler */}
       <svg
-        width={rulerSize * 80}
-        height={height * 20}
-        style={{ position: "absolute", top: rulerSize, left: 0, zIndex: 10, background: RULER_BG, pointerEvents: "none", textAlign: "center" }}
+        width={rulerSize}
+        height={height}
+        style={{ 
+          position: "absolute", 
+          top: rulerSize, 
+          left: 0, 
+          zIndex: 10, 
+          background: RULER_BG,
+          pointerEvents: "none" 
+        }}
       >
         <rect width={rulerSize} height={height} fill={RULER_BG} />
         {renderVerticalTicks()}
       </svg>
+      
       {/* Corner square */}
       <div
         style={{
@@ -134,4 +167,4 @@ export const Rulers: React.FC<RulersProps> = ({
   );
 };
 
-export default Rulers; 
+export default Rulers;
