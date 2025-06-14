@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DrawingCanvasArea from "./DrawingCanvasArea";
 import { Button } from "@/components/ui/button";
-import { Pencil, Eraser, Square, Circle, Minus, Palette, Download, ZoomIn, ZoomOut } from "lucide-react";
+import { Pencil, Eraser, Download, ZoomIn, ZoomOut } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 import axios from "axios";
@@ -10,9 +10,6 @@ import axios from "axios";
 const tools = [
   { name: "Draw", icon: <Pencil className="text-foreground" />, mode: "draw" },
   { name: "Erase", icon: <Eraser className="text-foreground" />, mode: "erase" },
-  { name: "Rectangle", icon: <Square className="text-foreground" />, mode: "rectangle" },
-  { name: "Circle", icon: <Circle className="text-foreground" />, mode: "circle" },
-  { name: "Line", icon: <Minus className="text-foreground" />, mode: "line" },
 ];
 
 const DrawingCanvas: React.FC = () => {

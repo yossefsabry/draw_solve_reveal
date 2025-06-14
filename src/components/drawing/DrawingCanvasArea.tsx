@@ -397,9 +397,15 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         onPointerLeave={handlePointerLeave}
         onWheel={handleWheel}
       />
-      <Rulers width={canvasSize.width} height={canvasSize.height} zoom={zoom} rulerSize={rulerSize} />
+      <Rulers 
+        width={canvasSize.width} 
+        height={canvasSize.height} 
+        zoom={zoom} 
+        offset={offset}
+        rulerSize={rulerSize} 
+      />
     </div>
   );
 };
 
-export default DrawingCanvasArea; 
+export default DrawingCanvasArea;
