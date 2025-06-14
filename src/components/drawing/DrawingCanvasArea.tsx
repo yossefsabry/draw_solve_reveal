@@ -26,6 +26,11 @@ interface DrawingCanvasAreaProps {
   setObjects: (objs: AnyDrawingObject[]) => void;
   canvasRef: React.RefObject<HTMLCanvasElement>;
   zoom: number;
+  minZoom?: number;
+  maxZoom?: number;
+  onZoomChange?: (z: number) => void;
+  offset?: { x: number; y: number };
+  onOffsetChange?: (o: { x: number; y: number }) => void;
 }
 
 const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
@@ -37,6 +42,11 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   setObjects,
   canvasRef,
   zoom,
+  minZoom = 0.5,
+  maxZoom = 4.0,
+  onZoomChange,
+  offset = { x: 0, y: 0 },
+  onOffsetChange,
 }) => {
   const isDrawing = useRef(false);
   const startPoint = useRef<{ x: number; y: number } | null>(null);
@@ -46,13 +56,17 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   const rulerSize = 16;
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isSpaceDown, setIsSpaceDown] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStart = useRef<{ x: number; y: number } | null>(null);
+  const offsetStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Helper to apply zoom to pointer positions
+  // Helper to apply zoom and offset to pointer positions
   const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
     return {
-      x: (e.clientX - rect.left) / zoom,
-      y: (e.clientY - rect.top) / zoom,
+      x: ((e.clientX - rect.left) / zoom) - offset.x,
+      y: ((e.clientY - rect.top) / zoom) - offset.y,
     };
   };
 
@@ -63,7 +77,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.save();
-    ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
+    ctx.setTransform(zoom, 0, 0, zoom, offset.x * zoom, offset.y * zoom);
     ctx.clearRect(0, 0, canvas.width / zoom, canvas.height / zoom);
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, canvas.width / zoom, canvas.height / zoom);
@@ -185,17 +199,11 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     ctx.restore();
   };
 
-  // Animation frame for redraw
+  // Redraw only when relevant state changes
   useEffect(() => {
-    let raf: number;
-    const loop = () => {
-      redraw();
-      raf = requestAnimationFrame(loop);
-    };
-    loop();
-    return () => cancelAnimationFrame(raf);
+    redraw();
     // eslint-disable-next-line
-  }, [color, brushSize, mode, showGrid, objects, cursor, shapePreview, zoom]);
+  }, [color, brushSize, mode, showGrid, objects, cursor, shapePreview, zoom, offset]);
 
   // Resize canvas to fit parent (minus rulers)
   useEffect(() => {
@@ -216,6 +224,26 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
 
   // Pointer events
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isSpaceDown && e.button === 0) {
+      setIsPanning(true);
+      panStart.current = { x: e.clientX, y: e.clientY };
+      offsetStart.current = { ...offset };
+      // Add global listeners for mousemove/mouseup
+      const handleMouseMove = (ev: MouseEvent) => {
+        if (!isPanning || !panStart.current || !onOffsetChange) return;
+        const dx = (ev.clientX - panStart.current.x) / zoom;
+        const dy = (ev.clientY - panStart.current.y) / zoom;
+        onOffsetChange({ x: offsetStart.current.x + dx, y: offsetStart.current.y + dy });
+      };
+      const handleMouseUp = () => {
+        setIsPanning(false);
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return;
+    }
     isDrawing.current = true;
     const pos = getPos(e);
     startPoint.current = pos;
@@ -227,6 +255,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isPanning) return; // panning handled globally
     const pos = getPos(e);
     setCursor(pos);
     if (!isDrawing.current) return;
@@ -271,6 +300,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   };
 
   const handlePointerUp = () => {
+    if (isPanning) return; // handled globally
     if (!isDrawing.current) return;
     if (mode === "draw" || mode === "erase") {
       if (drawingPath.current.length > 1) {
@@ -298,6 +328,56 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     handlePointerUp();
   };
 
+  // Mouse wheel zoom
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    if (onZoomChange && onOffsetChange && canvasRef.current) {
+      e.preventDefault();
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      let newZoom = zoom - e.deltaY * 0.001;
+      newZoom = Math.max(minZoom, Math.min(maxZoom, newZoom));
+      // World coordinates under cursor before zoom
+      const worldX = (mouseX / zoom) - offset.x;
+      const worldY = (mouseY / zoom) - offset.y;
+      // New offset so worldX stays under cursor
+      let newOffsetX = (mouseX / newZoom) - worldX;
+      let newOffsetY = (mouseY / newZoom) - worldY;
+      // Clamp offset so the canvas origin (0,0) is always visible
+      if (canvasRef.current) {
+        const canvasW = canvasRef.current.width;
+        const canvasH = canvasRef.current.height;
+        // Minimum offset: don't allow panning past top/left
+        newOffsetX = Math.min(newOffsetX, 0);
+        newOffsetY = Math.min(newOffsetY, 0);
+        // Maximum offset: don't allow panning past bottom/right
+        newOffsetX = Math.max(newOffsetX, -(canvasW / newZoom - canvasW / zoom));
+        newOffsetY = Math.max(newOffsetY, -(canvasH / newZoom - canvasH / zoom));
+        // Prevent NaN
+        if (isNaN(newOffsetX)) newOffsetX = 0;
+        if (isNaN(newOffsetY)) newOffsetY = 0;
+      }
+      onZoomChange(newZoom);
+      onOffsetChange({ x: newOffsetX, y: newOffsetY });
+    }
+  };
+
+  // Keyboard events for spacebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space") setIsSpaceDown(true);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Space") setIsSpaceDown(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
   return (
     <div ref={containerRef} style={{ width: "100%", height: "100%", position: "relative" }}>
       <canvas
@@ -309,12 +389,13 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
           width: `calc(100% - ${rulerSize}px)`,
           height: `calc(100% - ${rulerSize}px)`,
           touchAction: "none",
-          cursor: mode === "erase" ? "crosshair" : "crosshair"
+          cursor: isSpaceDown ? (isPanning ? "grabbing" : "grab") : (mode === "erase" ? "crosshair" : "crosshair")
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
+        onWheel={handleWheel}
       />
       <Rulers width={canvasSize.width} height={canvasSize.height} zoom={zoom} rulerSize={rulerSize} />
     </div>
