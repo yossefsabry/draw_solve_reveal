@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import Rulers from "./Rulers";
 
 interface AnyDrawingObject {
@@ -61,17 +61,17 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   const panStart = useRef<{ x: number; y: number } | null>(null);
   const offsetStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Helper to apply zoom and offset to pointer positions
-  const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  // Memoize getPos for stable reference
+  const getPos = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
     return {
       x: ((e.clientX - rect.left) / zoom) - offset.x,
       y: ((e.clientY - rect.top) / zoom) - offset.y,
     };
-  };
+  }, [zoom, offset.x, offset.y]);
 
-  // Redraw everything
-  const redraw = () => {
+  // Memoize redraw to avoid unnecessary re-renders
+  const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -197,13 +197,13 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       }
     }
     ctx.restore();
-  };
+  }, [canvasRef, zoom, offset.x, offset.y, showGrid, objects, color, brushSize, mode, shapePreview, cursor]);
 
   // Redraw only when relevant state changes
   useEffect(() => {
     redraw();
     // eslint-disable-next-line
-  }, [color, brushSize, mode, showGrid, objects, cursor, shapePreview, zoom, offset]);
+  }, [redraw]);
 
   // Resize canvas to fit parent (minus rulers)
   useEffect(() => {
@@ -335,8 +335,10 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       const rect = canvasRef.current.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      let newZoom = zoom - e.deltaY * 0.001;
-      newZoom = Math.max(minZoom, Math.min(maxZoom, newZoom));
+      // Use exponential zoom for smoothness
+      const delta = -e.deltaY * 0.001;
+      const zoomFactor = Math.exp(delta);
+      let newZoom = Math.max(minZoom, Math.min(maxZoom, zoom * zoomFactor));
       // World coordinates under cursor before zoom
       const worldX = (mouseX / zoom) - offset.x;
       const worldY = (mouseY / zoom) - offset.y;
@@ -378,6 +380,19 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     };
   }, []);
 
+  // Add useEffect to attach wheel event with passive: false
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    function wheelHandler(e) {
+      handleWheel(e);
+    }
+    canvas.addEventListener('wheel', wheelHandler, { passive: false });
+    return () => {
+      canvas.removeEventListener('wheel', wheelHandler);
+    };
+  }, [canvasRef, handleWheel]);
+
   return (
     <div ref={containerRef} style={{ width: "100%", height: "100%", position: "relative" }}>
       <canvas
@@ -395,7 +410,6 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
-        onWheel={handleWheel}
       />
       <Rulers 
         width={canvasSize.width} 
@@ -403,6 +417,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         zoom={zoom} 
         offset={offset}
         rulerSize={rulerSize} 
+        cursor={cursor}
       />
     </div>
   );

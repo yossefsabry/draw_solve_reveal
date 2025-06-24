@@ -1,4 +1,3 @@
-
 import React from "react";
 
 interface RulersProps {
@@ -8,6 +7,7 @@ interface RulersProps {
   offset: { x: number; y: number };
   rulerSize?: number;
   gridSize?: number;
+  cursor?: { x: number; y: number } | null;
 }
 
 const RULER_BG = "#2a2a2a";
@@ -22,6 +22,7 @@ export const Rulers: React.FC<RulersProps> = ({
   offset,
   rulerSize = 30,
   gridSize = 20,
+  cursor = null,
 }) => {
   // Calculate the start position based on offset and zoom
   const startX = Math.floor(-offset.x / zoom / gridSize) * gridSize;
@@ -32,15 +33,12 @@ export const Rulers: React.FC<RulersProps> = ({
     const ticks = [];
     const step = gridSize;
     const majorStep = step * 5; // Major tick every 5 grid units
-    
+    const labelStep = step; // Show label at every grid line
     for (let x = startX; x <= startX + width / zoom + step; x += step) {
       const screenX = x * zoom + offset.x;
-      
       if (screenX < 0 || screenX > width) continue;
-      
       const isMajor = Math.abs(x % majorStep) < 0.01;
       const tickHeight = isMajor ? rulerSize * 0.6 : rulerSize * 0.3;
-      
       ticks.push(
         <g key={x}>
           <line
@@ -51,10 +49,11 @@ export const Rulers: React.FC<RulersProps> = ({
             stroke={isMajor ? RULER_MAJOR : RULER_FG}
             strokeWidth={isMajor ? 1 : 0.5}
           />
-          {isMajor && (
+          {/* Always show label at every grid line */}
+          {Math.abs(x % labelStep) < 0.01 && (
             <text
               x={screenX}
-              y={rulerSize - tickHeight - 4}
+              y={rulerSize - tickHeight}
               fontSize={10}
               fill={RULER_TEXT}
               textAnchor="middle"
@@ -66,6 +65,23 @@ export const Rulers: React.FC<RulersProps> = ({
         </g>
       );
     }
+    // Draw cursor indicator if present
+    if (cursor) {
+      const cursorScreenX = (cursor.x + offset.x) * zoom;
+      if (cursorScreenX >= 0 && cursorScreenX <= width) {
+        ticks.push(
+          <line
+            key="cursor-x"
+            x1={cursorScreenX}
+            y1={0}
+            x2={cursorScreenX}
+            y2={rulerSize}
+            stroke="#00BFFF"
+            strokeWidth={2}
+          />
+        );
+      }
+    }
     return ticks;
   };
 
@@ -74,15 +90,12 @@ export const Rulers: React.FC<RulersProps> = ({
     const ticks = [];
     const step = gridSize;
     const majorStep = step * 5; // Major tick every 5 grid units
-    
+    const labelStep = step; // Show label at every grid line
     for (let y = startY; y <= startY + height / zoom + step; y += step) {
       const screenY = y * zoom + offset.y;
-      
       if (screenY < 0 || screenY > height) continue;
-      
       const isMajor = Math.abs(y % majorStep) < 0.01;
       const tickWidth = isMajor ? rulerSize * 0.6 : rulerSize * 0.3;
-      
       ticks.push(
         <g key={y}>
           <line
@@ -93,9 +106,10 @@ export const Rulers: React.FC<RulersProps> = ({
             stroke={isMajor ? RULER_MAJOR : RULER_FG}
             strokeWidth={isMajor ? 1 : 0.5}
           />
-          {isMajor && (
+          {/* Always show label at every grid line */}
+          {Math.abs(y % labelStep) < 0.01 && (
             <text
-              x={rulerSize - tickWidth - 4}
+              x={rulerSize - tickWidth + 40}
               y={screenY}
               fontSize={10}
               fill={RULER_TEXT}
@@ -109,6 +123,23 @@ export const Rulers: React.FC<RulersProps> = ({
           )}
         </g>
       );
+    }
+    // Draw cursor indicator if present
+    if (cursor) {
+      const cursorScreenY = (cursor.y + offset.y) * zoom;
+      if (cursorScreenY >= 0 && cursorScreenY <= height) {
+        ticks.push(
+          <line
+            key="cursor-y"
+            x1={0}
+            y1={cursorScreenY}
+            x2={rulerSize}
+            y2={cursorScreenY}
+            stroke="#00BFFF"
+            strokeWidth={2}
+          />
+        );
+      }
     }
     return ticks;
   };
