@@ -1,8 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DrawingCanvasArea from "./DrawingCanvasArea";
+import Canvas3D from "./Canvas3D";
+import ShapeSelector, { ShapeType } from "./ShapeSelector";
+import { useClearCanvas } from "@/hooks/use-canvas-clearing";
+import { useDrawingMode } from "@/hooks/use-drawing-mode";
 import { Button } from "@/components/ui/button";
-import { Pencil, Eraser, Download, ZoomIn, ZoomOut, Loader2, Type } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Pencil, Eraser, Download, ZoomIn, ZoomOut, Loader2, Type, Shapes, Eye, EyeOff } from "lucide-react";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 import axios from "axios";
@@ -12,9 +17,9 @@ const tools = [
   { name: "Draw", icon: <Pencil className="text-foreground" />, mode: "draw" },
   { name: "Erase", icon: <Eraser className="text-foreground" />, mode: "erase" },
   { name: "Text", icon: <Type className="text-foreground" />, mode: "text" },
+  { name: "Shapes", icon: <Shapes className="text-foreground" />, mode: "shape" },
 ];
 
-// Add a type for result labels
 function uuid() {
   return Math.random().toString(36).substring(2, 9) + Date.now();
 }
@@ -23,6 +28,7 @@ const DrawingCanvas: React.FC = () => {
   const [color, setColor] = useState("#FFFFFF");
   const [brushSize, setBrushSize] = useState(5);
   const [mode, setMode] = useState("draw");
+  const [selectedShape, setSelectedShape] = useState<ShapeType>("rectangle");
   const [showGrid, setShowGrid] = useState(true);
   const [zoom, setZoom] = useState(3.0);
   const [zoomInput, setZoomInput] = useState('300');
@@ -31,16 +37,20 @@ const DrawingCanvas: React.FC = () => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [objects, setObjects] = useState<any[]>([]);
   const [showRightSidebar, setShowRightSidebar] = useState(false);
+  const [showLeftSidebar, setShowLeftSidebar] = useState(true);
   const [undoStack, setUndoStack] = useState<any[][]>([]);
   const [redoStack, setRedoStack] = useState<any[][]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMobile = useIsMobile();
   const [showWelcome, setShowWelcome] = useState(false);
   const [isSolving, setIsSolving] = useState(false);
-  const [results, setResults] = useState([]); // [{id, expr, value, x, y, width, height, handwriting, handwritingVisible}]
-  const [handwritingRegions, setHandwritingRegions] = useState([]); // [{expr, bbox: {minX, minY, maxX, maxY}, imageData}]
-  const [customTexts, setCustomTexts] = useState([]); // [{id, text, x, y, width, height, editing}]
-
+  const [results, setResults] = useState([]);
+  const [handwritingRegions, setHandwritingRegions] = useState([]);
+  const [customTexts, setCustomTexts] = useState([]);
+  
+  // New hooks
+  const { mode: drawingMode, toggle2D3D, is2D, is3D } = useDrawingMode();
+  
   React.useEffect(() => {
     if (!localStorage.getItem("dsr-welcome-shown")) {
       setShowWelcome(true);
@@ -51,8 +61,22 @@ const DrawingCanvas: React.FC = () => {
   // Helper: push current objects to undo stack
   const pushToUndo = (objs: any[]) => {
     setUndoStack((prev) => [...prev, objs]);
-    setRedoStack([]); // clear redo stack on new action
+    setRedoStack([]);
   };
+
+  // Clear canvas hook
+  const { clearAll } = useClearCanvas({
+    setObjects,
+    canvasRef,
+    pushToUndo: () => pushToUndo(objects),
+    resetOtherStates: () => {
+      setResults([]);
+      setHandwritingRegions([]);
+      setCustomTexts([]);
+      setUndoStack([]);
+      setRedoStack([]);
+    }
+  });
 
   // Undo
   const handlePrev = () => {
@@ -74,12 +98,6 @@ const DrawingCanvas: React.FC = () => {
       setObjects(next);
       return prevRedo.slice(1);
     });
-  };
-
-  // Clear All
-  const handleClearAll = () => {
-    pushToUndo(objects);
-    setObjects([]);
   };
 
   // Export as PDF
@@ -105,6 +123,7 @@ const DrawingCanvas: React.FC = () => {
       return newZoom;
     });
   };
+  
   const handleZoomOut = () => {
     setZoom(z => {
       const newZoom = Math.max(z - 0.1, minZoom);
@@ -121,11 +140,13 @@ const DrawingCanvas: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Welcome to Draw & Solve!</DialogTitle>
             <DialogDescription>
-              <div className="mb-2">Draw & Solve lets you sketch math problems, diagrams, or notes, and solve or export them instantly.</div>
+              <div className="mb-2">Draw & Solve lets you sketch math problems, diagrams, or notes in 2D or 3D, and solve or export them instantly.</div>
               <ul className="list-disc pl-5 mb-2 text-left">
                 <li>🖊️ Draw or erase with adjustable brush size and color</li>
                 <li>🔍 Zoom and pan for precision</li>
                 <li>📐 Grid and rulers for alignment</li>
+                <li>🎯 Shape tools with 8 predefined shapes</li>
+                <li>🌐 Toggle between 2D and 3D drawing modes</li>
                 <li>⬅️ Undo/Redo and Clear All</li>
                 <li>📤 Export your drawing as PDF</li>
                 <li>🧮 Click "Solve" to send your drawing to the AI solver</li>
@@ -138,71 +159,118 @@ const DrawingCanvas: React.FC = () => {
           </button>
         </DialogContent>
       </Dialog>
-      {/* Toggle button for right sidebar (visible on mobile) */}
-      {isMobile && (
-        <div className="flex justify-end p-2">
+
+      {/* Top bar with 2D/3D toggle and visibility controls */}
+      <div className="flex justify-between items-center p-2 bg-[#181818] border-b border-neutral-800">
+        <div className="flex items-center gap-4">
+          {/* 2D/3D Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm">2D</span>
+            <Switch checked={is3D} onCheckedChange={toggle2D3D} />
+            <span className="text-sm">3D</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Sidebar visibility controls */}
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowRightSidebar((v) => !v)}
-            className="ml-auto"
+            onClick={() => setShowLeftSidebar(!showLeftSidebar)}
+            className="flex items-center gap-1"
           >
-            {showRightSidebar ? "Hide Options" : "Show Options"}
+            {showLeftSidebar ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            Tools
           </Button>
+          
+          {isMobile && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowRightSidebar(!showRightSidebar)}
+              className="flex items-center gap-1"
+            >
+              {showRightSidebar ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              Options
+            </Button>
+          )}
         </div>
-      )}
+      </div>
+
       <div className="flex-1 flex min-h-0 flex-col md:flex-row">
         {/* Left Sidebar */}
-        <div className="flex flex-row md:flex-col items-center gap-2 w-full md:w-16 bg-[#181818] border-b md:border-b-0 md:border-r border-neutral-800 py-2 md:py-4 overflow-y-auto max-h-full">
-          {tools.map(tool => (
+        {showLeftSidebar && (
+          <div className="flex flex-row md:flex-col items-center gap-2 w-full md:w-16 bg-[#181818] border-b md:border-b-0 md:border-r border-neutral-800 py-2 md:py-4 overflow-y-auto max-h-full">
+            {tools.map(tool => (
+              <Button
+                key={tool.name}
+                variant={mode === tool.mode ? "default" : "outline"}
+                size="icon"
+                className={`mb-2 ${mode === tool.mode ? "bg-primary text-primary-foreground ring-2 ring-primary" : ""}`}
+                onClick={() => setMode(tool.mode)}
+                title={tool.name}
+              >
+                {tool.icon}
+              </Button>
+            ))}
+            
+            {/* Shape selector - only show when shape mode is selected */}
+            {mode === "shape" && (
+              <div className="mb-2 px-2 w-full">
+                <ShapeSelector
+                  selectedShape={selectedShape}
+                  onShapeSelect={setSelectedShape}
+                />
+              </div>
+            )}
+            
             <Button
-              key={tool.name}
-              variant={mode === tool.mode ? "default" : "outline"}
+              variant={showGrid ? "default" : "outline"}
               size="icon"
-              className={`mb-2 ${mode === tool.mode ? "bg-primary text-primary-foreground ring-2 ring-primary" : ""}`}
-              onClick={() => setMode(tool.mode)}
-              title={tool.name}
+              className="mb-2"
+              onClick={() => setShowGrid(g => !g)}
+              title="Toggle Grid"
             >
-              {tool.icon}
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground">
+                <rect x="2" y="2" width="16" height="16" rx="2"/>
+                <path d="M2 7h16M2 13h16M7 2v16M13 2v16"/>
+              </svg>
             </Button>
-          ))}
-          <Button
-            variant={showGrid ? "default" : "outline"}
-            size="icon"
-            className="mb-2"
-            onClick={() => setShowGrid(g => !g)}
-            title="Toggle Grid"
-          >
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground"><rect x="2" y="2" width="16" height="16" rx="2"/><path d="M2 7h16M2 13h16M7 2v16M13 2v16"/></svg>
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="mb-2"
-            onClick={handleExport}
-            title="Export as PDF"
-          >
-            <Download className="text-foreground" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="mb-2"
-            onClick={handleZoomIn}
-            title="Zoom In"
-          >
-            <ZoomIn className="text-foreground" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="mb-2"
-            onClick={handleZoomOut}
-            title="Zoom Out"
-          >
-            <ZoomOut className="text-foreground" />
-          </Button>
-        </div>
+            
+            {is2D && (
+              <>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="mb-2"
+                  onClick={handleExport}
+                  title="Export as PDF"
+                >
+                  <Download className="text-foreground" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="mb-2"
+                  onClick={handleZoomIn}
+                  title="Zoom In"
+                >
+                  <ZoomIn className="text-foreground" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="mb-2"
+                  onClick={handleZoomOut}
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="text-foreground" />
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Main Canvas Area */}
         <div
           className="flex-1 flex flex-col items-center justify-center bg-[#232323] relative overflow-hidden"
@@ -227,74 +295,91 @@ const DrawingCanvas: React.FC = () => {
             }
           }}
         >
-          <DrawingCanvasArea
-            color={color}
-            brushSize={brushSize}
-            mode={mode}
-            showGrid={showGrid}
-            objects={objects}
-            setObjects={(newObjs) => {
-              pushToUndo(objects);
-              setObjects(newObjs);
-            }}
-            canvasRef={canvasRef}
-            zoom={zoom}
-            minZoom={minZoom}
-            maxZoom={maxZoom}
-            onZoomChange={z => {
-              setZoom(z);
-              setZoomInput(Math.round(z * 100).toString());
-            }}
-            offset={offset}
-            onOffsetChange={setOffset}
-          />
-          {/* Render result labels as draggable overlays */}
-          {results.map((label) => (
-            <DraggableLabel
-              key={label.id}
-              label={label}
-              onMove={(x, y) => {
-                setResults(results => results.map(l => l.id === label.id ? { ...l, x, y } : l));
+          {is2D ? (
+            <DrawingCanvasArea
+              color={color}
+              brushSize={brushSize}
+              mode={mode}
+              showGrid={showGrid}
+              objects={objects}
+              setObjects={(newObjs) => {
+                pushToUndo(objects);
+                setObjects(newObjs);
               }}
-              onResize={(width, height) => {
-                setResults(results => results.map(l => l.id === label.id ? { ...l, width, height } : l));
-              }}
-              onRemove={id => {
-                setResults(results => results.filter(l => l.id !== id));
-              }}
+              canvasRef={canvasRef}
               zoom={zoom}
+              minZoom={minZoom}
+              maxZoom={maxZoom}
+              onZoomChange={z => {
+                setZoom(z);
+                setZoomInput(Math.round(z * 100).toString());
+              }}
               offset={offset}
+              onOffsetChange={setOffset}
             />
-          ))}
-          {/* Render custom text overlays */}
-          {customTexts.map((label) => (
-            (label.text.trim() !== '' || label.editing) && (
-              <DraggableTextLabel
-                key={label.id}
-                label={label}
-                onMove={(x, y) => {
-                  setCustomTexts(texts => texts.map(l => l.id === label.id ? { ...l, x, y } : l));
-                }}
-                onResize={(width, height) => {
-                  setCustomTexts(texts => texts.map(l => l.id === label.id ? { ...l, width, height } : l));
-                }}
-                onEdit={text => {
-                  setCustomTexts(texts => texts.map(l => l.id === label.id ? { ...l, text, editing: false } : l));
-                }}
-                onStartEdit={() => {
-                  setCustomTexts(texts => texts.map(l => l.id === label.id ? { ...l, editing: true } : l));
-                }}
-                onAutoSize={(width, height) => {
-                  setCustomTexts(texts => texts.map(l => l.id === label.id ? { ...l, width, height } : l));
-                }}
-                zoom={zoom}
-                offset={offset}
-              />
-            )
-          ))}
+          ) : (
+            <Canvas3D
+              color={color}
+              brushSize={brushSize}
+              mode={mode}
+              objects={objects}
+              setObjects={setObjects}
+            />
+          )}
+          
+          {/* Keep existing overlay components for 2D mode */}
+          {is2D && (
+            <>
+              {/* Render result labels as draggable overlays */}
+              {results.map((label) => (
+                <DraggableLabel
+                  key={label.id}
+                  label={label}
+                  onMove={(x, y) => {
+                    setResults(results => results.map(l => l.id === label.id ? { ...l, x, y } : l));
+                  }}
+                  onResize={(width, height) => {
+                    setResults(results => results.map(l => l.id === label.id ? { ...l, width, height } : l));
+                  }}
+                  onRemove={id => {
+                    setResults(results => results.filter(l => l.id !== id));
+                  }}
+                  zoom={zoom}
+                  offset={offset}
+                />
+              ))}
+              
+              {/* Render custom text overlays */}
+              {customTexts.map((label) => (
+                (label.text.trim() !== '' || label.editing) && (
+                  <DraggableTextLabel
+                    key={label.id}
+                    label={label}
+                    onMove={(x, y) => {
+                      setCustomTexts(texts => texts.map(l => l.id === label.id ? { ...l, x, y } : l));
+                    }}
+                    onResize={(width, height) => {
+                      setCustomTexts(texts => texts.map(l => l.id === label.id ? { ...l, width, height } : l));
+                    }}
+                    onEdit={text => {
+                      setCustomTexts(texts => texts.map(l => l.id === label.id ? { ...l, text, editing: false } : l));
+                    }}
+                    onStartEdit={() => {
+                      setCustomTexts(texts => texts.map(l => l.id === label.id ? { ...l, editing: true } : l));
+                    }}
+                    onAutoSize={(width, height) => {
+                      setCustomTexts(texts => texts.map(l => l.id === label.id ? { ...l, width, height } : l));
+                    }}
+                    zoom={zoom}
+                    offset={offset}
+                  />
+                )
+              ))}
+            </>
+          )}
         </div>
+
         {/* Right Sidebar - responsive and toggleable */}
-        {/* On desktop: always visible. On mobile: toggled. */}
         {(isMobile ? showRightSidebar : true) && (
           <div className="flex flex-col w-full md:w-56 bg-[#181818] border-t md:border-t-0 md:border-l border-neutral-800 p-4 gap-6 overflow-y-auto max-h-full">
             {/* Action Buttons */}
@@ -318,131 +403,145 @@ const DrawingCanvas: React.FC = () => {
                 Next
               </Button>
             </div>
+            
             <div className="flex gap-2 mb-4">
-              <Button variant="destructive" size="sm" className="flex-1" onClick={handleClearAll} disabled={objects.length === 0}>Clear All</Button>
-              <Button
-                variant="default"
-                size="sm"
-                className="flex-1"
-                disabled={isSolving}
-                onClick={async () => {
-                  setIsSolving(true);
-                  try {
-                    let dictOfVars = {};
-                    const canvas = canvasRef.current;
-                    if (!canvas) throw new Error("Canvas not available");
-                    const ctx = canvas.getContext('2d');
-                    // --- Step 1: Detect handwriting regions for each variable ---
-                    // For demo: assume each drawing object is a variable (real code would use OCR or segmentation)
-                    const regions = objects.map((obj, idx) => {
-                      // Find bounding box for points
-                      if (!obj.points || obj.points.length === 0) return null;
-                      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                      obj.points.forEach(pt => {
-                        minX = Math.min(minX, pt.x);
-                        minY = Math.min(minY, pt.y);
-                        maxX = Math.max(maxX, pt.x);
-                        maxY = Math.max(maxY, pt.y);
-                      });
-                      // Add some padding
-                      minX = Math.max(0, minX - 5);
-                      minY = Math.max(0, minY - 5);
-                      maxX = Math.min(canvas.width, maxX + 5);
-                      maxY = Math.min(canvas.height, maxY + 5);
-                      // Get image data for this region
-                      const imageData = ctx.getImageData(minX, minY, maxX - minX, maxY - minY);
-                      // For demo, assign a fake variable name (real code would use OCR)
-                      const expr = String.fromCharCode(120 + idx); // x, y, z, ...
-                      return { expr, bbox: { minX, minY, maxX, maxY }, imageData };
-                    }).filter(Boolean);
-                    setHandwritingRegions(regions);
-                    // --- End Step 1 ---
-                    const response = await axios({
-                      method: 'post',
-                      url: 'http://localhost:8900/calculate',
-                      data: {
-                        image: canvas.toDataURL('image/png'),
-                        dict_of_vars: dictOfVars
-                      }
-                    });
-                    const resp = response.data;
-                    console.log("Solve result:", resp);
-                    // --- Step 2: Erase handwriting and add result label ---
-                    let newResults = [];
-                    (resp.data || []).forEach((data) => {
-                      // Find the handwriting region for this variable
-                      const region = regions.find(r => r.expr === data.expr);
-                      let x = canvas.width / 2, y = canvas.height / 2, width = 80, height = 32, handwriting = null;
-                      if (region) {
-                        // Erase the handwriting region
-                        ctx.clearRect(region.bbox.minX, region.bbox.minY, region.bbox.maxX - region.bbox.minX, region.bbox.maxY - region.bbox.minY);
-                        x = region.bbox.minX;
-                        y = region.bbox.minY;
-                        width = region.bbox.maxX - region.bbox.minX;
-                        height = region.bbox.maxY - region.bbox.minY;
-                        handwriting = region.imageData;
-                      }
-                      newResults.push({
-                        id: uuid(),
-                        expr: data.expr,
-                        value: data.result,
-                        x,
-                        y,
-                        width,
-                        height,
-                        handwriting,
-                        handwritingVisible: false
-                      });
-                    });
-                    setResults(prev => [...prev, ...newResults]);
-                    toast.success("Calculation successful!", { duration: 3000 });
-                    // --- End Step 2 ---
-                  } catch (error) {
-                    console.error("Error:", error);
-                    toast.error("Calculation failed!", { duration: 3000 });
-                  } finally {
-                    setIsSolving(false);
-                  }
-                }}
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="flex-1" 
+                onClick={clearAll}
+                disabled={objects.length === 0 && results.length === 0 && customTexts.length === 0}
               >
-                {isSolving ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="animate-spin w-4 h-4" /> Solving...
-                  </span>
-                ) : (
-                  "Solve"
-                )}
+                Clear All
               </Button>
+              
+              {is2D && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="flex-1"
+                  disabled={isSolving}
+                  onClick={async () => {
+                    setIsSolving(true);
+                    try {
+                      let dictOfVars = {};
+                      const canvas = canvasRef.current;
+                      if (!canvas) throw new Error("Canvas not available");
+                      const ctx = canvas.getContext('2d');
+                      // --- Step 1: Detect handwriting regions for each variable ---
+                      // For demo: assume each drawing object is a variable (real code would use OCR or segmentation)
+                      const regions = objects.map((obj, idx) => {
+                        // Find bounding box for points
+                        if (!obj.points || obj.points.length === 0) return null;
+                        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                        obj.points.forEach(pt => {
+                          minX = Math.min(minX, pt.x);
+                          minY = Math.min(minY, pt.y);
+                          maxX = Math.max(maxX, pt.x);
+                          maxY = Math.max(maxY, pt.y);
+                        });
+                        // Add some padding
+                        minX = Math.max(0, minX - 5);
+                        minY = Math.max(0, minY - 5);
+                        maxX = Math.min(canvas.width, maxX + 5);
+                        maxY = Math.min(canvas.height, maxY + 5);
+                        // Get image data for this region
+                        const imageData = ctx.getImageData(minX, minY, maxX - minX, maxY - minY);
+                        // For demo, assign a fake variable name (real code would use OCR)
+                        const expr = String.fromCharCode(120 + idx); // x, y, z, ...
+                        return { expr, bbox: { minX, minY, maxX, maxY }, imageData };
+                      }).filter(Boolean);
+                      setHandwritingRegions(regions);
+                      // --- End Step 1 ---
+                      const response = await axios({
+                        method: 'post',
+                        url: 'http://localhost:8900/calculate',
+                        data: {
+                          image: canvas.toDataURL('image/png'),
+                          dict_of_vars: dictOfVars
+                        }
+                      });
+                      const resp = response.data;
+                      console.log("Solve result:", resp);
+                      // --- Step 2: Erase handwriting and add result label ---
+                      let newResults = [];
+                      (resp.data || []).forEach((data) => {
+                        // Find the handwriting region for this variable
+                        const region = regions.find(r => r.expr === data.expr);
+                        let x = canvas.width / 2, y = canvas.height / 2, width = 80, height = 32, handwriting = null;
+                        if (region) {
+                          // Erase the handwriting region
+                          ctx.clearRect(region.bbox.minX, region.bbox.minY, region.bbox.maxX - region.bbox.minX, region.bbox.maxY - region.bbox.minY);
+                          x = region.bbox.minX;
+                          y = region.bbox.minY;
+                          width = region.bbox.maxX - region.bbox.minX;
+                          height = region.bbox.maxY - region.bbox.minY;
+                          handwriting = region.imageData;
+                        }
+                        newResults.push({
+                          id: uuid(),
+                          expr: data.expr,
+                          value: data.result,
+                          x,
+                          y,
+                          width,
+                          height,
+                          handwriting,
+                          handwritingVisible: false
+                        });
+                      });
+                      setResults(prev => [...prev, ...newResults]);
+                      toast.success("Calculation successful!", { duration: 3000 });
+                      // --- End Step 2 ---
+                    } catch (error) {
+                      console.error("Error:", error);
+                      toast.error("Calculation failed!", { duration: 3000 });
+                    } finally {
+                      setIsSolving(false);
+                    }
+                  }}
+                >
+                  {isSolving ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="animate-spin w-4 h-4" /> Solving...
+                    </span>
+                  ) : (
+                    "Solve"
+                  )}
+                </Button>
+              )}
             </div>
-            {/* Zoom Control */}
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium">Zoom</label>
-              <input
-                type="text"
-                value={zoomInput}
-                onChange={e => {
-                  setZoomInput(e.target.value);
-                }}
-                onBlur={() => {
-                  let val = Number(zoomInput);
-                  if (isNaN(val)) val = Math.round(zoom * 100);
-                  val = Math.max(minZoom * 100, Math.min(maxZoom * 100, val));
-                  setZoom(val / 100);
-                  setZoomInput(val.toString());
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
+            
+            {/* Zoom Control - only for 2D mode */}
+            {is2D && (
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium">Zoom</label>
+                <input
+                  type="text"
+                  value={zoomInput}
+                  onChange={e => setZoomInput(e.target.value)}
+                  onBlur={() => {
                     let val = Number(zoomInput);
                     if (isNaN(val)) val = Math.round(zoom * 100);
                     val = Math.max(minZoom * 100, Math.min(maxZoom * 100, val));
                     setZoom(val / 100);
                     setZoomInput(val.toString());
-                  }
-                }}
-                className="w-full px-2 py-1 rounded bg-background text-foreground border border-border"
-              />
-              <div className="text-xs mt-1">{Math.round(zoom * 100)}%</div>
-            </div>
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      let val = Number(zoomInput);
+                      if (isNaN(val)) val = Math.round(zoom * 100);
+                      val = Math.max(minZoom * 100, Math.min(maxZoom * 100, val));
+                      setZoom(val / 100);
+                      setZoomInput(val.toString());
+                    }
+                  }}
+                  className="w-full px-2 py-1 rounded bg-background text-foreground border border-border"
+                />
+                <div className="text-xs mt-1">{Math.round(zoom * 100)}%</div>
+              </div>
+            )}
+            
             <div>
               <label className="block mb-2 text-sm font-medium">Brush/Eraser Size</label>
               <input
@@ -455,6 +554,7 @@ const DrawingCanvas: React.FC = () => {
               />
               <div className="text-xs mt-1">{brushSize}px</div>
             </div>
+            
             <div>
               <label className="block mb-2 text-sm font-medium">Color</label>
               <input
@@ -468,12 +568,14 @@ const DrawingCanvas: React.FC = () => {
           </div>
         )}
       </div>
+      
       {/* Bottom Status Bar */}
       <div className="h-8 bg-[#181818] border-t border-neutral-800 flex items-center px-4 text-xs">
-        <span>Mode: {mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
+        <span>Mode: {drawingMode.toUpperCase()} - {mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
         <span className="ml-6">Brush Size: {brushSize}px</span>
         <span className="ml-6">Color: {color}</span>
-        <span className="ml-6">Zoom: {Math.round(zoom * 100)}%</span>
+        {is2D && <span className="ml-6">Zoom: {Math.round(zoom * 100)}%</span>}
+        {mode === "shape" && <span className="ml-6">Shape: {selectedShape}</span>}
       </div>
     </div>
   );

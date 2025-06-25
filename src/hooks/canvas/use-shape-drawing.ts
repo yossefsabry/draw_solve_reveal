@@ -2,9 +2,10 @@
 import { useRef, useState } from "react";
 import { ShapeTool, AnyDrawingObject } from "@/components/drawing/types";
 import { createShapeObject, drawShapePreview } from "@/components/drawing/ShapeDrawingUtils";
+import { ShapeType } from "@/components/drawing/ShapeSelector";
 
 interface UseShapeDrawingProps {
-  shapeTool: ShapeTool;
+  shapeTool: ShapeTool | ShapeType;
   color: string;
   brushSize: number;
   scale: number;
@@ -112,7 +113,7 @@ export const useShapeDrawing = ({
     }
     
     const newObject = createShapeObject(
-      shapeTool, 
+      shapeTool as ShapeTool, 
       startPointRef.current.x, 
       startPointRef.current.y, 
       finalEndPos.x, 
