@@ -379,7 +379,7 @@ function drawArrow(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
 function drawText(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   if (obj.type !== 'text') return;
   
-  ctx.font = '24px Arial';
+  ctx.font = `${obj.fontSize}px Arial`;
   ctx.fillStyle = obj.color || "#FFFFFF";
   ctx.fillText(obj.text, obj.x, obj.y);
 }
