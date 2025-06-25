@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import Rulers from "./Rulers";
 
@@ -69,6 +68,47 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   const [textInput, setTextInput] = useState("");
   const [textPosition, setTextPosition] = useState<{ x: number; y: number } | null>(null);
 
+  // Optimized grid rendering function
+  const drawOptimizedGrid = useCallback((ctx: CanvasRenderingContext2D) => {
+    if (!showGrid) return;
+    
+    ctx.save();
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 0.5 / zoom;
+    ctx.globalAlpha = 0.4;
+    
+    // Calculate grid size based on zoom for better performance
+    let gridSize = 20;
+    if (zoom < 0.5) gridSize = 100;
+    else if (zoom < 1) gridSize = 50;
+    else if (zoom > 2) gridSize = 10;
+    
+    // Calculate visible bounds with padding
+    const padding = gridSize * 2;
+    const startX = Math.floor((-offset.x - padding) / zoom / gridSize) * gridSize;
+    const startY = Math.floor((-offset.y - padding) / zoom / gridSize) * gridSize;
+    const endX = startX + Math.ceil((canvasSize.width + padding * 2) / zoom / gridSize) * gridSize;
+    const endY = startY + Math.ceil((canvasSize.height + padding * 2) / zoom / gridSize) * gridSize;
+    
+    // Draw vertical lines
+    ctx.beginPath();
+    for (let x = startX; x <= endX; x += gridSize) {
+      ctx.moveTo(x, startY);
+      ctx.lineTo(x, endY);
+    }
+    ctx.stroke();
+    
+    // Draw horizontal lines
+    ctx.beginPath();
+    for (let y = startY; y <= endY; y += gridSize) {
+      ctx.moveTo(startX, y);
+      ctx.lineTo(endX, y);
+    }
+    ctx.stroke();
+    
+    ctx.restore();
+  }, [showGrid, zoom, offset.x, offset.y, canvasSize.width, canvasSize.height]);
+
   // Memoize getPos for stable reference
   const getPos = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
@@ -98,34 +138,8 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     ctx.translate(offset.x, offset.y);
     ctx.scale(zoom, zoom);
 
-    // Draw grid if enabled
-    if (showGrid) {
-      ctx.save();
-      ctx.strokeStyle = '#333333';
-      ctx.lineWidth = 0.5 / zoom;
-      ctx.globalAlpha = 0.3;
-      
-      const gridSize = 20;
-      const startX = Math.floor(-offset.x / zoom / gridSize) * gridSize;
-      const startY = Math.floor(-offset.y / zoom / gridSize) * gridSize;
-      const endX = startX + (canvas.width / zoom) + gridSize;
-      const endY = startY + (canvas.height / zoom) + gridSize;
-      
-      for (let x = startX; x <= endX; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, startY);
-        ctx.lineTo(x, endY);
-        ctx.stroke();
-      }
-      
-      for (let y = startY; y <= endY; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(startX, y);
-        ctx.lineTo(endX, y);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
+    // Draw optimized grid
+    drawOptimizedGrid(ctx);
 
     // Draw all objects
     objects.forEach(obj => {

@@ -31,7 +31,7 @@ export const Rulers: React.FC<RulersProps> = ({
 
   // Calculate appropriate tick spacing based on zoom level
   const getTickSpacing = () => {
-    const minPixelSpacing = 50; // Minimum pixels between major ticks
+    const minPixelSpacing = 60; // Increased for better readability
     const worldSpacing = minPixelSpacing / zoom;
     
     // Find appropriate spacing (1, 2, 5, 10, 20, 50, 100, etc.)
@@ -76,18 +76,18 @@ export const Rulers: React.FC<RulersProps> = ({
         />
       );
       
-      // Add labels for major ticks
-      if (isMajor && screenX >= 0 && screenX <= width) {
+      // Add labels for major ticks with better positioning
+      if (isMajor && screenX >= 20 && screenX <= width - 20) {
         ticks.push(
           <text
             key={`h-label-${worldX.toFixed(2)}`}
             x={screenX}
-            y={rulerSize - tickHeight - 3}
-            fontSize={10}
+            y={rulerSize - tickHeight - 4} // Moved down slightly
+            fontSize={9}
             fill={RULER_TEXT}
             textAnchor="middle"
             dominantBaseline="bottom"
-            style={{ userSelect: "none" }}
+            style={{ userSelect: "none", fontWeight: "500" }}
           >
             {Math.round(worldX)}
           </text>
@@ -124,18 +124,18 @@ export const Rulers: React.FC<RulersProps> = ({
         />
       );
       
-      // Add labels for major ticks
-      if (isMajor && screenY >= 0 && screenY <= height) {
+      // Add labels for major ticks with better positioning
+      if (isMajor && screenY >= 20 && screenY <= height - 20) {
         ticks.push(
           <text
             key={`v-label-${worldY.toFixed(2)}`}
-            x={rulerSize - tickWidth - 3}
+            x={rulerSize - tickWidth - 6} // Moved right for better readability
             y={screenY}
-            fontSize={10}
+            fontSize={9}
             fill={RULER_TEXT}
             textAnchor="end"
             dominantBaseline="middle"
-            style={{ userSelect: "none" }}
+            style={{ userSelect: "none", fontWeight: "500" }}
           >
             {Math.round(worldY)}
           </text>
@@ -168,15 +168,15 @@ export const Rulers: React.FC<RulersProps> = ({
         />
       );
       
-      // Position label
+      // Position label with better positioning
       indicators.push(
         <rect
           key="cursor-x-bg"
-          x={cursorScreenX - 25}
+          x={Math.max(2, Math.min(width - 52, cursorScreenX - 25))}
           y={2}
           width={50}
-          height={14}
-          fill="rgba(0, 191, 255, 0.8)"
+          height={12}
+          fill="rgba(0, 191, 255, 0.9)"
           rx={2}
         />
       );
@@ -184,9 +184,9 @@ export const Rulers: React.FC<RulersProps> = ({
       indicators.push(
         <text
           key="cursor-x-label"
-          x={cursorScreenX}
-          y={9}
-          fontSize={10}
+          x={Math.max(27, Math.min(width - 27, cursorScreenX))}
+          y={8}
+          fontSize={9}
           fill="#000"
           textAnchor="middle"
           dominantBaseline="middle"
@@ -211,15 +211,15 @@ export const Rulers: React.FC<RulersProps> = ({
         />
       );
       
-      // Position label
+      // Position label with better positioning
       indicators.push(
         <rect
           key="cursor-y-bg"
           x={2}
-          y={cursorScreenY - 7}
-          width={40}
-          height={14}
-          fill="rgba(0, 191, 255, 0.8)"
+          y={Math.max(2, Math.min(height - 14, cursorScreenY - 6))}
+          width={35}
+          height={12}
+          fill="rgba(0, 191, 255, 0.9)"
           rx={2}
         />
       );
@@ -227,9 +227,9 @@ export const Rulers: React.FC<RulersProps> = ({
       indicators.push(
         <text
           key="cursor-y-label"
-          x={22}
-          y={cursorScreenY}
-          fontSize={10}
+          x={19}
+          y={Math.max(8, Math.min(height - 8, cursorScreenY))}
+          fontSize={9}
           fill="#000"
           textAnchor="middle"
           dominantBaseline="middle"
