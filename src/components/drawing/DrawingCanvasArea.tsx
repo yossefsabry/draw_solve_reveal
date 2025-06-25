@@ -1,28 +1,11 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import Rulers from "./Rulers";
-
-interface AnyDrawingObject {
-  type: string;
-  points?: { x: number; y: number }[];
-  color?: string;
-  lineWidth?: number;
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  radius?: number;
-  x1?: number;
-  y1?: number;
-  x2?: number;
-  y2?: number;
-  text?: string;
-  fontSize?: number;
-}
+import { AnyDrawingObject, DrawingMode } from "./types";
 
 interface DrawingCanvasAreaProps {
   color: string;
   brushSize: number;
-  mode: string;
+  mode: DrawingMode;
   showGrid: boolean;
   objects: AnyDrawingObject[];
   setObjects: (objs: AnyDrawingObject[]) => void;
@@ -327,7 +310,11 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     startPoint.current = pos;
     if (mode === "draw" || mode === "erase") {
       drawingPath.current = [pos];
-    } else if (mode === "rectangle" || mode === "circle" || mode === "line") {
+    } else if ((mode as any) === "rectangle" && startPoint.current) {
+      setShapePreview(null);
+    } else if ((mode as any) === "circle" && startPoint.current) {
+      setShapePreview(null);
+    } else if ((mode as any) === "line" && startPoint.current) {
       setShapePreview(null);
     }
   };
@@ -342,7 +329,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     
     if (mode === "draw" || mode === "erase") {
       drawingPath.current.push(pos);
-    } else if (mode === "rectangle" && startPoint.current) {
+    } else if ((mode as any) === "rectangle" && startPoint.current) {
       const width = pos.x - startPoint.current.x;
       const height = pos.y - startPoint.current.y;
       setShapePreview({
@@ -354,7 +341,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         color,
         lineWidth: brushSize,
       });
-    } else if (mode === "circle" && startPoint.current) {
+    } else if ((mode as any) === "circle" && startPoint.current) {
       const radius = Math.sqrt(
         Math.pow(pos.x - startPoint.current.x, 2) +
           Math.pow(pos.y - startPoint.current.y, 2)
@@ -367,7 +354,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         color,
         lineWidth: brushSize,
       });
-    } else if (mode === "line" && startPoint.current) {
+    } else if ((mode as any) === "line" && startPoint.current) {
       setShapePreview({
         type: "line",
         x1: startPoint.current.x,

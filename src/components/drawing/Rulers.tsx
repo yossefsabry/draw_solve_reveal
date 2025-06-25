@@ -72,7 +72,7 @@ export const Rulers: React.FC<RulersProps> = ({
           x2={screenX}
           y2={rulerSize - tickHeight}
           stroke={isMajor ? RULER_MAJOR : RULER_FG}
-          strokeWidth={isMajor ? 1 : 0.5}
+          strokeWidth={isMajor ? 0.2 : 0.5}
         />
       );
       
@@ -81,9 +81,9 @@ export const Rulers: React.FC<RulersProps> = ({
         ticks.push(
           <text
             key={`h-label-${worldX.toFixed(2)}`}
-            x={screenX}
-            y={rulerSize - tickHeight - 4} // Moved down slightly
-            fontSize={9}
+            x={screenX }
+            y={rulerSize - tickHeight + 4} // Moved down slightly
+            fontSize={8}
             fill={RULER_TEXT}
             textAnchor="middle"
             dominantBaseline="bottom"
@@ -115,12 +115,12 @@ export const Rulers: React.FC<RulersProps> = ({
       ticks.push(
         <line
           key={`v-${worldY.toFixed(2)}`}
-          x1={rulerSize}
+          x1={rulerSize + 10}
           y1={screenY}
-          x2={rulerSize - tickWidth}
+          x2={rulerSize - tickWidth + 5}
           y2={screenY}
           stroke={isMajor ? RULER_MAJOR : RULER_FG}
-          strokeWidth={isMajor ? 1 : 0.5}
+          strokeWidth={isMajor ? 0.2 : 0.5}
         />
       );
       
@@ -129,12 +129,12 @@ export const Rulers: React.FC<RulersProps> = ({
         ticks.push(
           <text
             key={`v-label-${worldY.toFixed(2)}`}
-            x={rulerSize - tickWidth - 6} // Moved right for better readability
+            x={rulerSize - tickWidth + 15} // Moved right for better readability
             y={screenY}
-            fontSize={9}
+            fontSize={8}
             fill={RULER_TEXT}
             textAnchor="end"
-            dominantBaseline="middle"
+            dominantBaseline="left"
             style={{ userSelect: "none", fontWeight: "500" }}
           >
             {Math.round(worldY)}
@@ -259,14 +259,14 @@ export const Rulers: React.FC<RulersProps> = ({
           borderBottom: `1px solid ${RULER_FG}`
         }}
       >
-        <rect width={width} height={rulerSize} fill={RULER_BG} />
+        <rect width={width + 10} height={rulerSize} fill={RULER_BG} />
         {renderHorizontalRuler()}
         {renderCursorIndicators().filter(item => item.key?.toString().includes('cursor-x'))}
       </svg>
       
       {/* Left ruler */}
       <svg
-        width={rulerSize}
+        width={rulerSize + 10}
         height={height}
         style={{ 
           position: "absolute", 
@@ -278,7 +278,7 @@ export const Rulers: React.FC<RulersProps> = ({
           borderRight: `1px solid ${RULER_FG}`
         }}
       >
-        <rect width={rulerSize} height={height} fill={RULER_BG} />
+        <rect width={rulerSize + 10} height={height} fill={RULER_BG} />
         {renderVerticalRuler()}
         {renderCursorIndicators().filter(item => item.key?.toString().includes('cursor-y'))}
       </svg>
@@ -289,7 +289,7 @@ export const Rulers: React.FC<RulersProps> = ({
           position: "absolute",
           top: 0,
           left: 0,
-          width: rulerSize,
+          width: rulerSize + 10,
           height: rulerSize,
           background: RULER_BG,
           zIndex: 11,
