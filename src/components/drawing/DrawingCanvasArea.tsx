@@ -73,9 +73,9 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     if (!showGrid) return;
     
     ctx.save();
-    ctx.strokeStyle = '#333333';
+    ctx.strokeStyle = '#444444'; // Made lighter for better visibility
     ctx.lineWidth = 0.5 / zoom;
-    ctx.globalAlpha = 0.4;
+    ctx.globalAlpha = 0.6; // Increased opacity for better visibility
     
     // Calculate grid size based on zoom for better performance
     let gridSize = 20;
