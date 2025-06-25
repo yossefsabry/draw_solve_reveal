@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import Rulers from "./Rulers";
 
 interface AnyDrawingObject {
@@ -15,6 +15,8 @@ interface AnyDrawingObject {
   y1?: number;
   x2?: number;
   y2?: number;
+  text?: string;
+  fontSize?: number;
 }
 
 interface DrawingCanvasAreaProps {
@@ -42,8 +44,8 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   setObjects,
   canvasRef,
   zoom,
-  minZoom = 0.5,
-  maxZoom = 4.0,
+  minZoom = 0.1,
+  maxZoom = 5.0,
   onZoomChange,
   offset = { x: 0, y: 0 },
   onOffsetChange,
@@ -60,6 +62,9 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef<{ x: number; y: number } | null>(null);
   const offsetStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isTyping, setIsTyping] = useState(false);
+  const [textInput, setTextInput] = useState("");
+  const [textPosition, setTextPosition] = useState<{ x: number; y: number } | null>(null);
 
   // Memoize getPos for stable reference
   const getPos = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -130,6 +135,18 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         ctx.moveTo(obj.x1!, obj.y1!);
         ctx.lineTo(obj.x2!, obj.y2!);
         ctx.stroke();
+      } else if (obj.type === "text") {
+        ctx.fillStyle = obj.color || "#FFFFFF";
+        ctx.font = `${obj.fontSize || 16}px Arial`;
+        ctx.textBaseline = "top";
+        
+        // Handle multi-line text
+        const lines = (obj.text || "").split('\n');
+        const lineHeight = (obj.fontSize || 16) * 1.2;
+        
+        lines.forEach((line, index) => {
+          ctx.fillText(line, obj.x || 0, (obj.y || 0) + (index * lineHeight));
+        });
       }
       ctx.restore();
     });
@@ -244,8 +261,17 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       window.addEventListener('mouseup', handleMouseUp);
       return;
     }
-    isDrawing.current = true;
+    
     const pos = getPos(e);
+    
+    if (mode === "text") {
+      setIsTyping(true);
+      setTextPosition(pos);
+      setTextInput("");
+      return;
+    }
+    
+    isDrawing.current = true;
     startPoint.current = pos;
     if (mode === "draw" || mode === "erase") {
       drawingPath.current = [pos];
@@ -393,6 +419,27 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     };
   }, [canvasRef, handleWheel]);
 
+  // Handle text input
+  const handleTextSubmit = () => {
+    if (textInput.trim() && textPosition) {
+      setObjects([
+        ...objects,
+        {
+          type: "text",
+          x: textPosition.x,
+          y: textPosition.y,
+          text: textInput,
+          color: color,
+          fontSize: brushSize * 2,
+        },
+      ]);
+    }
+    
+    setIsTyping(false);
+    setTextInput("");
+    setTextPosition(null);
+  };
+
   return (
     <div ref={containerRef} style={{ width: "100%", height: "100%", position: "relative" }}>
       <canvas
@@ -419,6 +466,51 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         rulerSize={rulerSize} 
         cursor={cursor}
       />
+      
+      {/* Text input overlay */}
+      {isTyping && textPosition && (
+        <div
+          style={{
+            position: "absolute",
+            left: rulerSize + textPosition.x * zoom + offset.x,
+            top: rulerSize + textPosition.y * zoom + offset.y,
+            zIndex: 20,
+          }}
+        >
+          <textarea
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.ctrlKey) {
+                handleTextSubmit();
+              } else if (e.key === "Escape") {
+                setIsTyping(false);
+                setTextInput("");
+                setTextPosition(null);
+              }
+            }}
+            placeholder="Type your text... (Ctrl+Enter to submit, Esc to cancel)"
+            style={{
+              minWidth: "200px",
+              minHeight: "60px",
+              maxWidth: "400px",
+              padding: "8px",
+              border: "2px solid #00BFFF",
+              borderRadius: "4px",
+              backgroundColor: "rgba(0, 0, 0, 0.8)",
+              color: color,
+              fontSize: `${brushSize * 2}px`,
+              fontFamily: "Arial, sans-serif",
+              resize: "both",
+              outline: "none",
+            }}
+            autoFocus
+          />
+          <div style={{ marginTop: "4px", fontSize: "12px", color: "#ccc" }}>
+            Ctrl+Enter to submit • Esc to cancel
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import React from "react";
 
 interface RulersProps {
@@ -24,50 +25,80 @@ export const Rulers: React.FC<RulersProps> = ({
   gridSize = 20,
   cursor = null,
 }) => {
-  // Calculate the start position based on offset and zoom
-  const startX = Math.floor(-offset.x / zoom / gridSize) * gridSize;
-  const startY = Math.floor(-offset.y / zoom / gridSize) * gridSize;
+  // Calculate visible range in world coordinates
+  const worldStartX = -offset.x / zoom;
+  const worldStartY = -offset.y / zoom;
+  const worldEndX = worldStartX + width / zoom;
+  const worldEndY = worldStartY + height / zoom;
 
-  // Helper to render horizontal ruler ticks and labels
+  // Calculate tick spacing based on zoom level
+  const getTickSpacing = () => {
+    const minPixelSpacing = 40; // Minimum pixels between major ticks
+    const worldSpacing = minPixelSpacing / zoom;
+    
+    // Find appropriate spacing (powers of 10, 20, 50)
+    const magnitude = Math.pow(10, Math.floor(Math.log10(worldSpacing)));
+    const normalized = worldSpacing / magnitude;
+    
+    let spacing;
+    if (normalized <= 1) spacing = magnitude;
+    else if (normalized <= 2) spacing = 2 * magnitude;
+    else if (normalized <= 5) spacing = 5 * magnitude;
+    else spacing = 10 * magnitude;
+    
+    return spacing;
+  };
+
+  const tickSpacing = getTickSpacing();
+  const minorTickSpacing = tickSpacing / 5;
+
+  // Render horizontal ruler ticks
   const renderHorizontalTicks = () => {
     const ticks = [];
-    const step = gridSize;
-    const majorStep = step * 5; // Major tick every 5 grid units
-    const labelStep = step; // Show label at every grid line
-    for (let x = startX; x <= startX + width / zoom + step; x += step) {
-      const screenX = x * zoom + offset.x;
-      if (screenX < 0 || screenX > width) continue;
-      const isMajor = Math.abs(x % majorStep) < 0.01;
+    
+    // Start from first major tick before visible area
+    const startTick = Math.floor(worldStartX / tickSpacing) * tickSpacing;
+    
+    for (let worldX = startTick; worldX <= worldEndX + tickSpacing; worldX += minorTickSpacing) {
+      const screenX = worldX * zoom + offset.x;
+      if (screenX < -20 || screenX > width + 20) continue;
+      
+      const isMajor = Math.abs(worldX % tickSpacing) < 0.001;
       const tickHeight = isMajor ? rulerSize * 0.6 : rulerSize * 0.3;
+      
       ticks.push(
-        <g key={x}>
-          <line
-            x1={screenX}
-            y1={rulerSize}
-            x2={screenX}
-            y2={rulerSize - tickHeight}
-            stroke={isMajor ? RULER_MAJOR : RULER_FG}
-            strokeWidth={isMajor ? 1 : 0.5}
-          />
-          {/* Always show label at every grid line */}
-          {Math.abs(x % labelStep) < 0.01 && (
-            <text
-              x={screenX}
-              y={rulerSize - tickHeight}
-              fontSize={10}
-              fill={RULER_TEXT}
-              textAnchor="middle"
-              style={{ userSelect: "none" }}
-            >
-              {Math.round(x)}
-            </text>
-          )}
-        </g>
+        <line
+          key={`h-${worldX}`}
+          x1={screenX}
+          y1={rulerSize}
+          x2={screenX}
+          y2={rulerSize - tickHeight}
+          stroke={isMajor ? RULER_MAJOR : RULER_FG}
+          strokeWidth={isMajor ? 1 : 0.5}
+        />
       );
+      
+      // Add labels for major ticks
+      if (isMajor) {
+        ticks.push(
+          <text
+            key={`h-label-${worldX}`}
+            x={screenX}
+            y={rulerSize - tickHeight - 2}
+            fontSize={10}
+            fill={RULER_TEXT}
+            textAnchor="middle"
+            style={{ userSelect: "none" }}
+          >
+            {Math.round(worldX)}
+          </text>
+        );
+      }
     }
-    // Draw cursor indicator if present
+    
+    // Cursor indicator
     if (cursor) {
-      const cursorScreenX = (cursor.x + offset.x) * zoom;
+      const cursorScreenX = cursor.x * zoom + offset.x;
       if (cursorScreenX >= 0 && cursorScreenX <= width) {
         ticks.push(
           <line
@@ -80,53 +111,75 @@ export const Rulers: React.FC<RulersProps> = ({
             strokeWidth={2}
           />
         );
+        
+        // Cursor position label
+        ticks.push(
+          <text
+            key="cursor-x-label"
+            x={cursorScreenX}
+            y={12}
+            fontSize={10}
+            fill="#00BFFF"
+            textAnchor="middle"
+            style={{ userSelect: "none" }}
+          >
+            {Math.round(cursor.x)}
+          </text>
+        );
       }
     }
+    
     return ticks;
   };
 
-  // Helper to render vertical ruler ticks and labels
+  // Render vertical ruler ticks
   const renderVerticalTicks = () => {
     const ticks = [];
-    const step = gridSize;
-    const majorStep = step * 5; // Major tick every 5 grid units
-    const labelStep = step; // Show label at every grid line
-    for (let y = startY; y <= startY + height / zoom + step; y += step) {
-      const screenY = y * zoom + offset.y;
-      if (screenY < 0 || screenY > height) continue;
-      const isMajor = Math.abs(y % majorStep) < 0.01;
+    
+    // Start from first major tick before visible area
+    const startTick = Math.floor(worldStartY / tickSpacing) * tickSpacing;
+    
+    for (let worldY = startTick; worldY <= worldEndY + tickSpacing; worldY += minorTickSpacing) {
+      const screenY = worldY * zoom + offset.y;
+      if (screenY < -20 || screenY > height + 20) continue;
+      
+      const isMajor = Math.abs(worldY % tickSpacing) < 0.001;
       const tickWidth = isMajor ? rulerSize * 0.6 : rulerSize * 0.3;
+      
       ticks.push(
-        <g key={y}>
-          <line
-            x1={rulerSize}
-            y1={screenY}
-            x2={rulerSize - tickWidth}
-            y2={screenY}
-            stroke={isMajor ? RULER_MAJOR : RULER_FG}
-            strokeWidth={isMajor ? 1 : 0.5}
-          />
-          {/* Always show label at every grid line */}
-          {Math.abs(y % labelStep) < 0.01 && (
-            <text
-              x={rulerSize - tickWidth + 40}
-              y={screenY}
-              fontSize={10}
-              fill={RULER_TEXT}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              transform={`rotate(-90, ${rulerSize - tickWidth - 4}, ${screenY})`}
-              style={{ userSelect: "none" }}
-            >
-              {Math.round(y)}
-            </text>
-          )}
-        </g>
+        <line
+          key={`v-${worldY}`}
+          x1={rulerSize}
+          y1={screenY}
+          x2={rulerSize - tickWidth}
+          y2={screenY}
+          stroke={isMajor ? RULER_MAJOR : RULER_FG}
+          strokeWidth={isMajor ? 1 : 0.5}
+        />
       );
+      
+      // Add labels for major ticks
+      if (isMajor) {
+        ticks.push(
+          <text
+            key={`v-label-${worldY}`}
+            x={rulerSize - tickWidth - 2}
+            y={screenY}
+            fontSize={10}
+            fill={RULER_TEXT}
+            textAnchor="end"
+            dominantBaseline="middle"
+            style={{ userSelect: "none" }}
+          >
+            {Math.round(worldY)}
+          </text>
+        );
+      }
     }
-    // Draw cursor indicator if present
+    
+    // Cursor indicator
     if (cursor) {
-      const cursorScreenY = (cursor.y + offset.y) * zoom;
+      const cursorScreenY = cursor.y * zoom + offset.y;
       if (cursorScreenY >= 0 && cursorScreenY <= height) {
         ticks.push(
           <line
@@ -139,8 +192,25 @@ export const Rulers: React.FC<RulersProps> = ({
             strokeWidth={2}
           />
         );
+        
+        // Cursor position label
+        ticks.push(
+          <text
+            key="cursor-y-label"
+            x={12}
+            y={cursorScreenY}
+            fontSize={10}
+            fill="#00BFFF"
+            textAnchor="start"
+            dominantBaseline="middle"
+            style={{ userSelect: "none" }}
+          >
+            {Math.round(cursor.y)}
+          </text>
+        );
       }
     }
+    
     return ticks;
   };
 
