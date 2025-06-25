@@ -68,9 +68,8 @@ export const useCanvasDrawing = ({
     
     if (mode === "draw" || mode === "erase") {
       startDrawingPath(pos);
-    } else if (mode === "move") {
-      startMovingObject(pos);
     }
+    // Remove the "move" mode check since it's not a valid DrawingMode
   };
   
   // Handle pointer movement
@@ -99,9 +98,8 @@ export const useCanvasDrawing = ({
     
     if (mode === "draw" || mode === "erase") {
       addToDrawingPath(currentPos, drawingLayerRef.current);
-    } else if (mode === "move") {
-      moveSelectedObject(currentPos);
     }
+    // Remove the "move" mode check since it's not a valid DrawingMode
     
     lastMousePosRef.current = currentPos;
   };
