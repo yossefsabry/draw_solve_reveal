@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import Rulers from "./Rulers";
 
@@ -33,6 +34,7 @@ interface DrawingCanvasAreaProps {
   onZoomChange?: (z: number) => void;
   offset?: { x: number; y: number };
   onOffsetChange?: (o: { x: number; y: number }) => void;
+  onClear?: () => void;
 }
 
 const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
@@ -49,13 +51,14 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   onZoomChange,
   offset = { x: 0, y: 0 },
   onOffsetChange,
+  onClear,
 }) => {
   const isDrawing = useRef(false);
   const startPoint = useRef<{ x: number; y: number } | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [shapePreview, setShapePreview] = useState<AnyDrawingObject | null>(null);
   const drawingPath = useRef<{ x: number; y: number }[]>([]);
-  const rulerSize = 16;
+  const rulerSize = 20;
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSpaceDown, setIsSpaceDown] = useState(false);
@@ -70,8 +73,8 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   const getPos = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
     return {
-      x: ((e.clientX - rect.left) / zoom) - offset.x,
-      y: ((e.clientY - rect.top) / zoom) - offset.y,
+      x: (e.clientX - rect.left - offset.x) / zoom,
+      y: (e.clientY - rect.top - offset.y) / zoom,
     };
   }, [zoom, offset.x, offset.y]);
 
@@ -81,40 +84,57 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.save();
-    ctx.setTransform(zoom, 0, 0, zoom, offset.x * zoom, offset.y * zoom);
-    ctx.clearRect(0, 0, canvas.width / zoom, canvas.height / zoom);
+
+    // Set canvas size
+    canvas.width = canvasSize.width;
+    canvas.height = canvasSize.height;
+
+    // Clear and fill with black background
     ctx.fillStyle = "#000000";
-    ctx.fillRect(0, 0, canvas.width / zoom, canvas.height / zoom);
-    // Draw grid
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Apply zoom and pan transformations
+    ctx.save();
+    ctx.translate(offset.x, offset.y);
+    ctx.scale(zoom, zoom);
+
+    // Draw grid if enabled
     if (showGrid) {
       ctx.save();
-      ctx.globalAlpha = 0.5;
-      const gridSize = 20;
       ctx.strokeStyle = '#333333';
-      ctx.lineWidth = 0.5;
-      for (let x = 0; x <= canvas.width / zoom; x += gridSize) {
+      ctx.lineWidth = 0.5 / zoom;
+      ctx.globalAlpha = 0.3;
+      
+      const gridSize = 20;
+      const startX = Math.floor(-offset.x / zoom / gridSize) * gridSize;
+      const startY = Math.floor(-offset.y / zoom / gridSize) * gridSize;
+      const endX = startX + (canvas.width / zoom) + gridSize;
+      const endY = startY + (canvas.height / zoom) + gridSize;
+      
+      for (let x = startX; x <= endX; x += gridSize) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height / zoom);
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
         ctx.stroke();
       }
-      for (let y = 0; y <= canvas.height / zoom; y += gridSize) {
+      
+      for (let y = startY; y <= endY; y += gridSize) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width / zoom, y);
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
         ctx.stroke();
       }
-      ctx.globalAlpha = 1.0;
       ctx.restore();
     }
+
     // Draw all objects
     objects.forEach(obj => {
       ctx.save();
       ctx.strokeStyle = obj.color || "#FFFFFF";
-      ctx.lineWidth = obj.lineWidth || 2;
+      ctx.lineWidth = (obj.lineWidth || 2) / zoom;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
+      
       if (obj.type === "draw") {
         if (obj.points && obj.points.length > 1) {
           ctx.beginPath();
@@ -135,14 +155,14 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         ctx.moveTo(obj.x1!, obj.y1!);
         ctx.lineTo(obj.x2!, obj.y2!);
         ctx.stroke();
-      } else if (obj.type === "text") {
+      } else if (obj.type === "text" || obj.type === "math") {
         ctx.fillStyle = obj.color || "#FFFFFF";
-        ctx.font = `${obj.fontSize || 16}px Arial`;
+        ctx.font = `${(obj.fontSize || 16) / zoom}px Arial`;
         ctx.textBaseline = "top";
         
-        // Handle multi-line text
+        // Handle multi-line text properly
         const lines = (obj.text || "").split('\n');
-        const lineHeight = (obj.fontSize || 16) * 1.2;
+        const lineHeight = (obj.fontSize || 16) * 1.2 / zoom;
         
         lines.forEach((line, index) => {
           ctx.fillText(line, obj.x || 0, (obj.y || 0) + (index * lineHeight));
@@ -150,11 +170,12 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       }
       ctx.restore();
     });
-    // Draw current path (freehand or eraser)
+
+    // Draw current drawing path
     if (isDrawing.current && drawingPath.current.length > 1 && (mode === "draw" || mode === "erase")) {
       ctx.save();
       ctx.strokeStyle = mode === "erase" ? "#000000" : color;
-      ctx.lineWidth = brushSize;
+      ctx.lineWidth = brushSize / zoom;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.beginPath();
@@ -163,12 +184,13 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       ctx.stroke();
       ctx.restore();
     }
+
     // Draw shape preview
     if (shapePreview) {
       ctx.save();
       ctx.strokeStyle = color;
-      ctx.lineWidth = brushSize;
-      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = brushSize / zoom;
+      ctx.setLineDash([4 / zoom, 4 / zoom]);
       if (shapePreview.type === "rectangle") {
         ctx.strokeRect(shapePreview.x!, shapePreview.y!, shapePreview.width!, shapePreview.height!);
       } else if (shapePreview.type === "circle") {
@@ -184,42 +206,50 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       ctx.setLineDash([]);
       ctx.restore();
     }
-    // Draw crosshair and eraser circle
-    if (cursor) {
+
+    // Draw crosshair cursor only when NOT typing and not in text mode
+    if (cursor && !isTyping && mode !== "text") {
       ctx.save();
       ctx.strokeStyle = "#00BFFF";
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1 / zoom;
+      ctx.setLineDash([4 / zoom, 4 / zoom]);
+      
+      // Horizontal line
       ctx.beginPath();
-      ctx.moveTo(cursor.x, 0);
-      ctx.lineTo(cursor.x, canvas.height / zoom);
+      ctx.moveTo(-offset.x / zoom, cursor.y);
+      ctx.lineTo((-offset.x + canvas.width) / zoom, cursor.y);
       ctx.stroke();
+      
+      // Vertical line
       ctx.beginPath();
-      ctx.moveTo(0, cursor.y);
-      ctx.lineTo(canvas.width / zoom, cursor.y);
+      ctx.moveTo(cursor.x, -offset.y / zoom);
+      ctx.lineTo(cursor.x, (-offset.y + canvas.height) / zoom);
       ctx.stroke();
+      
       ctx.setLineDash([]);
       ctx.restore();
+
+      // Draw eraser circle
       if (mode === "erase") {
         ctx.save();
         ctx.beginPath();
-        ctx.arc(cursor.x, cursor.y, brushSize * 1.5, 0, 2 * Math.PI);
+        ctx.arc(cursor.x, cursor.y, brushSize, 0, 2 * Math.PI);
         ctx.strokeStyle = "#00BFFF";
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([2, 2]);
+        ctx.lineWidth = 1.5 / zoom;
+        ctx.setLineDash([2 / zoom, 2 / zoom]);
         ctx.globalAlpha = 0.8;
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.restore();
       }
     }
-    ctx.restore();
-  }, [canvasRef, zoom, offset.x, offset.y, showGrid, objects, color, brushSize, mode, shapePreview, cursor]);
 
-  // Redraw only when relevant state changes
+    ctx.restore();
+  }, [canvasRef, zoom, offset.x, offset.y, showGrid, objects, color, brushSize, mode, shapePreview, cursor, isTyping, canvasSize]);
+
+  // Redraw when relevant state changes
   useEffect(() => {
     redraw();
-    // eslint-disable-next-line
   }, [redraw]);
 
   // Resize canvas to fit parent (minus rulers)
@@ -229,15 +259,21 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       if (canvasRef.current && parent) {
         const width = parent.clientWidth - rulerSize;
         const height = parent.clientHeight - rulerSize;
-        canvasRef.current.width = width;
-        canvasRef.current.height = height;
         setCanvasSize({ width, height });
       }
     };
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [canvasRef]);
+  }, [canvasRef, rulerSize]);
+
+  // Handle clear functionality
+  useEffect(() => {
+    if (onClear) {
+      // Clear all objects when clear is called
+      setObjects([]);
+    }
+  }, [onClear, setObjects]);
 
   // Pointer events
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -245,18 +281,20 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       setIsPanning(true);
       panStart.current = { x: e.clientX, y: e.clientY };
       offsetStart.current = { ...offset };
-      // Add global listeners for mousemove/mouseup
+      
       const handleMouseMove = (ev: MouseEvent) => {
         if (!isPanning || !panStart.current || !onOffsetChange) return;
-        const dx = (ev.clientX - panStart.current.x) / zoom;
-        const dy = (ev.clientY - panStart.current.y) / zoom;
+        const dx = ev.clientX - panStart.current.x;
+        const dy = ev.clientY - panStart.current.y;
         onOffsetChange({ x: offsetStart.current.x + dx, y: offsetStart.current.y + dy });
       };
+      
       const handleMouseUp = () => {
         setIsPanning(false);
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
       };
+      
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       return;
@@ -281,10 +319,13 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (isPanning) return; // panning handled globally
+    if (isPanning) return;
+    
     const pos = getPos(e);
     setCursor(pos);
+    
     if (!isDrawing.current) return;
+    
     if (mode === "draw" || mode === "erase") {
       drawingPath.current.push(pos);
     } else if (mode === "rectangle" && startPoint.current) {
@@ -326,8 +367,9 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   };
 
   const handlePointerUp = () => {
-    if (isPanning) return; // handled globally
+    if (isPanning) return;
     if (!isDrawing.current) return;
+    
     if (mode === "draw" || mode === "erase") {
       if (drawingPath.current.length > 1) {
         setObjects([
@@ -344,6 +386,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       setObjects([...objects, shapePreview]);
       setShapePreview(null);
     }
+    
     isDrawing.current = false;
     drawingPath.current = [];
     startPoint.current = null;
@@ -361,30 +404,20 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       const rect = canvasRef.current.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      // Use exponential zoom for smoothness
+      
       const delta = -e.deltaY * 0.001;
       const zoomFactor = Math.exp(delta);
       let newZoom = Math.max(minZoom, Math.min(maxZoom, zoom * zoomFactor));
-      // World coordinates under cursor before zoom
-      const worldX = (mouseX / zoom) - offset.x;
-      const worldY = (mouseY / zoom) - offset.y;
-      // New offset so worldX stays under cursor
-      let newOffsetX = (mouseX / newZoom) - worldX;
-      let newOffsetY = (mouseY / newZoom) - worldY;
-      // Clamp offset so the canvas origin (0,0) is always visible
-      if (canvasRef.current) {
-        const canvasW = canvasRef.current.width;
-        const canvasH = canvasRef.current.height;
-        // Minimum offset: don't allow panning past top/left
-        newOffsetX = Math.min(newOffsetX, 0);
-        newOffsetY = Math.min(newOffsetY, 0);
-        // Maximum offset: don't allow panning past bottom/right
-        newOffsetX = Math.max(newOffsetX, -(canvasW / newZoom - canvasW / zoom));
-        newOffsetY = Math.max(newOffsetY, -(canvasH / newZoom - canvasH / zoom));
-        // Prevent NaN
-        if (isNaN(newOffsetX)) newOffsetX = 0;
-        if (isNaN(newOffsetY)) newOffsetY = 0;
-      }
+      
+      const worldX = (mouseX - offset.x) / zoom;
+      const worldY = (mouseY - offset.y) / zoom;
+      
+      let newOffsetX = mouseX - worldX * newZoom;
+      let newOffsetY = mouseY - worldY * newZoom;
+      
+      if (isNaN(newOffsetX)) newOffsetX = 0;
+      if (isNaN(newOffsetY)) newOffsetY = 0;
+      
       onZoomChange(newZoom);
       onOffsetChange({ x: newOffsetX, y: newOffsetY });
     }
@@ -405,19 +438,6 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
-
-  // Add useEffect to attach wheel event with passive: false
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    function wheelHandler(e) {
-      handleWheel(e);
-    }
-    canvas.addEventListener('wheel', wheelHandler, { passive: false });
-    return () => {
-      canvas.removeEventListener('wheel', wheelHandler);
-    };
-  }, [canvasRef, handleWheel]);
 
   // Handle text input
   const handleTextSubmit = () => {
@@ -451,13 +471,17 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
           width: `calc(100% - ${rulerSize}px)`,
           height: `calc(100% - ${rulerSize}px)`,
           touchAction: "none",
-          cursor: isSpaceDown ? (isPanning ? "grabbing" : "grab") : (mode === "erase" ? "crosshair" : "crosshair")
+          cursor: isSpaceDown ? (isPanning ? "grabbing" : "grab") : 
+                 isTyping ? "text" : 
+                 mode === "erase" ? "crosshair" : "crosshair"
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
+        onWheel={handleWheel}
       />
+      
       <Rulers 
         width={canvasSize.width} 
         height={canvasSize.height} 
@@ -499,10 +523,12 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
               borderRadius: "4px",
               backgroundColor: "rgba(0, 0, 0, 0.8)",
               color: color,
-              fontSize: `${brushSize * 2}px`,
+              fontSize: `${Math.max(12, brushSize * 2)}px`,
               fontFamily: "Arial, sans-serif",
               resize: "both",
               outline: "none",
+              whiteSpace: "pre-wrap",
+              wordWrap: "break-word",
             }}
             autoFocus
           />

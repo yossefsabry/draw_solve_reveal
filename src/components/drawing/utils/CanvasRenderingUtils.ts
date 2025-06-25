@@ -153,7 +153,7 @@ export const drawObjects = (
     
     // Set object-specific properties
     ctx.strokeStyle = obj.color || "#FFFFFF";
-    ctx.lineWidth = obj.lineWidth;
+    ctx.lineWidth = obj.lineWidth || 2;
     ctx.globalCompositeOperation = "source-over";
     
     // Apply specific rendering based on object type
@@ -177,6 +177,7 @@ export const drawObjects = (
         drawArrow(ctx, obj);
         break;
       case 'text':
+      case 'math':
         drawText(ctx, obj);
         break;
       case 'polygon':
@@ -377,11 +378,19 @@ function drawArrow(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
 }
 
 function drawText(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
-  if (obj.type !== 'text') return;
+  if (obj.type !== 'text' && obj.type !== 'math') return;
   
   ctx.font = `${obj.fontSize}px Arial`;
   ctx.fillStyle = obj.color || "#FFFFFF";
-  ctx.fillText(obj.text, obj.x, obj.y);
+  ctx.textBaseline = "top";
+  
+  // Handle multi-line text
+  const lines = (obj.text || "").split('\n');
+  const lineHeight = obj.fontSize * 1.2;
+  
+  lines.forEach((line, index) => {
+    ctx.fillText(line, obj.x, obj.y + (index * lineHeight));
+  });
 }
 
 function drawPath(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {

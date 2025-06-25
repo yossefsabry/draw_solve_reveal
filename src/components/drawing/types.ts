@@ -86,9 +86,20 @@ export interface TextObject {
   text: string;
   color: string;
   fontSize: number;
+  lineWidth?: number; // Optional for text objects
 }
 
-export type AnyDrawingObject = DrawObject | RectangleObject | CircleObject | EllipseObject | LineObject | ArrowObject | TriangleObject | PolygonObject | TextObject;
+export interface MathResult {
+  type: 'math';
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  fontSize: number;
+  lineWidth?: number;
+}
 
-export type DrawingMode = "draw" | "erase";
+export type AnyDrawingObject = DrawObject | RectangleObject | CircleObject | EllipseObject | LineObject | ArrowObject | TriangleObject | PolygonObject | TextObject | MathResult;
+
+export type DrawingMode = "draw" | "erase" | "text";
 export type ShapeTool = "rectangle" | "circle" | "line" | "arrow" | "triangle" | "ellipse" | "polygon";

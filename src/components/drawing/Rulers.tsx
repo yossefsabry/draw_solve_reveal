@@ -7,12 +7,11 @@ interface RulersProps {
   zoom: number;
   offset: { x: number; y: number };
   rulerSize?: number;
-  gridSize?: number;
   cursor?: { x: number; y: number } | null;
 }
 
-const RULER_BG = "#2a2a2a";
-const RULER_FG = "#666666";
+const RULER_BG = "#1a1a1a";
+const RULER_FG = "#555555";
 const RULER_MAJOR = "#ffffff";
 const RULER_TEXT = "#cccccc";
 
@@ -21,8 +20,7 @@ export const Rulers: React.FC<RulersProps> = ({
   height,
   zoom,
   offset,
-  rulerSize = 30,
-  gridSize = 20,
+  rulerSize = 20,
   cursor = null,
 }) => {
   // Calculate visible range in world coordinates
@@ -31,12 +29,12 @@ export const Rulers: React.FC<RulersProps> = ({
   const worldEndX = worldStartX + width / zoom;
   const worldEndY = worldStartY + height / zoom;
 
-  // Calculate tick spacing based on zoom level
+  // Calculate appropriate tick spacing based on zoom level
   const getTickSpacing = () => {
-    const minPixelSpacing = 40; // Minimum pixels between major ticks
+    const minPixelSpacing = 50; // Minimum pixels between major ticks
     const worldSpacing = minPixelSpacing / zoom;
     
-    // Find appropriate spacing (powers of 10, 20, 50)
+    // Find appropriate spacing (1, 2, 5, 10, 20, 50, 100, etc.)
     const magnitude = Math.pow(10, Math.floor(Math.log10(worldSpacing)));
     const normalized = worldSpacing / magnitude;
     
@@ -52,23 +50,23 @@ export const Rulers: React.FC<RulersProps> = ({
   const tickSpacing = getTickSpacing();
   const minorTickSpacing = tickSpacing / 5;
 
-  // Render horizontal ruler ticks
-  const renderHorizontalTicks = () => {
+  // Render horizontal ruler
+  const renderHorizontalRuler = () => {
     const ticks = [];
     
-    // Start from first major tick before visible area
-    const startTick = Math.floor(worldStartX / tickSpacing) * tickSpacing;
+    // Start from first tick before visible area
+    const startTick = Math.floor(worldStartX / minorTickSpacing) * minorTickSpacing;
     
-    for (let worldX = startTick; worldX <= worldEndX + tickSpacing; worldX += minorTickSpacing) {
+    for (let worldX = startTick; worldX <= worldEndX + minorTickSpacing; worldX += minorTickSpacing) {
       const screenX = worldX * zoom + offset.x;
       if (screenX < -20 || screenX > width + 20) continue;
       
-      const isMajor = Math.abs(worldX % tickSpacing) < 0.001;
-      const tickHeight = isMajor ? rulerSize * 0.6 : rulerSize * 0.3;
+      const isMajor = Math.abs(worldX % tickSpacing) < 0.01;
+      const tickHeight = isMajor ? rulerSize * 0.7 : rulerSize * 0.3;
       
       ticks.push(
         <line
-          key={`h-${worldX}`}
+          key={`h-${worldX.toFixed(2)}`}
           x1={screenX}
           y1={rulerSize}
           x2={screenX}
@@ -79,15 +77,16 @@ export const Rulers: React.FC<RulersProps> = ({
       );
       
       // Add labels for major ticks
-      if (isMajor) {
+      if (isMajor && screenX >= 0 && screenX <= width) {
         ticks.push(
           <text
-            key={`h-label-${worldX}`}
+            key={`h-label-${worldX.toFixed(2)}`}
             x={screenX}
-            y={rulerSize - tickHeight - 2}
+            y={rulerSize - tickHeight - 3}
             fontSize={10}
             fill={RULER_TEXT}
             textAnchor="middle"
+            dominantBaseline="bottom"
             style={{ userSelect: "none" }}
           >
             {Math.round(worldX)}
@@ -96,59 +95,26 @@ export const Rulers: React.FC<RulersProps> = ({
       }
     }
     
-    // Cursor indicator
-    if (cursor) {
-      const cursorScreenX = cursor.x * zoom + offset.x;
-      if (cursorScreenX >= 0 && cursorScreenX <= width) {
-        ticks.push(
-          <line
-            key="cursor-x"
-            x1={cursorScreenX}
-            y1={0}
-            x2={cursorScreenX}
-            y2={rulerSize}
-            stroke="#00BFFF"
-            strokeWidth={2}
-          />
-        );
-        
-        // Cursor position label
-        ticks.push(
-          <text
-            key="cursor-x-label"
-            x={cursorScreenX}
-            y={12}
-            fontSize={10}
-            fill="#00BFFF"
-            textAnchor="middle"
-            style={{ userSelect: "none" }}
-          >
-            {Math.round(cursor.x)}
-          </text>
-        );
-      }
-    }
-    
     return ticks;
   };
 
-  // Render vertical ruler ticks
-  const renderVerticalTicks = () => {
+  // Render vertical ruler
+  const renderVerticalRuler = () => {
     const ticks = [];
     
-    // Start from first major tick before visible area
-    const startTick = Math.floor(worldStartY / tickSpacing) * tickSpacing;
+    // Start from first tick before visible area
+    const startTick = Math.floor(worldStartY / minorTickSpacing) * minorTickSpacing;
     
-    for (let worldY = startTick; worldY <= worldEndY + tickSpacing; worldY += minorTickSpacing) {
+    for (let worldY = startTick; worldY <= worldEndY + minorTickSpacing; worldY += minorTickSpacing) {
       const screenY = worldY * zoom + offset.y;
       if (screenY < -20 || screenY > height + 20) continue;
       
-      const isMajor = Math.abs(worldY % tickSpacing) < 0.001;
-      const tickWidth = isMajor ? rulerSize * 0.6 : rulerSize * 0.3;
+      const isMajor = Math.abs(worldY % tickSpacing) < 0.01;
+      const tickWidth = isMajor ? rulerSize * 0.7 : rulerSize * 0.3;
       
       ticks.push(
         <line
-          key={`v-${worldY}`}
+          key={`v-${worldY.toFixed(2)}`}
           x1={rulerSize}
           y1={screenY}
           x2={rulerSize - tickWidth}
@@ -159,11 +125,11 @@ export const Rulers: React.FC<RulersProps> = ({
       );
       
       // Add labels for major ticks
-      if (isMajor) {
+      if (isMajor && screenY >= 0 && screenY <= height) {
         ticks.push(
           <text
-            key={`v-label-${worldY}`}
-            x={rulerSize - tickWidth - 2}
+            key={`v-label-${worldY.toFixed(2)}`}
+            x={rulerSize - tickWidth - 3}
             y={screenY}
             fontSize={10}
             fill={RULER_TEXT}
@@ -177,41 +143,104 @@ export const Rulers: React.FC<RulersProps> = ({
       }
     }
     
-    // Cursor indicator
-    if (cursor) {
-      const cursorScreenY = cursor.y * zoom + offset.y;
-      if (cursorScreenY >= 0 && cursorScreenY <= height) {
-        ticks.push(
-          <line
-            key="cursor-y"
-            x1={0}
-            y1={cursorScreenY}
-            x2={rulerSize}
-            y2={cursorScreenY}
-            stroke="#00BFFF"
-            strokeWidth={2}
-          />
-        );
-        
-        // Cursor position label
-        ticks.push(
-          <text
-            key="cursor-y-label"
-            x={12}
-            y={cursorScreenY}
-            fontSize={10}
-            fill="#00BFFF"
-            textAnchor="start"
-            dominantBaseline="middle"
-            style={{ userSelect: "none" }}
-          >
-            {Math.round(cursor.y)}
-          </text>
-        );
-      }
+    return ticks;
+  };
+
+  // Render cursor indicators
+  const renderCursorIndicators = () => {
+    if (!cursor) return [];
+    
+    const indicators = [];
+    const cursorScreenX = cursor.x * zoom + offset.x;
+    const cursorScreenY = cursor.y * zoom + offset.y;
+    
+    // Horizontal cursor line
+    if (cursorScreenX >= 0 && cursorScreenX <= width) {
+      indicators.push(
+        <line
+          key="cursor-x"
+          x1={cursorScreenX}
+          y1={0}
+          x2={cursorScreenX}
+          y2={rulerSize}
+          stroke="#00BFFF"
+          strokeWidth={2}
+        />
+      );
+      
+      // Position label
+      indicators.push(
+        <rect
+          key="cursor-x-bg"
+          x={cursorScreenX - 25}
+          y={2}
+          width={50}
+          height={14}
+          fill="rgba(0, 191, 255, 0.8)"
+          rx={2}
+        />
+      );
+      
+      indicators.push(
+        <text
+          key="cursor-x-label"
+          x={cursorScreenX}
+          y={9}
+          fontSize={10}
+          fill="#000"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          style={{ userSelect: "none", fontWeight: "bold" }}
+        >
+          {Math.round(cursor.x)}
+        </text>
+      );
     }
     
-    return ticks;
+    // Vertical cursor line
+    if (cursorScreenY >= 0 && cursorScreenY <= height) {
+      indicators.push(
+        <line
+          key="cursor-y"
+          x1={0}
+          y1={cursorScreenY}
+          x2={rulerSize}
+          y2={cursorScreenY}
+          stroke="#00BFFF"
+          strokeWidth={2}
+        />
+      );
+      
+      // Position label
+      indicators.push(
+        <rect
+          key="cursor-y-bg"
+          x={2}
+          y={cursorScreenY - 7}
+          width={40}
+          height={14}
+          fill="rgba(0, 191, 255, 0.8)"
+          rx={2}
+        />
+      );
+      
+      indicators.push(
+        <text
+          key="cursor-y-label"
+          x={22}
+          y={cursorScreenY}
+          fontSize={10}
+          fill="#000"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          style={{ userSelect: "none", fontWeight: "bold" }}
+        >
+          {Math.round(cursor.y)}
+        </text>
+      );
+    }
+    
+    return indicators;
   };
 
   return (
@@ -226,11 +255,13 @@ export const Rulers: React.FC<RulersProps> = ({
           left: rulerSize, 
           zIndex: 10, 
           background: RULER_BG,
-          pointerEvents: "none" 
+          pointerEvents: "none",
+          borderBottom: `1px solid ${RULER_FG}`
         }}
       >
         <rect width={width} height={rulerSize} fill={RULER_BG} />
-        {renderHorizontalTicks()}
+        {renderHorizontalRuler()}
+        {renderCursorIndicators().filter(item => item.key?.toString().includes('cursor-x'))}
       </svg>
       
       {/* Left ruler */}
@@ -243,11 +274,13 @@ export const Rulers: React.FC<RulersProps> = ({
           left: 0, 
           zIndex: 10, 
           background: RULER_BG,
-          pointerEvents: "none" 
+          pointerEvents: "none",
+          borderRight: `1px solid ${RULER_FG}`
         }}
       >
         <rect width={rulerSize} height={height} fill={RULER_BG} />
-        {renderVerticalTicks()}
+        {renderVerticalRuler()}
+        {renderCursorIndicators().filter(item => item.key?.toString().includes('cursor-y'))}
       </svg>
       
       {/* Corner square */}
@@ -262,8 +295,16 @@ export const Rulers: React.FC<RulersProps> = ({
           zIndex: 11,
           borderRight: `1px solid ${RULER_FG}`,
           borderBottom: `1px solid ${RULER_FG}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "8px",
+          color: RULER_TEXT,
+          fontWeight: "bold"
         }}
-      />
+      >
+        {Math.round(zoom * 100)}%
+      </div>
     </>
   );
 };
