@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Pencil, Eraser, Download, ZoomIn, ZoomOut, Type, Shapes } from "lucide-react";
 import ShapeSelector, { ShapeType } from "./ShapeSelector";
@@ -38,6 +38,22 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
   onZoomIn,
   onZoomOut
 }) => {
+  const [isShapeSelectorOpen, setIsShapeSelectorOpen] = useState(false);
+
+  const handleModeChange = (newMode: string) => {
+    onModeChange(newMode);
+    if (newMode === "shape") {
+      setIsShapeSelectorOpen(true);
+    } else {
+      setIsShapeSelectorOpen(false);
+    }
+  };
+
+  const handleShapeSelect = (shape: ShapeType) => {
+    onShapeSelect(shape);
+    setIsShapeSelectorOpen(false);
+  };
+
   if (!show) return null;
 
   return (
@@ -56,7 +72,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
                   : "bg-[#2a2a2a] text-gray-300 border-transparent hover:bg-[#333] hover:border-gray-500"
               }`}
               style={{ width: 48, height: 48 }}
-              onClick={() => onModeChange(tool.mode)}
+              onClick={() => handleModeChange(tool.mode)}
               title={tool.name}
             >
               {tool.icon}
@@ -122,12 +138,12 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
       </div>
 
       {/* Shape selector dropdown */}
-      {mode === "shape" && (
-        <ShapeSelector
-          selectedShape={selectedShape}
-          onShapeSelect={onShapeSelect}
-        />
-      )}
+      <ShapeSelector
+        selectedShape={selectedShape}
+        onShapeSelect={handleShapeSelect}
+        isOpen={isShapeSelectorOpen}
+        onClose={() => setIsShapeSelectorOpen(false)}
+      />
     </div>
   );
 };
