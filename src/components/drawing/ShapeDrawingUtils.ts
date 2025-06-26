@@ -128,7 +128,7 @@ const isPointInPolygon = (x: number, y: number, points: { x: number; y: number }
 };
 
 export const createShapeObject = (
-  shapeTool: ShapeTool,
+  shapeTool: ShapeTool | "person" | "house" | "star",
   startX: number,
   startY: number,
   endX: number,
@@ -177,6 +177,48 @@ export const createShapeObject = (
         color,
         lineWidth
       };
+    case 'triangle':
+      return {
+        type: 'triangle',
+        x1: startX,
+        y1: startY,
+        x2: endX,
+        y2: startY,
+        x3: (startX + endX) / 2,
+        y3: endY,
+        color,
+        lineWidth
+      };
+    case 'person':
+      return {
+        type: 'person',
+        x1: startX,
+        y1: startY,
+        x2: endX,
+        y2: endY,
+        color,
+        lineWidth
+      };
+    case 'house':
+      return {
+        type: 'house',
+        x1: startX,
+        y1: startY,
+        x2: endX,
+        y2: endY,
+        color,
+        lineWidth
+      };
+    case 'star':
+      return {
+        type: 'star',
+        x1: startX,
+        y1: startY,
+        x2: endX,
+        y2: endY,
+        color,
+        lineWidth
+      };
     default:
       return null;
   }
@@ -184,7 +226,7 @@ export const createShapeObject = (
 
 export const drawShapePreview = (
   ctx: CanvasRenderingContext2D,
-  shapeTool: ShapeTool,
+  shapeTool: ShapeTool | "person" | "house" | "star",
   startX: number,
   startY: number,
   endX: number,
@@ -207,6 +249,19 @@ export const drawShapePreview = (
     case 'arrow':
       ctx.moveTo(startX, startY);
       ctx.lineTo(endX, endY);
+      break;
+    case 'triangle':
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, startY);
+      ctx.lineTo((startX + endX) / 2, endY);
+      ctx.closePath();
+      break;
+    case 'person':
+    case 'house':
+    case 'star':
+      // Simple rectangle preview for complex shapes
+      ctx.rect(Math.min(startX, endX), Math.min(startY, endY), 
+               Math.abs(endX - startX), Math.abs(endY - startY));
       break;
   }
   

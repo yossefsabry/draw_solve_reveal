@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Pencil, Eraser, Download, ZoomIn, ZoomOut, Type, Shapes } from "lucide-react";
@@ -40,92 +41,92 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
   if (!show) return null;
 
   return (
-    <div className="flex flex-row md:flex-col items-center gap-2 w-full md:w-16 bg-[#181818] border-b md:border-b-0 md:border-r border-neutral-800 py-2 md:py-4 overflow-y-auto max-h-full">
-      {/* Drawing/Erase/Text tools */}
-      <div className="flex flex-col items-center w-full mb-4">
-        {tools.filter(tool => tool.mode !== "shape").map(tool => (
+    <div className="relative">
+      <div className="flex flex-row md:flex-col items-center gap-2 w-full md:w-16 bg-[#1a1a1a] border-b md:border-b-0 md:border-r border-neutral-700 py-2 md:py-4 overflow-y-auto max-h-full">
+        {/* Drawing tools */}
+        <div className="flex flex-col items-center w-full mb-4">
+          {tools.map(tool => (
+            <Button
+              key={tool.name}
+              variant={mode === tool.mode ? "default" : "outline"}
+              size="icon"
+              className={`mb-3 transition-all duration-200 shadow-lg rounded-lg border-2 hover:scale-105 focus:scale-105 focus:ring-2 focus:ring-blue-400 ${
+                mode === tool.mode 
+                  ? "bg-blue-600 text-white border-blue-500 shadow-blue-500/25" 
+                  : "bg-[#2a2a2a] text-gray-300 border-transparent hover:bg-[#333] hover:border-gray-500"
+              }`}
+              style={{ width: 48, height: 48 }}
+              onClick={() => onModeChange(tool.mode)}
+              title={tool.name}
+            >
+              {tool.icon}
+            </Button>
+          ))}
+        </div>
+
+        {/* Grid and export controls */}
+        <div className="flex flex-col items-center w-full">
           <Button
-            key={tool.name}
-            variant={mode === tool.mode ? "default" : "outline"}
+            variant={showGrid ? "default" : "outline"}
             size="icon"
-            className={`mb-3 transition-all duration-150 shadow-md rounded-full border-2 border-transparent hover:border-primary hover:scale-110 focus:scale-110 focus:ring-2 focus:ring-primary/40 ${mode === tool.mode ? "bg-primary text-primary-foreground border-primary scale-110 ring-2 ring-primary" : "bg-background text-foreground"}`}
-            style={{ width: 44, height: 44, fontSize: 22 }}
-            onClick={() => onModeChange(tool.mode)}
-            title={tool.name}
+            className={`mb-3 transition-all duration-200 shadow-lg rounded-lg border-2 hover:scale-105 ${
+              showGrid 
+                ? "bg-green-600 text-white border-green-500" 
+                : "bg-[#2a2a2a] text-gray-300 border-transparent hover:bg-[#333]"
+            }`}
+            style={{ width: 48, height: 48 }}
+            onClick={onToggleGrid}
+            title="Toggle Grid"
           >
-            {tool.icon}
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="2" width="16" height="16" rx="2"/>
+              <path d="M2 7h16M2 13h16M7 2v16M13 2v16"/>
+            </svg>
           </Button>
-        ))}
+          
+          {is2D && (
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                className="mb-3 bg-[#2a2a2a] text-gray-300 border-transparent hover:bg-[#333] hover:scale-105 transition-all duration-200"
+                style={{ width: 48, height: 48 }}
+                onClick={onExport}
+                title="Export as PDF"
+              >
+                <Download />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="mb-3 bg-[#2a2a2a] text-gray-300 border-transparent hover:bg-[#333] hover:scale-105 transition-all duration-200"
+                style={{ width: 48, height: 48 }}
+                onClick={onZoomIn}
+                title="Zoom In"
+              >
+                <ZoomIn />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="bg-[#2a2a2a] text-gray-300 border-transparent hover:bg-[#333] hover:scale-105 transition-all duration-200"
+                style={{ width: 48, height: 48 }}
+                onClick={onZoomOut}
+                title="Zoom Out"
+              >
+                <ZoomOut />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Shape tools group */}
-      <div className="flex flex-col items-center w-full mb-4">
-        <div className="text-xs text-muted-foreground mb-2 tracking-wide uppercase font-semibold">Shapes</div>
-        <Button
-          variant={mode === "shape" ? "default" : "outline"}
-          size="icon"
-          className={`transition-all duration-150 shadow-md rounded-full border-2 border-transparent hover:border-primary hover:scale-110 focus:scale-110 focus:ring-2 focus:ring-primary/40 ${mode === "shape" ? "bg-primary text-primary-foreground border-primary scale-110 ring-2 ring-primary" : "bg-background text-foreground"}`}
-          style={{ width: 44, height: 44, fontSize: 22 }}
-          onClick={() => onModeChange("shape")}
-          title="Shapes"
-        >
-          <Shapes className="text-foreground" />
-        </Button>
-        {/* Shape selector dropdown, only show when shape mode is selected */}
-        {mode === "shape" && (
-          <div className="mt-4 w-full flex justify-center">
-            <ShapeSelector
-              selectedShape={selectedShape}
-              onShapeSelect={onShapeSelect}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Grid toggle and other controls */}
-      <Button
-        variant={showGrid ? "default" : "outline"}
-        size="icon"
-        className="mb-2"
-        onClick={onToggleGrid}
-        title="Toggle Grid"
-      >
-        <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground">
-          <rect x="2" y="2" width="16" height="16" rx="2"/>
-          <path d="M2 7h16M2 13h16M7 2v16M13 2v16"/>
-        </svg>
-      </Button>
-      
-      {is2D && (
-        <>
-          <Button
-            variant="outline"
-            size="icon"
-            className="mb-2"
-            onClick={onExport}
-            title="Export as PDF"
-          >
-            <Download className="text-foreground" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="mb-2"
-            onClick={onZoomIn}
-            title="Zoom In"
-          >
-            <ZoomIn className="text-foreground" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="mb-2"
-            onClick={onZoomOut}
-            title="Zoom Out"
-          >
-            <ZoomOut className="text-foreground" />
-          </Button>
-        </>
+      {/* Shape selector dropdown */}
+      {mode === "shape" && (
+        <ShapeSelector
+          selectedShape={selectedShape}
+          onShapeSelect={onShapeSelect}
+        />
       )}
     </div>
   );

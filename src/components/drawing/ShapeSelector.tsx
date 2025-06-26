@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -24,22 +25,21 @@ const ShapeSelector: React.FC<ShapeSelectorProps> = ({
   onShapeSelect
 }) => {
   return (
-    <div className="w-full flex flex-col items-center">
-      <div className="grid grid-cols-4 grid-rows-2 gap-4 p-4 bg-gradient-to-br from-background/90 to-primary/10 rounded-2xl shadow-2xl border border-primary/30 max-w-sm">
+    <div className="absolute top-16 left-2 z-50 bg-[#2a2a2a] border border-neutral-600 rounded-lg shadow-xl p-3">
+      <div className="grid grid-cols-2 gap-2 min-w-[200px]">
         {shapes.map((shape) => (
           <button
             key={shape.type}
             onClick={() => onShapeSelect(shape.type)}
-            className={`flex flex-col items-center justify-center w-16 h-16 rounded-full transition-all duration-150 text-2xl font-bold border-2 focus:outline-none focus:ring-2 focus:ring-primary/40
+            className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all duration-200 border-2 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400
               ${selectedShape === shape.type
-                ? 'bg-primary text-primary-foreground border-primary scale-110 shadow-lg font-extrabold'
-                : 'bg-background text-foreground border-transparent hover:bg-primary/10 hover:border-primary'}
+                ? 'bg-blue-600 text-white border-blue-500 shadow-md'
+                : 'bg-[#1a1a1a] text-gray-300 border-transparent hover:bg-[#333] hover:border-gray-500'}
             `}
             title={shape.name}
-            tabIndex={0}
           >
-            <span className="mb-1" style={{fontSize: '2.2rem', lineHeight: 1}}>{shape.icon}</span>
-            <span className={`text-xs font-semibold leading-tight mt-1 ${selectedShape === shape.type ? 'font-bold' : 'font-normal'}`}>{shape.name}</span>
+            <span className="text-2xl mb-1">{shape.icon}</span>
+            <span className="text-xs font-medium">{shape.name}</span>
           </button>
         ))}
       </div>

@@ -63,12 +63,22 @@ const DrawingCanvas: React.FC = () => {
   // Clear canvas hook
   const clearAll = () => {
     pushToUndo(objects);
-    setObjects(objects.filter(obj => obj.type !== 'text' && obj.type !== 'math'));
+    // Clear everything except grid
+    setObjects([]);
     setCustomTexts([]);
     setResults([]);
     setHandwritingRegions([]);
-    setUndoStack([]);
-    setRedoStack([]);
+    
+    // Clear the canvas directly
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+    }
+    
+    toast.success("Canvas cleared successfully!", { duration: 2000 });
   };
 
   // Undo/Redo handlers
@@ -224,18 +234,19 @@ const DrawingCanvas: React.FC = () => {
       const rect = e.currentTarget.getBoundingClientRect();
       const x = (e.clientX - rect.left) / zoom - offset.x;
       const y = (e.clientY - rect.top) / zoom - offset.y;
-      setCustomTexts(prev => [
-        ...prev,
-        {
-          id: uuid(),
-          text: "",
-          x,
-          y,
-          width: 120,
-          height: 40,
-          editing: true
-        }
-      ]);
+      
+      // Add text directly to objects instead of using separate text system
+      const newTextObject: AnyDrawingObject = {
+        type: "text",
+        x,
+        y,
+        text: "Double-click to edit",
+        color: color,
+        fontSize: Math.max(16, brushSize * 2),
+      };
+      
+      pushToUndo(objects);
+      setObjects([...objects, newTextObject]);
     }
   };
 
@@ -273,7 +284,7 @@ const DrawingCanvas: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#232323] text-white">
+    <div className="flex flex-col h-screen bg-[#1a1a1a] text-white">
       <WelcomeModal open={showWelcome} onOpenChange={setShowWelcome} />
       
       <TopBar
@@ -302,7 +313,7 @@ const DrawingCanvas: React.FC = () => {
         />
 
         {/* Main Canvas Area */}
-        <div className="flex-1 flex flex-col items-center justify-center bg-[#232323] relative overflow-hidden" onClick={handleCanvasClick}>
+        <div className="flex-1 flex flex-col items-center justify-center bg-[#1a1a1a] relative overflow-hidden" onClick={handleCanvasClick}>
           {is2D ? (
             <DrawingCanvasArea
               color={color}
@@ -324,6 +335,7 @@ const DrawingCanvas: React.FC = () => {
               }}
               offset={offset}
               onOffsetChange={setOffset}
+              selectedShape={selectedShape}
             />
           ) : (
             <Canvas3D

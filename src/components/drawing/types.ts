@@ -1,4 +1,3 @@
-
 export interface Point {
   x: number;
   y: number;
@@ -99,7 +98,37 @@ export interface MathResult {
   lineWidth?: number;
 }
 
-export type AnyDrawingObject = DrawObject | RectangleObject | CircleObject | EllipseObject | LineObject | ArrowObject | TriangleObject | PolygonObject | TextObject | MathResult;
+export interface PersonObject {
+  type: 'person';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  lineWidth: number;
+}
+
+export interface HouseObject {
+  type: 'house';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  lineWidth: number;
+}
+
+export interface StarObject {
+  type: 'star';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  lineWidth: number;
+}
+
+export type AnyDrawingObject = DrawObject | RectangleObject | CircleObject | EllipseObject | LineObject | ArrowObject | TriangleObject | PolygonObject | TextObject | MathResult | PersonObject | HouseObject | StarObject;
 
 export type DrawingMode = "draw" | "erase" | "text";
-export type ShapeTool = "rectangle" | "circle" | "line" | "arrow" | "triangle" | "ellipse" | "polygon";
+export type ShapeTool = "rectangle" | "circle" | "line" | "arrow" | "triangle" | "ellipse" | "polygon" | "person" | "house" | "star";
