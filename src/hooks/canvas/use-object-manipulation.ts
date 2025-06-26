@@ -21,8 +21,15 @@ export const useObjectManipulation = ({
     if (clickedObjectIndex !== -1) {
       const obj = objects[clickedObjectIndex];
       
-      // Handle different object types
+      // Handle different object types based on their structure
       if (obj.type === 'triangle' || obj.type === 'line' || obj.type === 'arrow') {
+        setSelectedShape({
+          index: clickedObjectIndex,
+          offsetX: pos.x - obj.x1,
+          offsetY: pos.y - obj.y1,
+        });
+      } else if (obj.type === 'person' || obj.type === 'house' || obj.type === 'star') {
+        // These objects use x1, y1 coordinates
         setSelectedShape({
           index: clickedObjectIndex,
           offsetX: pos.x - obj.x1,
@@ -42,8 +49,8 @@ export const useObjectManipulation = ({
           offsetX: pos.x - firstPoint.x,
           offsetY: pos.y - firstPoint.y,
         });
-      } else {
-        // For objects with x, y properties (rectangle, circle, ellipse, text)
+      } else if ('x' in obj && 'y' in obj) {
+        // For objects with x, y properties (rectangle, circle, ellipse, text, math)
         setSelectedShape({
           index: clickedObjectIndex,
           offsetX: pos.x - obj.x,
@@ -76,6 +83,8 @@ export const useObjectManipulation = ({
     } else if (obj.type === 'triangle') {
       const width = obj.x2 - obj.x1;
       const height = obj.y2 - obj.y1;
+      const width2 = obj.x3 - obj.x1;
+      const height2 = obj.y3 - obj.y1;
       
       updatedObjects[selectedShape.index] = {
         ...obj,
@@ -83,10 +92,21 @@ export const useObjectManipulation = ({
         y1: deltaY,
         x2: deltaX + width,
         y2: deltaY + height,
-        x3: deltaX - width,
-        y3: deltaY + height
+        x3: deltaX + width2,
+        y3: deltaY + height2
       };
     } else if (obj.type === 'line' || obj.type === 'arrow') {
+      const width = obj.x2 - obj.x1;
+      const height = obj.y2 - obj.y1;
+      
+      updatedObjects[selectedShape.index] = {
+        ...obj,
+        x1: deltaX,
+        y1: deltaY,
+        x2: deltaX + width,
+        y2: deltaY + height
+      };
+    } else if (obj.type === 'person' || obj.type === 'house' || obj.type === 'star') {
       const width = obj.x2 - obj.x1;
       const height = obj.y2 - obj.y1;
       
@@ -121,7 +141,7 @@ export const useObjectManipulation = ({
           y: p.y + offsetY
         }))
       };
-    } else if (obj.type === 'text') {
+    } else if (obj.type === 'text' || obj.type === 'math') {
       updatedObjects[selectedShape.index] = {
         ...obj,
         x: deltaX,

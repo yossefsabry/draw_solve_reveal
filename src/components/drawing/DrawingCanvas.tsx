@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DrawingCanvasArea from "./DrawingCanvasArea";
@@ -9,7 +10,7 @@ import RightSidebar from "./RightSidebar";
 import BottomStatusBar from "./BottomStatusBar";
 import CanvasOverlays from "./CanvasOverlays";
 import { ShapeType } from "./ShapeSelector";
-import { DrawingMode } from "./types";
+import { DrawingMode, AnyDrawingObject } from "./types";
 import { useClearCanvas } from "@/hooks/use-canvas-clearing";
 import { useDrawingMode } from "@/hooks/use-drawing-mode";
 import jsPDF from "jspdf";
