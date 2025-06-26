@@ -31,6 +31,7 @@ const DrawingCanvas: React.FC = () => {
   const minZoom = 0.5;
   const maxZoom = 4.0;
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const maxOffset = 2000; // Limit how far you can pan
   const [objects, setObjects] = useState<any[]>([]);
   const [showRightSidebar, setShowRightSidebar] = useState(false);
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
@@ -228,6 +229,22 @@ const DrawingCanvas: React.FC = () => {
     }
   };
 
+  // Reset view to center function
+  const handleResetView = () => {
+    setZoom(1.0);
+    setZoomInput('100');
+    setOffset({ x: 0, y: 0 });
+    toast.success("View reset to center!", { duration: 2000 });
+  };
+
+  // Enhanced offset change with limits
+  const handleOffsetChange = (newOffset: { x: number; y: number }) => {
+    setOffset({
+      x: Math.max(-maxOffset, Math.min(maxOffset, newOffset.x)),
+      y: Math.max(-maxOffset, Math.min(maxOffset, newOffset.y))
+    });
+  };
+
   // Overlay handlers
   const handleResultMove = (id: string, x: number, y: number) => {
     setResults(results => results.map(l => l.id === id ? { ...l, x, y } : l));
@@ -273,6 +290,7 @@ const DrawingCanvas: React.FC = () => {
         showRightSidebar={showRightSidebar}
         onToggleRightSidebar={() => setShowRightSidebar(!showRightSidebar)}
         isMobile={isMobile}
+        onResetView={handleResetView}
       />
 
       <div className="flex-1 flex min-h-0 flex-col md:flex-row">
@@ -290,7 +308,7 @@ const DrawingCanvas: React.FC = () => {
           onZoomOut={handleZoomOut}
         />
 
-        {/* Main Canvas Area - removed onClick handler */}
+        {/* Main Canvas Area */}
         <div className="flex-1 flex flex-col items-center justify-center bg-[#1a1a1a] relative overflow-hidden">
           {is2D ? (
             <DrawingCanvasArea
@@ -312,7 +330,7 @@ const DrawingCanvas: React.FC = () => {
                 setZoomInput(Math.round(z * 100).toString());
               }}
               offset={offset}
-              onOffsetChange={setOffset}
+              onOffsetChange={handleOffsetChange}
               selectedShape={selectedShape}
             />
           ) : (

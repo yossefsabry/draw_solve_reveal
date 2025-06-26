@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, RotateCcw } from "lucide-react";
 
 interface TopBarProps {
   is3D: boolean;
@@ -12,6 +12,7 @@ interface TopBarProps {
   showRightSidebar: boolean;
   onToggleRightSidebar: () => void;
   isMobile: boolean;
+  onResetView?: () => void;
 }
 
 const TopBar: React.FC<TopBarProps> = ({
@@ -21,7 +22,8 @@ const TopBar: React.FC<TopBarProps> = ({
   onToggleLeftSidebar,
   showRightSidebar,
   onToggleRightSidebar,
-  isMobile
+  isMobile,
+  onResetView
 }) => {
   return (
     <div className="flex justify-between items-center p-2 bg-[#181818] border-b border-neutral-800">
@@ -32,6 +34,20 @@ const TopBar: React.FC<TopBarProps> = ({
           <Switch checked={is3D} onCheckedChange={onToggle2D3D} />
           <span className="text-sm">3D</span>
         </div>
+        
+        {/* Reset View Button */}
+        {!is3D && onResetView && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onResetView}
+            className="flex items-center gap-1 bg-[#2a2a2a] text-gray-300 border-transparent hover:bg-[#333] hover:text-white"
+            title="Reset view to center (0,0)"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reset View
+          </Button>
+        )}
       </div>
       
       <div className="flex items-center gap-2">
