@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import Rulers from "./Rulers";
+import TextInputBox from "./TextInputBox";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { createShapeObject } from "./ShapeDrawingUtils";
 import { ShapeType } from "./ShapeSelector";
@@ -49,6 +50,10 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef<{ x: number; y: number } | null>(null);
   const offsetStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  
+  // Text input state
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [textInputPosition, setTextInputPosition] = useState({ x: 0, y: 0 });
 
   // Optimized grid rendering - separated from main canvas
   const drawOptimizedGrid = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -90,17 +95,20 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
 
   // Helper function to check if a point intersects with an object
   const isPointInObject = useCallback((point: { x: number; y: number }, obj: AnyDrawingObject): boolean => {
-    const tolerance = Math.max(10, brushSize) / zoom;
+    const tolerance = Math.max(15, brushSize * 2) / zoom;
     
     switch (obj.type) {
       case "text":
       case "math":
-        const textWidth = (obj.text || "").length * (obj.fontSize || 16) * 0.6;
-        const textHeight = (obj.fontSize || 16) * 1.2;
+        const lines = (obj.text || "").split('\n');
+        const lineHeight = (obj.fontSize || 16) * 1.2;
+        const totalHeight = lines.length * lineHeight;
+        const maxLineWidth = Math.max(...lines.map(line => line.length * (obj.fontSize || 16) * 0.6));
+        
         return point.x >= (obj.x || 0) - tolerance &&
-               point.x <= (obj.x || 0) + textWidth + tolerance &&
+               point.x <= (obj.x || 0) + maxLineWidth + tolerance &&
                point.y >= (obj.y || 0) - tolerance &&
-               point.y <= (obj.y || 0) + textHeight + tolerance;
+               point.y <= (obj.y || 0) + totalHeight + tolerance;
       
       case "rectangle":
         return point.x >= (obj.x || 0) - tolerance &&
@@ -462,28 +470,24 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     return () => window.removeEventListener("resize", handleResize);
   }, [canvasRef, rulerSize]);
 
-  // Enhanced pointer events
+  // Enhanced pointer events with improved panning
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (isSpaceDown && e.button === 0) {
+    // Handle text mode
+    if (mode === "text") {
+      if (!showTextInput) {
+        const pos = getPos(e);
+        setTextInputPosition(pos);
+        setShowTextInput(true);
+      }
+      return;
+    }
+
+    // Handle space key panning with improved logic
+    if (isSpaceDown) {
       setIsPanning(true);
       panStart.current = { x: e.clientX, y: e.clientY };
       offsetStart.current = { ...offset };
-      
-      const handleMouseMove = (ev: MouseEvent) => {
-        if (!isPanning || !panStart.current || !onOffsetChange) return;
-        const dx = ev.clientX - panStart.current.x;
-        const dy = ev.clientY - panStart.current.y;
-        onOffsetChange({ x: offsetStart.current.x + dx, y: offsetStart.current.y + dy });
-      };
-      
-      const handleMouseUp = () => {
-        setIsPanning(false);
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-      
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      e.preventDefault();
       return;
     }
     
@@ -494,18 +498,26 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     if (mode === "draw" || mode === "erase") {
       drawingPath.current = [pos];
     } else if (mode === "shape" && selectedShape) {
-      // Start shape drawing
       setShapePreview(null);
     }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (isPanning) return;
-    
     const pos = getPos(e);
     setCursor(pos);
     
-    if (!isDrawing.current) return;
+    // Improved panning logic
+    if (isPanning && panStart.current && onOffsetChange) {
+      const dx = e.clientX - panStart.current.x;
+      const dy = e.clientY - panStart.current.y;
+      onOffsetChange({ 
+        x: offsetStart.current.x + dx, 
+        y: offsetStart.current.y + dy 
+      });
+      return;
+    }
+    
+    if (!isDrawing.current || mode === "text") return;
     
     if (mode === "draw" || mode === "erase") {
       drawingPath.current.push(pos);
@@ -524,7 +536,12 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   };
 
   const handlePointerUp = () => {
-    if (isPanning) return;
+    if (isPanning) {
+      setIsPanning(false);
+      panStart.current = null;
+      return;
+    }
+    
     if (!isDrawing.current) return;
     
     if (mode === "draw") {
@@ -588,20 +605,50 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     }
   };
 
+  // Text input handlers
+  const handleTextSubmit = (text: string) => {
+    const newTextObject: AnyDrawingObject = {
+      type: "text",
+      x: textInputPosition.x,
+      y: textInputPosition.y,
+      text: text,
+      color: color,
+      fontSize: Math.max(16, brushSize * 2),
+    };
+    
+    setObjects([...objects, newTextObject]);
+    setShowTextInput(false);
+  };
+
+  const handleTextCancel = () => {
+    setShowTextInput(false);
+  };
+
+  // Improved keyboard handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space") setIsSpaceDown(true);
+      if (e.code === "Space" && !showTextInput) {
+        e.preventDefault();
+        setIsSpaceDown(true);
+      }
     };
+    
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "Space") setIsSpaceDown(false);
+      if (e.code === "Space") {
+        e.preventDefault();
+        setIsSpaceDown(false);
+        setIsPanning(false);
+      }
     };
+    
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, []);
+  }, [showTextInput]);
 
   return (
     <div ref={containerRef} style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -633,6 +680,17 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         rulerSize={rulerSize} 
         cursor={cursor}
       />
+
+      {showTextInput && (
+        <TextInputBox
+          x={textInputPosition.x}
+          y={textInputPosition.y}
+          zoom={zoom}
+          offset={offset}
+          onSubmit={handleTextSubmit}
+          onCancel={handleTextCancel}
+        />
+      )}
     </div>
   );
 };

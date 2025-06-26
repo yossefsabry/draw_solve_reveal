@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DrawingCanvasArea from "./DrawingCanvasArea";
@@ -229,28 +228,6 @@ const DrawingCanvas: React.FC = () => {
     }
   };
 
-  // Text click handler for text mode
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    if (mode === "text") {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / zoom - offset.x;
-      const y = (e.clientY - rect.top) / zoom - offset.y;
-      
-      // Add text directly to objects instead of using separate text system
-      const newTextObject: AnyDrawingObject = {
-        type: "text",
-        x,
-        y,
-        text: "Double-click to edit",
-        color: color,
-        fontSize: Math.max(16, brushSize * 2),
-      };
-      
-      pushToUndo(objects);
-      setObjects([...objects, newTextObject]);
-    }
-  };
-
   // Overlay handlers
   const handleResultMove = (id: string, x: number, y: number) => {
     setResults(results => results.map(l => l.id === id ? { ...l, x, y } : l));
@@ -313,8 +290,8 @@ const DrawingCanvas: React.FC = () => {
           onZoomOut={handleZoomOut}
         />
 
-        {/* Main Canvas Area */}
-        <div className="flex-1 flex flex-col items-center justify-center bg-[#1a1a1a] relative overflow-hidden" onClick={handleCanvasClick}>
+        {/* Main Canvas Area - removed onClick handler */}
+        <div className="flex-1 flex flex-col items-center justify-center bg-[#1a1a1a] relative overflow-hidden">
           {is2D ? (
             <DrawingCanvasArea
               color={color}
