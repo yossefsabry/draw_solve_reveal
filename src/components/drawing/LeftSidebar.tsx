@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Pencil, Eraser, Download, ZoomIn, ZoomOut, Type, Shapes } from "lucide-react";
@@ -42,29 +41,48 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
   return (
     <div className="flex flex-row md:flex-col items-center gap-2 w-full md:w-16 bg-[#181818] border-b md:border-b-0 md:border-r border-neutral-800 py-2 md:py-4 overflow-y-auto max-h-full">
-      {tools.map(tool => (
+      {/* Drawing/Erase/Text tools */}
+      <div className="flex flex-col items-center w-full mb-4">
+        {tools.filter(tool => tool.mode !== "shape").map(tool => (
+          <Button
+            key={tool.name}
+            variant={mode === tool.mode ? "default" : "outline"}
+            size="icon"
+            className={`mb-3 transition-all duration-150 shadow-md rounded-full border-2 border-transparent hover:border-primary hover:scale-110 focus:scale-110 focus:ring-2 focus:ring-primary/40 ${mode === tool.mode ? "bg-primary text-primary-foreground border-primary scale-110 ring-2 ring-primary" : "bg-background text-foreground"}`}
+            style={{ width: 44, height: 44, fontSize: 22 }}
+            onClick={() => onModeChange(tool.mode)}
+            title={tool.name}
+          >
+            {tool.icon}
+          </Button>
+        ))}
+      </div>
+
+      {/* Shape tools group */}
+      <div className="flex flex-col items-center w-full mb-4">
+        <div className="text-xs text-muted-foreground mb-2 tracking-wide uppercase font-semibold">Shapes</div>
         <Button
-          key={tool.name}
-          variant={mode === tool.mode ? "default" : "outline"}
+          variant={mode === "shape" ? "default" : "outline"}
           size="icon"
-          className={`mb-2 ${mode === tool.mode ? "bg-primary text-primary-foreground ring-2 ring-primary" : ""}`}
-          onClick={() => onModeChange(tool.mode)}
-          title={tool.name}
+          className={`transition-all duration-150 shadow-md rounded-full border-2 border-transparent hover:border-primary hover:scale-110 focus:scale-110 focus:ring-2 focus:ring-primary/40 ${mode === "shape" ? "bg-primary text-primary-foreground border-primary scale-110 ring-2 ring-primary" : "bg-background text-foreground"}`}
+          style={{ width: 44, height: 44, fontSize: 22 }}
+          onClick={() => onModeChange("shape")}
+          title="Shapes"
         >
-          {tool.icon}
+          <Shapes className="text-foreground" />
         </Button>
-      ))}
-      
-      {/* Shape selector - only show when shape mode is selected */}
-      {mode === "shape" && (
-        <div className="mb-2 px-2 w-full">
-          <ShapeSelector
-            selectedShape={selectedShape}
-            onShapeSelect={onShapeSelect}
-          />
-        </div>
-      )}
-      
+        {/* Shape selector dropdown, only show when shape mode is selected */}
+        {mode === "shape" && (
+          <div className="mt-4 w-full flex justify-center">
+            <ShapeSelector
+              selectedShape={selectedShape}
+              onShapeSelect={onShapeSelect}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Grid toggle and other controls */}
       <Button
         variant={showGrid ? "default" : "outline"}
         size="icon"

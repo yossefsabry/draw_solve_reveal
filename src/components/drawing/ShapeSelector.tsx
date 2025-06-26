@@ -1,13 +1,5 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronDown } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 export type ShapeType = 'rectangle' | 'circle' | 'line' | 'arrow' | 'triangle' | 'person' | 'house' | 'star';
 
@@ -31,30 +23,27 @@ const ShapeSelector: React.FC<ShapeSelectorProps> = ({
   selectedShape,
   onShapeSelect
 }) => {
-  const selectedShapeData = shapes.find(s => s.type === selectedShape);
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
-          <span>{selectedShapeData?.icon}</span>
-          <span>{selectedShapeData?.name}</span>
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
+    <div className="w-full flex flex-col items-center">
+      <div className="grid grid-cols-4 grid-rows-2 gap-4 p-4 bg-gradient-to-br from-background/90 to-primary/10 rounded-2xl shadow-2xl border border-primary/30 max-w-sm">
         {shapes.map((shape) => (
-          <DropdownMenuItem
+          <button
             key={shape.type}
             onClick={() => onShapeSelect(shape.type)}
-            className="flex items-center gap-2"
+            className={`flex flex-col items-center justify-center w-16 h-16 rounded-full transition-all duration-150 text-2xl font-bold border-2 focus:outline-none focus:ring-2 focus:ring-primary/40
+              ${selectedShape === shape.type
+                ? 'bg-primary text-primary-foreground border-primary scale-110 shadow-lg font-extrabold'
+                : 'bg-background text-foreground border-transparent hover:bg-primary/10 hover:border-primary'}
+            `}
+            title={shape.name}
+            tabIndex={0}
           >
-            <span>{shape.icon}</span>
-            <span>{shape.name}</span>
-          </DropdownMenuItem>
+            <span className="mb-1" style={{fontSize: '2.2rem', lineHeight: 1}}>{shape.icon}</span>
+            <span className={`text-xs font-semibold leading-tight mt-1 ${selectedShape === shape.type ? 'font-bold' : 'font-normal'}`}>{shape.name}</span>
+          </button>
         ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </div>
+    </div>
   );
 };
 

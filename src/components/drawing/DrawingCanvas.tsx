@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DrawingCanvasArea from "./DrawingCanvasArea";
@@ -10,6 +9,7 @@ import RightSidebar from "./RightSidebar";
 import BottomStatusBar from "./BottomStatusBar";
 import CanvasOverlays from "./CanvasOverlays";
 import { ShapeType } from "./ShapeSelector";
+import { DrawingMode } from "./types";
 import { useClearCanvas } from "@/hooks/use-canvas-clearing";
 import { useDrawingMode } from "@/hooks/use-drawing-mode";
 import jsPDF from "jspdf";
@@ -23,7 +23,7 @@ function uuid() {
 const DrawingCanvas: React.FC = () => {
   const [color, setColor] = useState("#FFFFFF");
   const [brushSize, setBrushSize] = useState(5);
-  const [mode, setMode] = useState("draw");
+  const [mode, setMode] = useState<DrawingMode>("draw");
   const [selectedShape, setSelectedShape] = useState<ShapeType>("rectangle");
   const [showGrid, setShowGrid] = useState(true);
   const [zoom, setZoom] = useState(3.0);
@@ -61,18 +61,15 @@ const DrawingCanvas: React.FC = () => {
   };
 
   // Clear canvas hook
-  const { clearAll } = useClearCanvas({
-    setObjects,
-    canvasRef,
-    pushToUndo: () => pushToUndo(objects),
-    resetOtherStates: () => {
-      setResults([]);
-      setHandwritingRegions([]);
-      setCustomTexts([]);
-      setUndoStack([]);
-      setRedoStack([]);
-    }
-  });
+  const clearAll = () => {
+    pushToUndo(objects);
+    setObjects(objects.filter(obj => obj.type !== 'text' && obj.type !== 'math'));
+    setCustomTexts([]);
+    setResults([]);
+    setHandwritingRegions([]);
+    setUndoStack([]);
+    setRedoStack([]);
+  };
 
   // Undo/Redo handlers
   const handlePrev = () => {
@@ -293,7 +290,7 @@ const DrawingCanvas: React.FC = () => {
         <LeftSidebar
           show={showLeftSidebar}
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={(m) => setMode(m as DrawingMode)}
           selectedShape={selectedShape}
           onShapeSelect={setSelectedShape}
           showGrid={showGrid}

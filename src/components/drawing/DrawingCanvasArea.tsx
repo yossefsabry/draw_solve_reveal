@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import Rulers from "./Rulers";
-import { AnyDrawingObject, DrawingMode } from "./types";
+import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
+import { createShapeObject } from "./ShapeDrawingUtils";
 
 interface DrawingCanvasAreaProps {
   color: string;
@@ -17,6 +18,7 @@ interface DrawingCanvasAreaProps {
   offset?: { x: number; y: number };
   onOffsetChange?: (o: { x: number; y: number }) => void;
   onClear?: () => void;
+  selectedShape?: ShapeTool;
 }
 
 const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
@@ -34,6 +36,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   offset = { x: 0, y: 0 },
   onOffsetChange,
   onClear,
+  selectedShape,
 }) => {
   const isDrawing = useRef(false);
   const startPoint = useRef<{ x: number; y: number } | null>(null);
@@ -310,11 +313,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     startPoint.current = pos;
     if (mode === "draw" || mode === "erase") {
       drawingPath.current = [pos];
-    } else if ((mode as any) === "rectangle" && startPoint.current) {
-      setShapePreview(null);
-    } else if ((mode as any) === "circle" && startPoint.current) {
-      setShapePreview(null);
-    } else if ((mode as any) === "line" && startPoint.current) {
+    } else if (mode === "shape" && startPoint.current) {
       setShapePreview(null);
     }
   };
@@ -329,41 +328,17 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     
     if (mode === "draw" || mode === "erase") {
       drawingPath.current.push(pos);
-    } else if ((mode as any) === "rectangle" && startPoint.current) {
-      const width = pos.x - startPoint.current.x;
-      const height = pos.y - startPoint.current.y;
-      setShapePreview({
-        type: "rectangle",
-        x: startPoint.current.x,
-        y: startPoint.current.y,
-        width,
-        height,
+    } else if (mode === "shape" && startPoint.current && selectedShape) {
+      const preview = createShapeObject(
+        selectedShape,
+        startPoint.current.x,
+        startPoint.current.y,
+        pos.x,
+        pos.y,
         color,
-        lineWidth: brushSize,
-      });
-    } else if ((mode as any) === "circle" && startPoint.current) {
-      const radius = Math.sqrt(
-        Math.pow(pos.x - startPoint.current.x, 2) +
-          Math.pow(pos.y - startPoint.current.y, 2)
+        brushSize
       );
-      setShapePreview({
-        type: "circle",
-        x: startPoint.current.x,
-        y: startPoint.current.y,
-        radius,
-        color,
-        lineWidth: brushSize,
-      });
-    } else if ((mode as any) === "line" && startPoint.current) {
-      setShapePreview({
-        type: "line",
-        x1: startPoint.current.x,
-        y1: startPoint.current.y,
-        x2: pos.x,
-        y2: pos.y,
-        color,
-        lineWidth: brushSize,
-      });
+      setShapePreview(preview);
     }
   };
 
@@ -383,7 +358,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
           },
         ]);
       }
-    } else if (shapePreview) {
+    } else if (mode === "shape" && shapePreview) {
       setObjects([...objects, shapePreview]);
       setShapePreview(null);
     }
