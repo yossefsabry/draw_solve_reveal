@@ -50,7 +50,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   const panStart = useRef<{ x: number; y: number } | null>(null);
   const offsetStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Optimized grid rendering
+  // Optimized grid rendering - separated from main canvas
   const drawOptimizedGrid = useCallback((ctx: CanvasRenderingContext2D) => {
     if (!showGrid) return;
     
@@ -58,6 +58,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     ctx.strokeStyle = '#555555';
     ctx.lineWidth = 0.5 / zoom;
     ctx.globalAlpha = 0.8;
+    ctx.globalCompositeOperation = "source-over"; // Ensure grid is always drawn normally
     
     let gridSize = 20;
     if (zoom < 0.5) gridSize = 100;
@@ -87,6 +88,106 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     ctx.restore();
   }, [showGrid, zoom, offset.x, offset.y, canvasSize.width, canvasSize.height]);
 
+  // Helper function to check if a point intersects with an object
+  const isPointInObject = useCallback((point: { x: number; y: number }, obj: AnyDrawingObject): boolean => {
+    const tolerance = Math.max(10, brushSize) / zoom;
+    
+    switch (obj.type) {
+      case "text":
+      case "math":
+        const textWidth = (obj.text || "").length * (obj.fontSize || 16) * 0.6;
+        const textHeight = (obj.fontSize || 16) * 1.2;
+        return point.x >= (obj.x || 0) - tolerance &&
+               point.x <= (obj.x || 0) + textWidth + tolerance &&
+               point.y >= (obj.y || 0) - tolerance &&
+               point.y <= (obj.y || 0) + textHeight + tolerance;
+      
+      case "rectangle":
+        return point.x >= (obj.x || 0) - tolerance &&
+               point.x <= (obj.x || 0) + (obj.width || 0) + tolerance &&
+               point.y >= (obj.y || 0) - tolerance &&
+               point.y <= (obj.y || 0) + (obj.height || 0) + tolerance;
+      
+      case "circle":
+        const dx = point.x - (obj.x || 0);
+        const dy = point.y - (obj.y || 0);
+        return Math.sqrt(dx * dx + dy * dy) <= (obj.radius || 0) + tolerance;
+      
+      case "draw":
+        if (!obj.points || obj.points.length === 0) return false;
+        return obj.points.some(p => {
+          const dx = point.x - p.x;
+          const dy = point.y - p.y;
+          return Math.sqrt(dx * dx + dy * dy) <= tolerance;
+        });
+      
+      case "line":
+      case "arrow":
+        // Check if point is near the line
+        const x1 = obj.x1 || 0;
+        const y1 = obj.y1 || 0;
+        const x2 = obj.x2 || 0;
+        const y2 = obj.y2 || 0;
+        
+        const A = point.x - x1;
+        const B = point.y - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+        
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        const param = lenSq !== 0 ? dot / lenSq : -1;
+        
+        let xx, yy;
+        if (param < 0) {
+          xx = x1;
+          yy = y1;
+        } else if (param > 1) {
+          xx = x2;
+          yy = y2;
+        } else {
+          xx = x1 + param * C;
+          yy = y1 + param * D;
+        }
+        
+        const dx2 = point.x - xx;
+        const dy2 = point.y - yy;
+        return Math.sqrt(dx2 * dx2 + dy2 * dy2) <= tolerance;
+      
+      default:
+        // For complex shapes like person, house, star, etc.
+        const bounds = getObjectBounds(obj);
+        return point.x >= bounds.minX - tolerance &&
+               point.x <= bounds.maxX + tolerance &&
+               point.y >= bounds.minY - tolerance &&
+               point.y <= bounds.maxY + tolerance;
+    }
+  }, [brushSize, zoom]);
+
+  // Helper function to get object bounds
+  const getObjectBounds = useCallback((obj: AnyDrawingObject) => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+    if ('x1' in obj && 'y1' in obj && 'x2' in obj && 'y2' in obj) {
+      minX = Math.min(obj.x1 || 0, obj.x2 || 0);
+      maxX = Math.max(obj.x1 || 0, obj.x2 || 0);
+      minY = Math.min(obj.y1 || 0, obj.y2 || 0);
+      maxY = Math.max(obj.y1 || 0, obj.y2 || 0);
+    } else if ('x' in obj && 'y' in obj) {
+      minX = obj.x || 0;
+      maxX = obj.x || 0;
+      minY = obj.y || 0;
+      maxY = obj.y || 0;
+      
+      if ('width' in obj && 'height' in obj) {
+        maxX += obj.width || 0;
+        maxY += obj.height || 0;
+      }
+    }
+    
+    return { minX, minY, maxX, maxY };
+  }, []);
+
   const getPos = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
     return {
@@ -95,7 +196,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     };
   }, [zoom, offset.x, offset.y]);
 
-  // Enhanced redraw function
+  // Enhanced redraw function with proper layering
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -113,7 +214,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     ctx.translate(offset.x, offset.y);
     ctx.scale(zoom, zoom);
 
-    // Draw grid
+    // Draw grid first (always preserved)
     drawOptimizedGrid(ctx);
 
     // Draw all objects with improved rendering
@@ -123,6 +224,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       ctx.lineWidth = (obj.lineWidth || 2) / zoom;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
+      ctx.globalCompositeOperation = "source-over";
       
       if (obj.type === "draw") {
         if (obj.points && obj.points.length > 1) {
@@ -265,9 +367,12 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     if (isDrawing.current && drawingPath.current.length > 1 && (mode === "draw" || mode === "erase")) {
       ctx.save();
       if (mode === "erase") {
-        ctx.globalCompositeOperation = "destination-out";
+        // For eraser preview, show a red path
+        ctx.strokeStyle = "#FF6B6B";
+        ctx.globalAlpha = 0.8;
+      } else {
+        ctx.strokeStyle = color;
       }
-      ctx.strokeStyle = mode === "erase" ? "#000000" : color;
       ctx.lineWidth = brushSize / zoom;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
@@ -337,7 +442,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     }
 
     ctx.restore();
-  }, [canvasRef, zoom, offset.x, offset.y, showGrid, objects, color, brushSize, mode, shapePreview, cursor, canvasSize]);
+  }, [canvasRef, zoom, offset.x, offset.y, showGrid, objects, color, brushSize, mode, shapePreview, cursor, canvasSize, drawOptimizedGrid]);
 
   useEffect(() => {
     redraw();
@@ -422,33 +527,26 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     if (isPanning) return;
     if (!isDrawing.current) return;
     
-    if (mode === "draw" || mode === "erase") {
+    if (mode === "draw") {
       if (drawingPath.current.length > 1) {
         const newObject: AnyDrawingObject = {
           type: "draw",
           points: [...drawingPath.current],
-          color: mode === "erase" ? "#000000" : color,
+          color: color,
           lineWidth: brushSize,
         };
+        setObjects([...objects, newObject]);
+      }
+    } else if (mode === "erase") {
+      if (drawingPath.current.length > 1) {
+        // Enhanced eraser logic - remove objects that intersect with eraser path
+        const filteredObjects = objects.filter(obj => {
+          // Check if any point in the eraser path intersects with this object
+          const shouldErase = drawingPath.current.some(point => isPointInObject(point, obj));
+          return !shouldErase;
+        });
         
-        if (mode === "erase") {
-          // For eraser, we need to remove intersecting objects
-          const filteredObjects = objects.filter(obj => {
-            if (obj.type === "text" || obj.type === "math") {
-              // Check if eraser path intersects with text bounds
-              return !drawingPath.current.some(point => 
-                point.x >= (obj.x || 0) && 
-                point.x <= (obj.x || 0) + 100 && 
-                point.y >= (obj.y || 0) && 
-                point.y <= (obj.y || 0) + (obj.fontSize || 16)
-              );
-            }
-            return true;
-          });
-          setObjects([...filteredObjects, newObject]);
-        } else {
-          setObjects([...objects, newObject]);
-        }
+        setObjects(filteredObjects);
       }
     } else if (mode === "shape" && shapePreview) {
       setObjects([...objects, shapePreview]);
