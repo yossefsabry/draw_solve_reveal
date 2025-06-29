@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Eye, EyeOff, RotateCcw, Undo, Redo } from "lucide-react";
+import { Eye, EyeOff, RotateCcw } from "lucide-react";
 
 interface TopBarProps {
   is3D: boolean;
@@ -13,10 +13,6 @@ interface TopBarProps {
   onToggleRightSidebar: () => void;
   isMobile: boolean;
   onResetView?: () => void;
-  onUndo?: () => void;
-  onRedo?: () => void;
-  canUndo?: boolean;
-  canRedo?: boolean;
 }
 
 const TopBar: React.FC<TopBarProps> = ({
@@ -27,11 +23,7 @@ const TopBar: React.FC<TopBarProps> = ({
   showRightSidebar,
   onToggleRightSidebar,
   isMobile,
-  onResetView,
-  onUndo,
-  onRedo,
-  canUndo = false,
-  canRedo = false
+  onResetView
 }) => {
   return (
     <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
@@ -60,33 +52,6 @@ const TopBar: React.FC<TopBarProps> = ({
             <span className="hidden sm:inline">Reset View</span>
           </Button>
         )}
-        
-        {/* Undo/Redo Buttons */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onUndo}
-            disabled={!canUndo}
-            className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 font-medium px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo className="h-4 w-4" />
-            <span className="hidden sm:inline">Undo</span>
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRedo}
-            disabled={!canRedo}
-            className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 font-medium px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            <Redo className="h-4 w-4" />
-            <span className="hidden sm:inline">Redo</span>
-          </Button>
-        </div>
       </div>
       
       <div className="flex items-center gap-3">

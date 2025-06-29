@@ -336,10 +336,7 @@ const DrawingCanvas: React.FC = () => {
               mode={mode}
               showGrid={showGrid}
               objects={objects}
-              setObjects={(newObjs) => {
-                pushToUndo(objects);
-                setObjects(newObjs);
-              }}
+              setObjects={setObjects}
               canvasRef={canvasRef}
               zoom={zoom}
               minZoom={minZoom}
@@ -358,10 +355,7 @@ const DrawingCanvas: React.FC = () => {
               brushSize={brushSize}
               mode={mode}
               objects={objects}
-              setObjects={(newObjs) => {
-                pushToUndo(objects);
-                setObjects(newObjs);
-              }}
+              setObjects={setObjects}
               showGrid={showGrid}
               selectedShape={selectedShape}
             />
@@ -387,10 +381,6 @@ const DrawingCanvas: React.FC = () => {
         <RightSidebar
           show={showRightSidebar}
           isMobile={isMobile}
-          undoStack={undoStack}
-          redoStack={redoStack}
-          onPrev={handlePrev}
-          onNext={handleNext}
           onClearAll={clearAll}
           objects={objects}
           results={results}
