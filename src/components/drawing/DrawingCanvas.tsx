@@ -55,6 +55,25 @@ const DrawingCanvas: React.FC = () => {
     }
   }, []);
 
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z for undo
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handlePrev();
+      }
+      // Ctrl+Shift+Z for redo
+      else if (e.ctrlKey && e.shiftKey && e.key === 'Z') {
+        e.preventDefault();
+        handleNext();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [objects, undoStack, redoStack]);
+
   // Helper: push current objects to undo stack
   const pushToUndo = (objs: any[]) => {
     setUndoStack((prev) => [...prev, objs]);
@@ -339,8 +358,12 @@ const DrawingCanvas: React.FC = () => {
               brushSize={brushSize}
               mode={mode}
               objects={objects}
-              setObjects={setObjects}
+              setObjects={(newObjs) => {
+                pushToUndo(objects);
+                setObjects(newObjs);
+              }}
               showGrid={showGrid}
+              selectedShape={selectedShape}
             />
           )}
           

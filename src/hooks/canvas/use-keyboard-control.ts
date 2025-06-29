@@ -8,6 +8,7 @@ export const useKeyboardControl = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
+        e.preventDefault(); // Prevent page scrolling
         setKeyPressed(prev => ({ ...prev, space: true }));
       }
       if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
