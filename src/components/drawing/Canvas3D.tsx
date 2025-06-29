@@ -20,7 +20,7 @@ interface Canvas3DProps {
 const DrawingPath = ({ points, color, lineWidth }: { points: any[], color: string, lineWidth: number }) => {
   if (!points || points.length < 2) return null;
   
-  const linePoints = points.map(p => new THREE.Vector3(p.x / 50, p.y / 50, 0.1)); // Raised above grid
+  const linePoints = points.map(p => new THREE.Vector3(p.x / 50, p.y / 50, 0.2)); // Raised above grid
   
   return (
     <Line
@@ -31,13 +31,94 @@ const DrawingPath = ({ points, color, lineWidth }: { points: any[], color: strin
   );
 };
 
+// Preview Path Component
+const PreviewPath = ({ points, color, lineWidth }: { points: any[], color: string, lineWidth: number }) => {
+  if (!points || points.length < 2) return null;
+  
+  const linePoints = points.map(p => new THREE.Vector3(p.x / 50, p.y / 50, 0.3)); // Higher than regular paths
+  
+  return (
+    <Line
+      points={linePoints}
+      color={color}
+      lineWidth={lineWidth}
+      opacity={0.7}
+      transparent
+    />
+  );
+};
+
+// Preview Shape Component
+const PreviewShape = ({ startPoint, currentPoint, selectedShape, color, brushSize }: {
+  startPoint: { x: number, y: number } | null,
+  currentPoint: { x: number, y: number } | null,
+  selectedShape?: string,
+  color: string,
+  brushSize: number
+}) => {
+  if (!startPoint || !currentPoint || !selectedShape) return null;
+  
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  if (selectedShape === 'rectangle') {
+    const width = Math.abs(currentPoint.x - startPoint.x);
+    const height = Math.abs(currentPoint.y - startPoint.y);
+    const centerX = (startPoint.x + currentPoint.x) / 2;
+    const centerY = (startPoint.y + currentPoint.y) / 2;
+    
+    return (
+      <mesh 
+        ref={meshRef}
+        position={[centerX / 50, -centerY / 50, 0.3]}
+      >
+        <boxGeometry args={[width / 50, height / 50, 0.2]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} />
+      </mesh>
+    );
+  }
+  
+  if (selectedShape === 'circle') {
+    const radius = Math.sqrt(
+      Math.pow(currentPoint.x - startPoint.x, 2) + 
+      Math.pow(currentPoint.y - startPoint.y, 2)
+    );
+    return (
+      <mesh 
+        ref={meshRef}
+        position={[startPoint.x / 50, -startPoint.y / 50, 0.3]}
+      >
+        <sphereGeometry args={[radius / 50, 32, 32]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} />
+      </mesh>
+    );
+  }
+  
+  if (selectedShape === 'line') {
+    const points = [
+      new THREE.Vector3(startPoint.x / 50, -startPoint.y / 50, 0.3),
+      new THREE.Vector3(currentPoint.x / 50, -currentPoint.y / 50, 0.3)
+    ];
+    return (
+      <Line
+        points={points}
+        color={color}
+        lineWidth={brushSize}
+        opacity={0.7}
+        transparent
+      />
+    );
+  }
+  
+  return null;
+};
+
 // 3D Shape Components
 const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
   useFrame(() => {
     if (meshRef.current) {
-      meshRef.current.rotation.y += 0.005; // Slower rotation
+      meshRef.current.rotation.y += 0.005;
     }
   });
   
@@ -67,8 +148,8 @@ const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
   
   if (obj.type === 'line') {
     const points = [
-      new THREE.Vector3((obj.x1 || 0) / 50, -(obj.y1 || 0) / 50, 0.1),
-      new THREE.Vector3((obj.x2 || 0) / 50, -(obj.y2 || 0) / 50, 0.1)
+      new THREE.Vector3((obj.x1 || 0) / 50, -(obj.y1 || 0) / 50, 0.2),
+      new THREE.Vector3((obj.x2 || 0) / 50, -(obj.y2 || 0) / 50, 0.2)
     ];
     return (
       <Line
@@ -82,7 +163,7 @@ const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
   if (obj.type === 'text' || obj.type === 'math') {
     return (
       <Text
-        position={[(obj.x || 0) / 50, -(obj.y || 0) / 50, 0.1]}
+        position={[(obj.x || 0) / 50, -(obj.y || 0) / 50, 0.2]}
         fontSize={(obj.fontSize || 16) / 50}
         color={obj.color}
         anchorX="left"
@@ -96,6 +177,29 @@ const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
   return null;
 };
 
+// Position indicator component
+const PositionIndicator = ({ position }: { position: { x: number, y: number, z: number } | null }) => {
+  if (!position) return null;
+  
+  return (
+    <group position={[position.x / 50, position.y / 50, position.z]}>
+      <mesh>
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshBasicMaterial color="#ff0000" />
+      </mesh>
+      <Text
+        position={[0, 0.3, 0]}
+        fontSize={0.1}
+        color="#ffffff"
+        anchorX="center"
+        anchorY="center"
+      >
+        {`X: ${Math.round(position.x)}, Y: ${Math.round(position.y)}, Z: ${Math.round(position.z * 50)}`}
+      </Text>
+    </group>
+  );
+};
+
 // Interactive 3D Scene
 const Scene3D = ({ 
   objects, 
@@ -104,9 +208,13 @@ const Scene3D = ({
   onPointerMove, 
   onPointerUp,
   currentPath,
+  previewStartPoint,
+  previewCurrentPoint,
   color,
   brushSize,
-  isDrawing
+  isDrawing,
+  selectedShape,
+  cursorPosition
 }: { 
   objects: AnyDrawingObject[], 
   showGrid?: boolean,
@@ -114,15 +222,18 @@ const Scene3D = ({
   onPointerMove?: (e: any) => void,
   onPointerUp?: (e: any) => void,
   currentPath?: { x: number, y: number }[],
+  previewStartPoint?: { x: number, y: number } | null,
+  previewCurrentPoint?: { x: number, y: number } | null,
   color?: string,
   brushSize?: number,
-  isDrawing?: boolean
+  isDrawing?: boolean,
+  selectedShape?: string,
+  cursorPosition?: { x: number, y: number, z: number } | null
 }) => {
   const { camera, gl } = useThree();
   const controlsRef = useRef<any>();
   
   useEffect(() => {
-    // Set default camera position
     camera.position.set(5, 5, 5);
     camera.lookAt(0, 0, 0);
   }, [camera]);
@@ -130,7 +241,7 @@ const Scene3D = ({
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={0.6} />
       <directionalLight position={[10, 10, 5]} intensity={1} />
       <pointLight position={[-10, -10, -5]} intensity={0.5} />
       
@@ -152,10 +263,10 @@ const Scene3D = ({
         />
       )}
       
-      {/* Invisible plane for drawing detection */}
+      {/* Drawing plane - invisible but detects mouse */}
       <mesh
-        position={[0, 0, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0, 0.1]}
+        rotation={[0, 0, 0]}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -164,6 +275,9 @@ const Scene3D = ({
         <planeGeometry args={[100, 100]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
+      
+      {/* Position indicator */}
+      <PositionIndicator position={cursorPosition} />
       
       {/* Render all objects */}
       {objects.map((obj, index) => {
@@ -180,14 +294,23 @@ const Scene3D = ({
         return <Shape3D key={`shape-${index}`} obj={obj} />;
       })}
       
-      {/* Show current drawing path */}
+      {/* Show current drawing path preview */}
       {isDrawing && currentPath && currentPath.length > 1 && (
-        <DrawingPath
+        <PreviewPath
           points={currentPath}
           color={color || '#ffffff'}
           lineWidth={brushSize || 2}
         />
       )}
+      
+      {/* Show shape preview */}
+      <PreviewShape
+        startPoint={previewStartPoint}
+        currentPoint={previewCurrentPoint}
+        selectedShape={selectedShape}
+        color={color || '#ffffff'}
+        brushSize={brushSize || 2}
+      />
       
       {/* Controls */}
       <OrbitControls 
@@ -197,6 +320,7 @@ const Scene3D = ({
         enableRotate={true}
         minDistance={1}
         maxDistance={50}
+        enabled={true}
       />
     </>
   );
@@ -214,37 +338,46 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<{ x: number, y: number }[]>([]);
   const [startPoint, setStartPoint] = useState<{ x: number, y: number } | null>(null);
+  const [previewPoint, setPreviewPoint] = useState<{ x: number, y: number } | null>(null);
+  const [cursorPosition, setCursorPosition] = useState<{ x: number, y: number, z: number } | null>(null);
   const { keyPressed } = useKeyboardControl();
   
   const handlePointerDown = (e: any) => {
-    // Don't draw if space is pressed (used for camera movement)
     if (keyPressed.space) return;
     
     e.stopPropagation();
     
+    const point = e.point;
+    const worldPoint = { x: point.x * 50, y: -point.y * 50 };
+    
     if (mode === 'draw') {
       setIsDrawing(true);
-      const point = e.point;
-      const worldPoint = { x: point.x * 50, y: -point.z * 50 };
       setCurrentPath([worldPoint]);
       setStartPoint(worldPoint);
     } else if (selectedShape && (selectedShape === 'rectangle' || selectedShape === 'circle' || selectedShape === 'line')) {
       setIsDrawing(true);
-      const point = e.point;
-      const worldPoint = { x: point.x * 50, y: -point.z * 50 };
       setStartPoint(worldPoint);
+      setPreviewPoint(worldPoint);
     }
   };
   
   const handlePointerMove = (e: any) => {
-    if (!isDrawing || keyPressed.space) return;
-    
     e.stopPropagation();
     const point = e.point;
-    let worldPoint = { x: point.x * 50, y: -point.z * 50 };
+    let worldPoint = { x: point.x * 50, y: -point.y * 50 };
+    
+    // Update cursor position for indicator
+    setCursorPosition({ x: worldPoint.x, y: worldPoint.y, z: 0.1 });
+    
+    if (!isDrawing) {
+      setPreviewPoint(worldPoint);
+      return;
+    }
+    
+    if (keyPressed.space) return;
     
     if (mode === 'draw') {
-      // Handle straight line drawing with Shift
+      // Handle straight line drawing with keyboard shortcuts
       if (keyPressed.shift && startPoint) {
         const deltaX = Math.abs(worldPoint.x - startPoint.x);
         const deltaY = Math.abs(worldPoint.y - startPoint.y);
@@ -271,6 +404,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
       
       setCurrentPath(prev => [...prev, worldPoint]);
     }
+    
+    setPreviewPoint(worldPoint);
   };
   
   const handlePointerUp = (e: any) => {
@@ -286,19 +421,16 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         lineWidth: brushSize
       };
       setObjects([...objects, newObject]);
-    } else if (selectedShape && startPoint) {
-      const point = e.point;
-      const endPoint = { x: point.x * 50, y: -point.z * 50 };
-      
+    } else if (selectedShape && startPoint && previewPoint) {
       let newObject: AnyDrawingObject | null = null;
       
       if (selectedShape === 'rectangle') {
-        const width = Math.abs(endPoint.x - startPoint.x);
-        const height = Math.abs(endPoint.y - startPoint.y);
+        const width = Math.abs(previewPoint.x - startPoint.x);
+        const height = Math.abs(previewPoint.y - startPoint.y);
         newObject = {
           type: 'rectangle',
-          x: Math.min(startPoint.x, endPoint.x),
-          y: Math.min(startPoint.y, endPoint.y),
+          x: Math.min(startPoint.x, previewPoint.x),
+          y: Math.min(startPoint.y, previewPoint.y),
           width,
           height,
           color,
@@ -306,8 +438,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         };
       } else if (selectedShape === 'circle') {
         const radius = Math.sqrt(
-          Math.pow(endPoint.x - startPoint.x, 2) + 
-          Math.pow(endPoint.y - startPoint.y, 2)
+          Math.pow(previewPoint.x - startPoint.x, 2) + 
+          Math.pow(previewPoint.y - startPoint.y, 2)
         );
         newObject = {
           type: 'circle',
@@ -322,8 +454,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
           type: 'line',
           x1: startPoint.x,
           y1: startPoint.y,
-          x2: endPoint.x,
-          y2: endPoint.y,
+          x2: previewPoint.x,
+          y2: previewPoint.y,
           color,
           lineWidth: brushSize
         };
@@ -334,9 +466,11 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
       }
     }
     
+    // Reset states
     setIsDrawing(false);
     setCurrentPath([]);
     setStartPoint(null);
+    setPreviewPoint(null);
   };
   
   return (
@@ -352,9 +486,13 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           currentPath={currentPath}
+          previewStartPoint={startPoint}
+          previewCurrentPoint={previewPoint}
           color={color}
           brushSize={brushSize}
           isDrawing={isDrawing}
+          selectedShape={selectedShape}
+          cursorPosition={cursorPosition}
         />
       </Canvas>
     </div>
