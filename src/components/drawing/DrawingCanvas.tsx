@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DrawingCanvasArea from "./DrawingCanvasArea";
@@ -27,15 +26,17 @@ const DrawingCanvas: React.FC = () => {
   const [mode, setMode] = useState<DrawingMode>("draw");
   const [selectedShape, setSelectedShape] = useState<ShapeType>("rectangle");
   const [showGrid, setShowGrid] = useState(true);
-  const [zoom, setZoom] = useState(1.0);
-  const [zoomInput, setZoomInput] = useState('100');
+  const [zoom, setZoom] = useState(1.0); // Changed from 3.0 to 1.0 for default view
+  const [zoomInput, setZoomInput] = useState('100'); // Changed from '300' to '100'
   const minZoom = 0.5;
   const maxZoom = 4.0;
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const maxOffset = 2000;
+  const maxOffset = 2000; // Limit how far you can pan
   const [objects, setObjects] = useState<any[]>([]);
   const [showRightSidebar, setShowRightSidebar] = useState(false);
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
+  const [undoStack, setUndoStack] = useState<any[][]>([]);
+  const [redoStack, setRedoStack] = useState<any[][]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMobile = useIsMobile();
   const [showWelcome, setShowWelcome] = useState(false);
@@ -54,8 +55,34 @@ const DrawingCanvas: React.FC = () => {
     }
   }, []);
 
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z for undo
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handlePrev();
+      }
+      // Ctrl+Shift+Z for redo
+      else if (e.ctrlKey && e.shiftKey && e.key === 'Z') {
+        e.preventDefault();
+        handleNext();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [objects, undoStack, redoStack]);
+
+  // Helper: push current objects to undo stack
+  const pushToUndo = (objs: any[]) => {
+    setUndoStack((prev) => [...prev, objs]);
+    setRedoStack([]);
+  };
+
   // Clear canvas hook
   const clearAll = () => {
+    pushToUndo(objects);
     // Clear everything except grid
     setObjects([]);
     setCustomTexts([]);
@@ -72,6 +99,27 @@ const DrawingCanvas: React.FC = () => {
     }
     
     toast.success("Canvas cleared successfully!", { duration: 2000 });
+  };
+
+  // Undo/Redo handlers
+  const handlePrev = () => {
+    setUndoStack((prevUndo) => {
+      if (prevUndo.length === 0) return prevUndo;
+      setRedoStack((prevRedo) => [objects, ...prevRedo]);
+      const last = prevUndo[prevUndo.length - 1];
+      setObjects(last);
+      return prevUndo.slice(0, -1);
+    });
+  };
+
+  const handleNext = () => {
+    setRedoStack((prevRedo) => {
+      if (prevRedo.length === 0) return prevRedo;
+      setUndoStack((prevUndo) => [...prevUndo, objects]);
+      const next = prevRedo[0];
+      setObjects(next);
+      return prevRedo.slice(1);
+    });
   };
 
   // Export as PDF
@@ -200,7 +248,7 @@ const DrawingCanvas: React.FC = () => {
     }
   };
 
-  // Reset view to center function
+  // Reset view to center function - now resets to 1.0 zoom instead of 3.0
   const handleResetView = () => {
     setZoom(1.0);
     setZoomInput('100');
@@ -288,7 +336,10 @@ const DrawingCanvas: React.FC = () => {
               mode={mode}
               showGrid={showGrid}
               objects={objects}
-              setObjects={setObjects}
+              setObjects={(newObjs) => {
+                pushToUndo(objects);
+                setObjects(newObjs);
+              }}
               canvasRef={canvasRef}
               zoom={zoom}
               minZoom={minZoom}
@@ -307,7 +358,10 @@ const DrawingCanvas: React.FC = () => {
               brushSize={brushSize}
               mode={mode}
               objects={objects}
-              setObjects={setObjects}
+              setObjects={(newObjs) => {
+                pushToUndo(objects);
+                setObjects(newObjs);
+              }}
               showGrid={showGrid}
               selectedShape={selectedShape}
             />
@@ -333,6 +387,10 @@ const DrawingCanvas: React.FC = () => {
         <RightSidebar
           show={showRightSidebar}
           isMobile={isMobile}
+          undoStack={undoStack}
+          redoStack={redoStack}
+          onPrev={handlePrev}
+          onNext={handleNext}
           onClearAll={clearAll}
           objects={objects}
           results={results}
