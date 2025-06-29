@@ -26,13 +26,17 @@ const TopBar: React.FC<TopBarProps> = ({
   onResetView
 }) => {
   return (
-    <div className="flex justify-between items-center p-2 bg-[#181818] border-b border-neutral-800">
-      <div className="flex items-center gap-4">
+    <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="flex items-center gap-6">
         {/* 2D/3D Toggle */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm">2D</span>
-          <Switch checked={is3D} onCheckedChange={onToggle2D3D} />
-          <span className="text-sm">3D</span>
+        <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">2D</span>
+          <Switch 
+            checked={is3D} 
+            onCheckedChange={onToggle2D3D}
+            className="data-[state=checked]:bg-blue-500 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600"
+          />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">3D</span>
         </div>
         
         {/* Reset View Button */}
@@ -41,25 +45,25 @@ const TopBar: React.FC<TopBarProps> = ({
             variant="outline"
             size="sm"
             onClick={onResetView}
-            className="flex items-center gap-1 bg-[#2a2a2a] text-gray-300 border-transparent hover:bg-[#333] hover:text-white"
+            className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 font-medium px-4 py-2"
             title="Reset view to center (0,0)"
           >
             <RotateCcw className="h-4 w-4" />
-            Reset View
+            <span className="hidden sm:inline">Reset View</span>
           </Button>
         )}
       </div>
       
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {/* Sidebar visibility controls */}
         <Button
           variant="outline"
           size="sm"
           onClick={onToggleLeftSidebar}
-          className="flex items-center gap-1"
+          className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 font-medium px-4 py-2"
         >
           {showLeftSidebar ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          Tools
+          <span className="hidden sm:inline">Tools</span>
         </Button>
         
         {isMobile && (
@@ -67,10 +71,10 @@ const TopBar: React.FC<TopBarProps> = ({
             variant="outline"
             size="sm"
             onClick={onToggleRightSidebar}
-            className="flex items-center gap-1"
+            className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 font-medium px-4 py-2"
           >
             {showRightSidebar ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            Options
+            <span className="hidden sm:inline">Options</span>
           </Button>
         )}
       </div>

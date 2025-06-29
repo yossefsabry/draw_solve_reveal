@@ -4,6 +4,7 @@ import TextInputBox from "./TextInputBox";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { createShapeObject } from "./ShapeDrawingUtils";
 import { ShapeType } from "./ShapeSelector";
+import TextObject from "./TextObject";
 
 interface DrawingCanvasAreaProps {
   color: string;
@@ -54,6 +55,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   // Text input state
   const [showTextInput, setShowTextInput] = useState(false);
   const [textInputPosition, setTextInputPosition] = useState({ x: 0, y: 0 });
+  const [selectedTextIndex, setSelectedTextIndex] = useState<number | null>(null);
 
   // Optimized grid rendering - separated from main canvas
   const drawOptimizedGrid = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -225,8 +227,10 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     // Draw grid first (always preserved)
     drawOptimizedGrid(ctx);
 
-    // Draw all objects with improved rendering
+    // Draw all objects except text (text will be rendered as HTML elements)
     objects.forEach(obj => {
+      if (obj.type === "text" || obj.type === "math") return; // Skip text objects
+      
       ctx.save();
       ctx.strokeStyle = obj.color || "#FFFFFF";
       ctx.lineWidth = (obj.lineWidth || 2) / zoom;
@@ -356,17 +360,6 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         }
         ctx.closePath();
         ctx.stroke();
-      } else if (obj.type === "text" || obj.type === "math") {
-        ctx.fillStyle = obj.color || "#FFFFFF";
-        ctx.font = `${(obj.fontSize || 16) / zoom}px Arial`;
-        ctx.textBaseline = "top";
-        
-        const lines = (obj.text || "").split('\n');
-        const lineHeight = (obj.fontSize || 16) * 1.2 / zoom;
-        
-        lines.forEach((line, index) => {
-          ctx.fillText(line, obj.x || 0, (obj.y || 0) + (index * lineHeight));
-        });
       }
       ctx.restore();
     });
@@ -478,9 +471,13 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         const pos = getPos(e);
         setTextInputPosition(pos);
         setShowTextInput(true);
+        setSelectedTextIndex(null);
       }
       return;
     }
+
+    // Deselect text when clicking on canvas
+    setSelectedTextIndex(null);
 
     // Handle space key panning with improved logic
     if (isSpaceDown) {
@@ -606,14 +603,14 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   };
 
   // Text input handlers
-  const handleTextSubmit = (text: string) => {
+  const handleTextSubmit = (text: string, fontSize: number) => {
     const newTextObject: AnyDrawingObject = {
       type: "text",
       x: textInputPosition.x,
       y: textInputPosition.y,
       text: text,
       color: color,
-      fontSize: Math.max(16, brushSize * 2),
+      fontSize: fontSize,
     };
     
     setObjects([...objects, newTextObject]);
@@ -622,6 +619,42 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
 
   const handleTextCancel = () => {
     setShowTextInput(false);
+  };
+
+  // Text object manipulation handlers
+  const handleTextMove = (index: number, deltaX: number, deltaY: number) => {
+    const updatedObjects = [...objects];
+    const textObj = updatedObjects[index];
+    if (textObj.type === "text" || textObj.type === "math") {
+      updatedObjects[index] = {
+        ...textObj,
+        x: (textObj.x || 0) + deltaX,
+        y: (textObj.y || 0) + deltaY
+      };
+      setObjects(updatedObjects);
+    }
+  };
+
+  const handleTextResize = (index: number, newFontSize: number) => {
+    const updatedObjects = [...objects];
+    const textObj = updatedObjects[index];
+    if (textObj.type === "text" || textObj.type === "math") {
+      updatedObjects[index] = {
+        ...textObj,
+        fontSize: newFontSize
+      };
+      setObjects(updatedObjects);
+    }
+  };
+
+  const handleTextDelete = (index: number) => {
+    const updatedObjects = objects.filter((_, i) => i !== index);
+    setObjects(updatedObjects);
+    setSelectedTextIndex(null);
+  };
+
+  const handleTextSelect = (index: number) => {
+    setSelectedTextIndex(index);
   };
 
   // Improved keyboard handling
@@ -680,6 +713,29 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         rulerSize={rulerSize} 
         cursor={cursor}
       />
+
+      {/* Render text objects as HTML elements */}
+      {objects.map((obj, index) => {
+        if (obj.type !== "text" && obj.type !== "math") return null;
+        
+        return (
+          <TextObject
+            key={`text-${index}`}
+            x={obj.x || 0}
+            y={obj.y || 0}
+            text={obj.text || ""}
+            fontSize={obj.fontSize || 16}
+            color={obj.color || "#FFFFFF"}
+            zoom={zoom}
+            offset={offset}
+            isSelected={selectedTextIndex === index}
+            onMove={(deltaX, deltaY) => handleTextMove(index, deltaX, deltaY)}
+            onResize={(newFontSize) => handleTextResize(index, newFontSize)}
+            onDelete={() => handleTextDelete(index)}
+            onSelect={() => handleTextSelect(index)}
+          />
+        );
+      })}
 
       {showTextInput && (
         <TextInputBox
