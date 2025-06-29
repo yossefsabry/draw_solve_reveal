@@ -57,7 +57,7 @@ const TextInputBox: React.FC<TextInputBoxProps> = ({
 
   return (
     <div
-      className="absolute z-50 bg-white border-2 border-blue-400 rounded-lg shadow-2xl p-3"
+      className="absolute z-50 bg-black border-2 border-blue-400 rounded-lg shadow-2xl p-3"
       style={{
         left: Math.max(10, Math.min(screenX, window.innerWidth - 260)),
         top: Math.max(10, Math.min(screenY, window.innerHeight - 140)),
@@ -74,7 +74,7 @@ const TextInputBox: React.FC<TextInputBoxProps> = ({
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Type your text here..."
-        className="min-h-[80px] resize-none text-sm text-black border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+        className="min-h-[80px] resize-none text-sm text-white border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
         rows={4}
       />
       <div className="flex gap-2 mt-3">
@@ -90,8 +90,7 @@ const TextInputBox: React.FC<TextInputBoxProps> = ({
           onClick={onCancel}
           variant="outline"
           size="sm"
-          className="flex-1 text-xs h-8 border-gray-300 hover:bg-gray-50"
-        >
+          className="flex-2 text-xs h-8 border-gray-300 hover:bg-black">
           <X className="w-3 h-3 mr-1" />
           Cancel (Esc)
         </Button>
