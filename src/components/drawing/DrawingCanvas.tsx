@@ -26,8 +26,8 @@ const DrawingCanvas: React.FC = () => {
   const [mode, setMode] = useState<DrawingMode>("draw");
   const [selectedShape, setSelectedShape] = useState<ShapeType>("rectangle");
   const [showGrid, setShowGrid] = useState(true);
-  const [zoom, setZoom] = useState(3.0);
-  const [zoomInput, setZoomInput] = useState('300');
+  const [zoom, setZoom] = useState(1.0); // Changed from 3.0 to 1.0 for default view
+  const [zoomInput, setZoomInput] = useState('100'); // Changed from '300' to '100'
   const minZoom = 0.5;
   const maxZoom = 4.0;
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -118,7 +118,7 @@ const DrawingCanvas: React.FC = () => {
     toast.success("PDF downloaded successfully!", { duration: 3000 });
   };
 
-  // Zoom controls
+  // Zoom controls with default 1.0 zoom
   const handleZoomIn = () => {
     setZoom(z => {
       const newZoom = Math.min(z + 0.1, maxZoom);
@@ -229,7 +229,7 @@ const DrawingCanvas: React.FC = () => {
     }
   };
 
-  // Reset view to center function
+  // Reset view to center function - now resets to 1.0 zoom instead of 3.0
   const handleResetView = () => {
     setZoom(1.0);
     setZoomInput('100');
@@ -340,6 +340,7 @@ const DrawingCanvas: React.FC = () => {
               mode={mode}
               objects={objects}
               setObjects={setObjects}
+              showGrid={showGrid}
             />
           )}
           
