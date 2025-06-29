@@ -6,10 +6,6 @@ import { Loader2 } from "lucide-react";
 interface RightSidebarProps {
   show: boolean;
   isMobile: boolean;
-  undoStack: any[][];
-  redoStack: any[][];
-  onPrev: () => void;
-  onNext: () => void;
   onClearAll: () => void;
   objects: any[];
   results: any[];
@@ -34,10 +30,6 @@ interface RightSidebarProps {
 const RightSidebar: React.FC<RightSidebarProps> = ({
   show,
   isMobile,
-  undoStack,
-  redoStack,
-  onPrev,
-  onNext,
   onClearAll,
   objects,
   results,
@@ -63,27 +55,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   return (
     <div className="flex flex-col w-full md:w-56 bg-[#181818] border-t md:border-t-0 md:border-l border-neutral-800 p-4 gap-6 overflow-y-auto max-h-full">
       {/* Action Buttons */}
-      <div className="flex gap-2 mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          className={`flex-1 ${undoStack.length === 0 ? 'bg-muted text-muted-foreground' : 'bg-foreground text-background'}`}
-          onClick={onPrev}
-          disabled={undoStack.length === 0}
-        >
-          Prev
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className={`flex-1 ${redoStack.length === 0 ? 'bg-muted text-muted-foreground' : 'bg-foreground text-background'}`}
-          onClick={onNext}
-          disabled={redoStack.length === 0}
-        >
-          Next
-        </Button>
-      </div>
-      
       <div className="flex gap-2 mb-4">
         <Button 
           variant="destructive" 

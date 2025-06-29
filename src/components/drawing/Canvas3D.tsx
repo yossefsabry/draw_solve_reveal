@@ -192,7 +192,7 @@ const PositionIndicator = ({ position }: { position: { x: number, y: number, z: 
         fontSize={0.1}
         color="#ffffff"
         anchorX="center"
-        anchorY="center"
+        anchorY="middle"
       >
         {`X: ${Math.round(position.x)}, Y: ${Math.round(position.y)}, Z: ${Math.round(position.z * 50)}`}
       </Text>
