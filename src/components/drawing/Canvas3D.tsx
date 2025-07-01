@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Line, Text } from '@react-three/drei';
@@ -62,6 +63,16 @@ const ShapePreview = ({
   color: string, 
   lineWidth: number 
 }) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useEffect(() => {
+    if (meshRef.current && shapeType === 'line' && startPoint && endPoint) {
+      const start = new THREE.Vector3(startPoint.x / 50, 0, -startPoint.y / 50);
+      const end = new THREE.Vector3(endPoint.x / 50, 0, -endPoint.y / 50);
+      meshRef.current.lookAt(end);
+    }
+  }, [startPoint, endPoint, shapeType]);
+  
   if (!startPoint || !endPoint) return null;
   
   if (shapeType === 'rectangle') {
@@ -101,7 +112,7 @@ const ShapePreview = ({
     const center = start.clone().add(end).multiplyScalar(0.5);
     
     return (
-      <mesh position={center} lookAt={end}>
+      <mesh ref={meshRef} position={center}>
         <cylinderGeometry args={[lineWidth / 200, lineWidth / 200, length, 8]} />
         <meshStandardMaterial color={color} transparent opacity={0.7} />
       </mesh>
