@@ -400,6 +400,10 @@ const DrawingCanvas: React.FC = () => {
           color={color}
           onColorChange={setColor}
           mode={mode}
+          onUndo={handlePrev}
+          onRedo={handleNext}
+          canUndo={undoStack.length > 0}
+          canRedo={redoStack.length > 0}
         />
       </div>
       

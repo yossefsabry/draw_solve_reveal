@@ -1,7 +1,7 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Undo, Redo } from "lucide-react";
 
 interface RightSidebarProps {
   show: boolean;
@@ -25,6 +25,10 @@ interface RightSidebarProps {
   color: string;
   onColorChange: (color: string) => void;
   mode: string;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 const RightSidebar: React.FC<RightSidebarProps> = ({
@@ -48,12 +52,62 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   onBrushSizeChange,
   color,
   onColorChange,
-  mode
+  mode,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo
 }) => {
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z for undo
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        onUndo();
+      }
+      // Ctrl+Shift+Z or Ctrl+Y for redo
+      else if ((e.ctrlKey && e.shiftKey && e.key === 'Z') || (e.ctrlKey && e.key === 'y')) {
+        e.preventDefault();
+        onRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onUndo, onRedo]);
+
   if (!(isMobile ? show : true)) return null;
 
   return (
     <div className="flex flex-col w-full md:w-56 bg-[#181818] border-t md:border-t-0 md:border-l border-neutral-800 p-4 gap-6 overflow-y-auto max-h-full">
+      {/* Undo/Redo Buttons */}
+      <div className="flex gap-2 mb-4">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="flex-1 flex items-center gap-2" 
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="Undo (Ctrl+Z)"
+        >
+          <Undo className="h-4 w-4" />
+          Undo
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="flex-1 flex items-center gap-2" 
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
+        >
+          <Redo className="h-4 w-4" />
+          Redo
+        </Button>
+      </div>
+
       {/* Action Buttons */}
       <div className="flex gap-2 mb-4">
         <Button 
