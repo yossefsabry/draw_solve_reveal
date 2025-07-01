@@ -20,7 +20,7 @@ interface Canvas3DProps {
 const DrawingPath = ({ points, color, lineWidth }: { points: any[], color: string, lineWidth: number }) => {
   if (!points || points.length < 2) return null;
   
-  const linePoints = points.map(p => new THREE.Vector3(p.x / 50, p.y / 50, 0.1));
+  const linePoints = points.map(p => new THREE.Vector3(p.x / 50, 0, -p.y / 50));
   
   return (
     <Line
@@ -35,7 +35,7 @@ const DrawingPath = ({ points, color, lineWidth }: { points: any[], color: strin
 const DrawingPreview = ({ points, color, lineWidth }: { points: any[], color: string, lineWidth: number }) => {
   if (!points || points.length < 1) return null;
   
-  const linePoints = points.map(p => new THREE.Vector3(p.x / 50, p.y / 50, 0.1));
+  const linePoints = points.map(p => new THREE.Vector3(p.x / 50, 0, -p.y / 50));
   
   return (
     <Line
@@ -69,12 +69,12 @@ const ShapePreview = ({
     const width = Math.abs(endPoint.x - startPoint.x) / 50;
     const height = Math.abs(endPoint.y - startPoint.y) / 50;
     const centerX = (startPoint.x + endPoint.x) / 2 / 50;
-    const centerY = -(startPoint.y + endPoint.y) / 2 / 50;
+    const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
     
     return (
-      <mesh position={[centerX, centerY, 0.1]}>
-        <boxGeometry args={[width, height, 0.1]} />
-        <meshStandardMaterial color={color} transparent opacity={0.7} />
+      <mesh position={[centerX, 0, centerZ]}>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} side={THREE.DoubleSide} wireframe />
       </mesh>
     );
   }
@@ -86,17 +86,17 @@ const ShapePreview = ({
     ) / 50;
     
     return (
-      <mesh position={[startPoint.x / 50, -startPoint.y / 50, 0.1]}>
-        <sphereGeometry args={[radius, 16, 16]} />
-        <meshStandardMaterial color={color} transparent opacity={0.7} />
+      <mesh position={[startPoint.x / 50, 0, -startPoint.y / 50]}>
+        <circleGeometry args={[radius, 32]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} side={THREE.DoubleSide} wireframe />
       </mesh>
     );
   }
   
   if (shapeType === 'line') {
     const points = [
-      new THREE.Vector3(startPoint.x / 50, -startPoint.y / 50, 0.1),
-      new THREE.Vector3(endPoint.x / 50, -endPoint.y / 50, 0.1)
+      new THREE.Vector3(startPoint.x / 50, 0, -startPoint.y / 50),
+      new THREE.Vector3(endPoint.x / 50, 0, -endPoint.y / 50)
     ];
     
     return (
@@ -127,7 +127,7 @@ const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
   useFrame(() => {
-    if (meshRef.current) {
+    if (meshRef.current && obj.type !== 'draw' && obj.type !== 'line' && obj.type !== 'text') {
       meshRef.current.rotation.y += 0.005;
     }
   });
@@ -136,10 +136,10 @@ const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
     return (
       <mesh 
         ref={meshRef}
-        position={[(obj.x || 0) / 50, -(obj.y || 0) / 50, 0.5]}
+        position={[(obj.x || 0) / 50 + (obj.width || 0) / 100, 0, -(obj.y || 0) / 50 - (obj.height || 0) / 100]}
       >
-        <boxGeometry args={[(obj.width || 0) / 50, (obj.height || 0) / 50, 1]} />
-        <meshStandardMaterial color={obj.color} />
+        <planeGeometry args={[(obj.width || 0) / 50, (obj.height || 0) / 50]} />
+        <meshStandardMaterial color={obj.color} side={THREE.DoubleSide} wireframe />
       </mesh>
     );
   }
@@ -148,18 +148,18 @@ const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
     return (
       <mesh 
         ref={meshRef}
-        position={[(obj.x || 0) / 50, -(obj.y || 0) / 50, 0.5]}
+        position={[(obj.x || 0) / 50, 0, -(obj.y || 0) / 50]}
       >
-        <sphereGeometry args={[(obj.radius || 0) / 50, 32, 32]} />
-        <meshStandardMaterial color={obj.color} />
+        <circleGeometry args={[(obj.radius || 0) / 50, 32]} />
+        <meshStandardMaterial color={obj.color} side={THREE.DoubleSide} wireframe />
       </mesh>
     );
   }
   
   if (obj.type === 'line') {
     const points = [
-      new THREE.Vector3((obj.x1 || 0) / 50, -(obj.y1 || 0) / 50, 0.1),
-      new THREE.Vector3((obj.x2 || 0) / 50, -(obj.y2 || 0) / 50, 0.1)
+      new THREE.Vector3((obj.x1 || 0) / 50, 0, -(obj.y1 || 0) / 50),
+      new THREE.Vector3((obj.x2 || 0) / 50, 0, -(obj.y2 || 0) / 50)
     ];
     return (
       <Line
@@ -173,7 +173,7 @@ const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
   if (obj.type === 'text' || obj.type === 'math') {
     return (
       <Text
-        position={[(obj.x || 0) / 50, -(obj.y || 0) / 50, 0.1]}
+        position={[(obj.x || 0) / 50, 0, -(obj.y || 0) / 50]}
         fontSize={(obj.fontSize || 16) / 50}
         color={obj.color}
         anchorX="left"
@@ -187,7 +187,7 @@ const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
   return null;
 };
 
-// Interactive 3D Scene
+// Interactive 3D Scene with fixed drawing plane
 const Scene3D = ({ 
   objects, 
   showGrid = true, 
@@ -250,7 +250,7 @@ const Scene3D = ({
         />
       )}
       
-      {/* Invisible plane for drawing detection */}
+      {/* Drawing plane - invisible but catches pointer events */}
       <mesh
         position={[0, 0, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
@@ -298,12 +298,12 @@ const Scene3D = ({
         />
       )}
       
-      {/* Controls */}
+      {/* Controls - disable when drawing */}
       <OrbitControls 
         ref={controlsRef}
-        enablePan={true}
-        enableZoom={true}
-        enableRotate={true}
+        enablePan={!isDrawing}
+        enableZoom={!isDrawing}
+        enableRotate={!isDrawing}
         minDistance={1}
         maxDistance={50}
       />
@@ -333,6 +333,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
     e.stopPropagation();
     
     const point = e.point;
+    // Convert 3D intersection to 2D coordinates
     const worldPoint = { x: point.x * 50, y: -point.z * 50 };
     
     setIsDrawing(true);
@@ -345,6 +346,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   
   const handlePointerMove = (e: any) => {
     const point = e.point;
+    // Convert 3D intersection to 2D coordinates
     const worldPoint = { x: point.x * 50, y: -point.z * 50 };
     
     // Update position indicator
