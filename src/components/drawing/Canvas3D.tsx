@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Line, Text } from '@react-three/drei';
@@ -16,35 +15,37 @@ interface Canvas3DProps {
   selectedShape?: string;
 }
 
-// 3D Drawing Path Component
+// 3D Drawing Path Component - now with tube geometry for 3D effect
 const DrawingPath = ({ points, color, lineWidth }: { points: any[], color: string, lineWidth: number }) => {
   if (!points || points.length < 2) return null;
   
   const linePoints = points.map(p => new THREE.Vector3(p.x / 50, 0, -p.y / 50));
   
+  // Create a tube geometry for 3D line effect
+  const curve = new THREE.CatmullRomCurve3(linePoints);
+  const tubeGeometry = new THREE.TubeGeometry(curve, linePoints.length * 2, lineWidth / 100, 8, false);
+  
   return (
-    <Line
-      points={linePoints}
-      color={color}
-      lineWidth={lineWidth}
-    />
+    <mesh>
+      <primitive object={tubeGeometry} />
+      <meshStandardMaterial color={color} />
+    </mesh>
   );
 };
 
-// Preview Components
+// Preview Components with 3D effect
 const DrawingPreview = ({ points, color, lineWidth }: { points: any[], color: string, lineWidth: number }) => {
-  if (!points || points.length < 1) return null;
+  if (!points || points.length < 2) return null;
   
   const linePoints = points.map(p => new THREE.Vector3(p.x / 50, 0, -p.y / 50));
+  const curve = new THREE.CatmullRomCurve3(linePoints);
+  const tubeGeometry = new THREE.TubeGeometry(curve, linePoints.length * 2, lineWidth / 100, 8, false);
   
   return (
-    <Line
-      points={linePoints}
-      color={color}
-      lineWidth={lineWidth}
-      opacity={0.7}
-      transparent
-    />
+    <mesh>
+      <primitive object={tubeGeometry} />
+      <meshStandardMaterial color={color} transparent opacity={0.7} />
+    </mesh>
   );
 };
 
@@ -63,18 +64,17 @@ const ShapePreview = ({
 }) => {
   if (!startPoint || !endPoint) return null;
   
-  const meshRef = useRef<THREE.Mesh>(null);
-  
   if (shapeType === 'rectangle') {
     const width = Math.abs(endPoint.x - startPoint.x) / 50;
     const height = Math.abs(endPoint.y - startPoint.y) / 50;
+    const depth = 0.1; // Add depth for 3D effect
     const centerX = (startPoint.x + endPoint.x) / 2 / 50;
     const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
     
     return (
-      <mesh position={[centerX, 0, centerZ]}>
-        <planeGeometry args={[width, height]} />
-        <meshStandardMaterial color={color} transparent opacity={0.7} side={THREE.DoubleSide} wireframe />
+      <mesh position={[centerX, depth / 2, centerZ]}>
+        <boxGeometry args={[width, depth, height]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} />
       </mesh>
     );
   }
@@ -86,27 +86,25 @@ const ShapePreview = ({
     ) / 50;
     
     return (
-      <mesh position={[startPoint.x / 50, 0, -startPoint.y / 50]}>
-        <circleGeometry args={[radius, 32]} />
-        <meshStandardMaterial color={color} transparent opacity={0.7} side={THREE.DoubleSide} wireframe />
+      <mesh position={[startPoint.x / 50, 0.05, -startPoint.y / 50]}>
+        <cylinderGeometry args={[radius, radius, 0.1, 32]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} />
       </mesh>
     );
   }
   
   if (shapeType === 'line') {
-    const points = [
-      new THREE.Vector3(startPoint.x / 50, 0, -startPoint.y / 50),
-      new THREE.Vector3(endPoint.x / 50, 0, -endPoint.y / 50)
-    ];
+    const start = new THREE.Vector3(startPoint.x / 50, 0, -startPoint.y / 50);
+    const end = new THREE.Vector3(endPoint.x / 50, 0, -endPoint.y / 50);
+    const direction = end.clone().sub(start);
+    const length = direction.length();
+    const center = start.clone().add(end).multiplyScalar(0.5);
     
     return (
-      <Line
-        points={points}
-        color={color}
-        lineWidth={lineWidth}
-        transparent
-        opacity={0.7}
-      />
+      <mesh position={center} lookAt={end}>
+        <cylinderGeometry args={[lineWidth / 200, lineWidth / 200, length, 8]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} />
+      </mesh>
     );
   }
   
@@ -122,7 +120,7 @@ const PositionIndicator = ({ position }: { position: { x: number, y: number, z: 
   );
 };
 
-// 3D Shape Components
+// Enhanced 3D Shape Components with proper 3D geometry
 const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
@@ -133,47 +131,62 @@ const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
   });
   
   if (obj.type === 'rectangle') {
+    const width = (obj.width || 0) / 50;
+    const height = (obj.height || 0) / 50;
+    const depth = Math.max(width, height) * 0.1; // Dynamic depth based on size
+    
     return (
       <mesh 
         ref={meshRef}
-        position={[(obj.x || 0) / 50 + (obj.width || 0) / 100, 0, -(obj.y || 0) / 50 - (obj.height || 0) / 100]}
+        position={[(obj.x || 0) / 50 + width / 2, depth / 2, -(obj.y || 0) / 50 - height / 2]}
       >
-        <planeGeometry args={[(obj.width || 0) / 50, (obj.height || 0) / 50]} />
-        <meshStandardMaterial color={obj.color} side={THREE.DoubleSide} wireframe />
+        <boxGeometry args={[width, depth, height]} />
+        <meshStandardMaterial color={obj.color} />
       </mesh>
     );
   }
   
   if (obj.type === 'circle') {
+    const radius = (obj.radius || 0) / 50;
+    const height = radius * 0.2; // Dynamic height based on radius
+    
     return (
       <mesh 
         ref={meshRef}
-        position={[(obj.x || 0) / 50, 0, -(obj.y || 0) / 50]}
+        position={[(obj.x || 0) / 50, height / 2, -(obj.y || 0) / 50]}
       >
-        <circleGeometry args={[(obj.radius || 0) / 50, 32]} />
-        <meshStandardMaterial color={obj.color} side={THREE.DoubleSide} wireframe />
+        <cylinderGeometry args={[radius, radius, height, 32]} />
+        <meshStandardMaterial color={obj.color} />
       </mesh>
     );
   }
   
   if (obj.type === 'line') {
-    const points = [
-      new THREE.Vector3((obj.x1 || 0) / 50, 0, -(obj.y1 || 0) / 50),
-      new THREE.Vector3((obj.x2 || 0) / 50, 0, -(obj.y2 || 0) / 50)
-    ];
+    const start = new THREE.Vector3((obj.x1 || 0) / 50, 0, -(obj.y1 || 0) / 50);
+    const end = new THREE.Vector3((obj.x2 || 0) / 50, 0, -(obj.y2 || 0) / 50);
+    const direction = end.clone().sub(start);
+    const length = direction.length();
+    const center = start.clone().add(end).multiplyScalar(0.5);
+    
+    // Calculate rotation to align cylinder with line direction
+    const axis = new THREE.Vector3(0, 1, 0);
+    const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, direction.normalize());
+    
     return (
-      <Line
-        points={points}
-        color={obj.color}
-        lineWidth={obj.lineWidth || 2}
-      />
+      <mesh 
+        position={center}
+        quaternion={quaternion}
+      >
+        <cylinderGeometry args={[(obj.lineWidth || 2) / 200, (obj.lineWidth || 2) / 200, length, 8]} />
+        <meshStandardMaterial color={obj.color} />
+      </mesh>
     );
   }
   
   if (obj.type === 'text' || obj.type === 'math') {
     return (
       <Text
-        position={[(obj.x || 0) / 50, 0, -(obj.y || 0) / 50]}
+        position={[(obj.x || 0) / 50, 0.1, -(obj.y || 0) / 50]}
         fontSize={(obj.fontSize || 16) / 50}
         color={obj.color}
         anchorX="left"
@@ -182,6 +195,10 @@ const Shape3D = ({ obj }: { obj: AnyDrawingObject }) => {
         {obj.text}
       </Text>
     );
+  }
+  
+  if (obj.type === 'draw') {
+    return <DrawingPath points={obj.points || []} color={obj.color || '#ffffff'} lineWidth={obj.lineWidth || 2} />;
   }
   
   return null;
