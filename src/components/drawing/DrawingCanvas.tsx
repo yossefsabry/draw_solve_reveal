@@ -55,25 +55,6 @@ const DrawingCanvas: React.FC = () => {
     }
   }, []);
 
-  // Keyboard shortcuts for undo/redo
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Z for undo
-      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handlePrev();
-      }
-      // Ctrl+Shift+Z for redo
-      else if (e.ctrlKey && e.shiftKey && e.key === 'Z') {
-        e.preventDefault();
-        handleNext();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [objects, undoStack, redoStack]);
-
   // Helper: push current objects to undo stack
   const pushToUndo = (objs: any[]) => {
     setUndoStack((prev) => [...prev, objs]);
@@ -101,25 +82,23 @@ const DrawingCanvas: React.FC = () => {
     toast.success("Canvas cleared successfully!", { duration: 2000 });
   };
 
-  // Undo/Redo handlers
+  // Enhanced Undo/Redo handlers that work during drawing
   const handlePrev = () => {
-    setUndoStack((prevUndo) => {
-      if (prevUndo.length === 0) return prevUndo;
-      setRedoStack((prevRedo) => [objects, ...prevRedo]);
-      const last = prevUndo[prevUndo.length - 1];
-      setObjects(last);
-      return prevUndo.slice(0, -1);
-    });
+    if (undoStack.length === 0) return;
+    
+    setRedoStack((prevRedo) => [objects, ...prevRedo]);
+    const last = undoStack[undoStack.length - 1];
+    setObjects(last);
+    setUndoStack((prevUndo) => prevUndo.slice(0, -1));
   };
 
   const handleNext = () => {
-    setRedoStack((prevRedo) => {
-      if (prevRedo.length === 0) return prevRedo;
-      setUndoStack((prevUndo) => [...prevUndo, objects]);
-      const next = prevRedo[0];
-      setObjects(next);
-      return prevRedo.slice(1);
-    });
+    if (redoStack.length === 0) return;
+    
+    setUndoStack((prevUndo) => [...prevUndo, objects]);
+    const next = redoStack[0];
+    setObjects(next);
+    setRedoStack((prevRedo) => prevRedo.slice(1));
   };
 
   // Export as PDF
@@ -336,7 +315,13 @@ const DrawingCanvas: React.FC = () => {
               mode={mode}
               showGrid={showGrid}
               objects={objects}
-              setObjects={setObjects}
+              setObjects={(newObjects) => {
+                // Save to undo stack before setting new objects
+                if (JSON.stringify(newObjects) !== JSON.stringify(objects)) {
+                  pushToUndo(objects);
+                  setObjects(newObjects);
+                }
+              }}
               canvasRef={canvasRef}
               zoom={zoom}
               minZoom={minZoom}
@@ -355,7 +340,13 @@ const DrawingCanvas: React.FC = () => {
               brushSize={brushSize}
               mode={mode}
               objects={objects}
-              setObjects={setObjects}
+              setObjects={(newObjects) => {
+                // Save to undo stack before setting new objects
+                if (JSON.stringify(newObjects) !== JSON.stringify(objects)) {
+                  pushToUndo(objects);
+                  setObjects(newObjects);
+                }
+              }}
               showGrid={showGrid}
               selectedShape={selectedShape}
             />

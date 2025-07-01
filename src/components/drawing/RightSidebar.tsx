@@ -58,24 +58,24 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   canUndo,
   canRedo
 }) => {
-  // Keyboard shortcuts
+  // Keyboard shortcuts - simplified to Ctrl+Z for both undo and redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Z for undo
-      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+      // Ctrl+Z for undo and redo (alternating behavior)
+      if (e.ctrlKey && e.key === 'z') {
         e.preventDefault();
-        onUndo();
-      }
-      // Ctrl+Shift+Z or Ctrl+Y for redo
-      else if ((e.ctrlKey && e.shiftKey && e.key === 'Z') || (e.ctrlKey && e.key === 'y')) {
-        e.preventDefault();
-        onRedo();
+        // If shift is held, do redo, otherwise do undo
+        if (e.shiftKey && canRedo) {
+          onRedo();
+        } else if (!e.shiftKey && canUndo) {
+          onUndo();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onUndo, onRedo]);
+  }, [onUndo, onRedo, canUndo, canRedo]);
 
   if (!(isMobile ? show : true)) return null;
 
@@ -101,7 +101,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           className="flex-1 flex items-center gap-2" 
           onClick={onRedo}
           disabled={!canRedo}
-          title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
+          title="Redo (Ctrl+Shift+Z)"
         >
           <Redo className="h-4 w-4" />
           Redo
