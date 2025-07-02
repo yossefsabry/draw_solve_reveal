@@ -20,21 +20,23 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
   });
   
   if (obj.type === 'rectangle') {
-    const width = (obj.width || 0) / 50;
-    const height = (obj.height || 0) / 50;
-    const depth = Math.max(width, height) * 0.15; // Increased depth for better visibility
+    const width = Math.abs(obj.width || 0) / 50;
+    const height = Math.abs(obj.height || 0) / 50;
+    const depth = Math.max(width, height) * 0.2;
+    const centerX = (obj.x || 0) / 50 + width / 2;
+    const centerZ = -((obj.y || 0) / 50 + height / 2);
     
     return (
       <mesh 
         ref={meshRef}
-        position={[(obj.x || 0) / 50 + width / 2, depth / 2 + 0.5, -(obj.y || 0) / 50 - height / 2]}
+        position={[centerX, depth / 2 + 1, centerZ]}
         castShadow
         receiveShadow
       >
         <boxGeometry args={[width, depth, height]} />
         <meshStandardMaterial 
           color={obj.color} 
-          metalness={0.1}
+          metalness={0.2}
           roughness={0.3}
         />
       </mesh>
@@ -42,20 +44,20 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
   }
   
   if (obj.type === 'circle') {
-    const radius = (obj.radius || 0) / 50;
-    const height = Math.max(radius * 0.3, 0.1); // Better proportioned height
+    const radius = Math.abs(obj.radius || 0) / 50;
+    const height = Math.max(radius * 0.4, 0.15);
     
     return (
       <mesh 
         ref={meshRef}
-        position={[(obj.x || 0) / 50, height / 2 + 0.5, -(obj.y || 0) / 50]}
+        position={[(obj.x || 0) / 50, height / 2 + 1, -(obj.y || 0) / 50]}
         castShadow
         receiveShadow
       >
-        <cylinderGeometry args={[radius, radius, height, 64]} />
+        <cylinderGeometry args={[radius, radius, height, 32]} />
         <meshStandardMaterial 
           color={obj.color}
-          metalness={0.1}
+          metalness={0.2}
           roughness={0.3}
         />
       </mesh>
@@ -63,8 +65,8 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
   }
   
   if (obj.type === 'line') {
-    const start = new THREE.Vector3((obj.x1 || 0) / 50, 0.5, -(obj.y1 || 0) / 50);
-    const end = new THREE.Vector3((obj.x2 || 0) / 50, 0.5, -(obj.y2 || 0) / 50);
+    const start = new THREE.Vector3((obj.x1 || 0) / 50, 1, -(obj.y1 || 0) / 50);
+    const end = new THREE.Vector3((obj.x2 || 0) / 50, 1, -(obj.y2 || 0) / 50);
     const direction = end.clone().sub(start);
     const length = direction.length();
     const center = start.clone().add(end).multiplyScalar(0.5);
@@ -79,10 +81,10 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
         quaternion={quaternion}
         castShadow
       >
-        <cylinderGeometry args={[(obj.lineWidth || 2) / 150, (obj.lineWidth || 2) / 150, length, 16]} />
+        <cylinderGeometry args={[(obj.lineWidth || 2) / 120, (obj.lineWidth || 2) / 120, length, 12]} />
         <meshStandardMaterial 
           color={obj.color}
-          metalness={0.2}
+          metalness={0.3}
           roughness={0.4}
         />
       </mesh>
@@ -92,7 +94,7 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
   if (obj.type === 'text' || obj.type === 'math') {
     return (
       <Text
-        position={[(obj.x || 0) / 50, 0.6, -(obj.y || 0) / 50]}
+        position={[(obj.x || 0) / 50, 1.2, -(obj.y || 0) / 50]}
         fontSize={(obj.fontSize || 16) / 50}
         color={obj.color}
         anchorX="left"

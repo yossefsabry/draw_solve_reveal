@@ -62,7 +62,7 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
     
     return (
       <mesh position={[startPoint.x / 50, height / 2 + 1, -startPoint.y / 50]} castShadow>
-        <cylinderGeometry args={[radius, radius, height, 64]} />
+        <cylinderGeometry args={[radius, radius, height, 32]} />
         <meshStandardMaterial 
           color={color} 
           transparent 
@@ -83,7 +83,7 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
     
     return (
       <mesh ref={meshRef} position={center} castShadow>
-        <cylinderGeometry args={[lineWidth / 150, lineWidth / 150, length, 16]} />
+        <cylinderGeometry args={[lineWidth / 120, lineWidth / 120, length, 12]} />
         <meshStandardMaterial 
           color={color} 
           transparent 
