@@ -20,17 +20,26 @@ const DrawingPath3D: React.FC<DrawingPath3DProps> = ({
   // Position all drawing paths above the grid (y = 0.5)
   const linePoints = points.map(p => new THREE.Vector3(p.x / 50, 0.5, -p.y / 50));
   
-  // Create a tube geometry for 3D line effect
+  // Create a tube geometry for 3D line effect with better smoothness
   const curve = new THREE.CatmullRomCurve3(linePoints);
-  const tubeGeometry = new THREE.TubeGeometry(curve, linePoints.length * 2, lineWidth / 100, 8, false);
+  const segments = Math.max(linePoints.length * 4, 32); // More segments for smoother curves
+  const tubeGeometry = new THREE.TubeGeometry(
+    curve, 
+    segments, 
+    lineWidth / 120, // Adjusted radius for better visibility
+    12, // More radial segments for smoother tubes
+    false
+  );
   
   return (
-    <mesh>
+    <mesh castShadow={!isPreview}>
       <primitive object={tubeGeometry} />
       <meshStandardMaterial 
         color={color} 
         transparent={isPreview} 
-        opacity={isPreview ? 0.7 : 1} 
+        opacity={isPreview ? 0.6 : 1}
+        metalness={0.1}
+        roughness={0.4}
       />
     </mesh>
   );

@@ -22,30 +22,42 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
   if (obj.type === 'rectangle') {
     const width = (obj.width || 0) / 50;
     const height = (obj.height || 0) / 50;
-    const depth = Math.max(width, height) * 0.1; // Dynamic depth based on size
+    const depth = Math.max(width, height) * 0.15; // Increased depth for better visibility
     
     return (
       <mesh 
         ref={meshRef}
         position={[(obj.x || 0) / 50 + width / 2, depth / 2 + 0.5, -(obj.y || 0) / 50 - height / 2]}
+        castShadow
+        receiveShadow
       >
         <boxGeometry args={[width, depth, height]} />
-        <meshStandardMaterial color={obj.color} />
+        <meshStandardMaterial 
+          color={obj.color} 
+          metalness={0.1}
+          roughness={0.3}
+        />
       </mesh>
     );
   }
   
   if (obj.type === 'circle') {
     const radius = (obj.radius || 0) / 50;
-    const height = radius * 0.2; // Dynamic height based on radius
+    const height = Math.max(radius * 0.3, 0.1); // Better proportioned height
     
     return (
       <mesh 
         ref={meshRef}
         position={[(obj.x || 0) / 50, height / 2 + 0.5, -(obj.y || 0) / 50]}
+        castShadow
+        receiveShadow
       >
-        <cylinderGeometry args={[radius, radius, height, 32]} />
-        <meshStandardMaterial color={obj.color} />
+        <cylinderGeometry args={[radius, radius, height, 64]} />
+        <meshStandardMaterial 
+          color={obj.color}
+          metalness={0.1}
+          roughness={0.3}
+        />
       </mesh>
     );
   }
@@ -65,9 +77,14 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
       <mesh 
         position={center}
         quaternion={quaternion}
+        castShadow
       >
-        <cylinderGeometry args={[(obj.lineWidth || 2) / 200, (obj.lineWidth || 2) / 200, length, 8]} />
-        <meshStandardMaterial color={obj.color} />
+        <cylinderGeometry args={[(obj.lineWidth || 2) / 150, (obj.lineWidth || 2) / 150, length, 16]} />
+        <meshStandardMaterial 
+          color={obj.color}
+          metalness={0.2}
+          roughness={0.4}
+        />
       </mesh>
     );
   }
@@ -80,6 +97,7 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
         color={obj.color}
         anchorX="left"
         anchorY="middle"
+        castShadow
       >
         {obj.text}
       </Text>

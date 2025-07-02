@@ -23,7 +23,10 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
     if (meshRef.current && shapeType === 'line' && startPoint && endPoint) {
       const start = new THREE.Vector3(startPoint.x / 50, 0.5, -startPoint.y / 50);
       const end = new THREE.Vector3(endPoint.x / 50, 0.5, -endPoint.y / 50);
-      meshRef.current.lookAt(end);
+      const direction = end.clone().sub(start);
+      const axis = new THREE.Vector3(0, 1, 0);
+      const quaternion = new THREE.Quaternion().setFromUnitVectors(axis, direction.normalize());
+      meshRef.current.quaternion.copy(quaternion);
     }
   }, [startPoint, endPoint, shapeType]);
   
@@ -32,14 +35,20 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
   if (shapeType === 'rectangle') {
     const width = Math.abs(endPoint.x - startPoint.x) / 50;
     const height = Math.abs(endPoint.y - startPoint.y) / 50;
-    const depth = 0.1; // Add depth for 3D effect
+    const depth = Math.max(width, height) * 0.15; // Better proportioned depth
     const centerX = (startPoint.x + endPoint.x) / 2 / 50;
     const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
     
     return (
       <mesh position={[centerX, depth / 2 + 0.5, centerZ]}>
         <boxGeometry args={[width, depth, height]} />
-        <meshStandardMaterial color={color} transparent opacity={0.7} />
+        <meshStandardMaterial 
+          color={color} 
+          transparent 
+          opacity={0.6}
+          metalness={0.1}
+          roughness={0.3}
+        />
       </mesh>
     );
   }
@@ -49,11 +58,18 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
       Math.pow(endPoint.x - startPoint.x, 2) + 
       Math.pow(endPoint.y - startPoint.y, 2)
     ) / 50;
+    const height = Math.max(radius * 0.3, 0.1); // Better proportioned height
     
     return (
-      <mesh position={[startPoint.x / 50, 0.55, -startPoint.y / 50]}>
-        <cylinderGeometry args={[radius, radius, 0.1, 32]} />
-        <meshStandardMaterial color={color} transparent opacity={0.7} />
+      <mesh position={[startPoint.x / 50, height / 2 + 0.5, -startPoint.y / 50]}>
+        <cylinderGeometry args={[radius, radius, height, 64]} />
+        <meshStandardMaterial 
+          color={color} 
+          transparent 
+          opacity={0.6}
+          metalness={0.1}
+          roughness={0.3}
+        />
       </mesh>
     );
   }
@@ -67,8 +83,14 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
     
     return (
       <mesh ref={meshRef} position={center}>
-        <cylinderGeometry args={[lineWidth / 200, lineWidth / 200, length, 8]} />
-        <meshStandardMaterial color={color} transparent opacity={0.7} />
+        <cylindrGeometry args={[lineWidth / 150, lineWidth / 150, length, 16]} />
+        <meshStandardMaterial 
+          color={color} 
+          transparent 
+          opacity={0.6}
+          metalness={0.2}
+          roughness={0.4}
+        />
       </mesh>
     );
   }

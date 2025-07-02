@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useThree } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
@@ -38,7 +37,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
   selectedShape,
   mode
 }) => {
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
   const controlsRef = useRef<any>();
   const [isPanning, setIsPanning] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
@@ -47,7 +46,11 @@ const Scene3D: React.FC<Scene3DProps> = ({
   useEffect(() => {
     camera.position.set(5, 5, 5);
     camera.lookAt(0, 0, 0);
-  }, [camera]);
+    
+    // Enable shadows for better visual quality
+    gl.shadowMap.enabled = true;
+    gl.shadowMap.type = 2; // PCFSoftShadowMap
+  }, [camera, gl]);
 
   // Handle keyboard events for Alt key
   useEffect(() => {
@@ -118,27 +121,57 @@ const Scene3D: React.FC<Scene3DProps> = ({
   
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[10, 10, 5]} intensity={1} />
-      <pointLight position={[-10, -10, -5]} intensity={0.5} />
+      {/* Enhanced Lighting with shadows */}
+      <ambientLight intensity={0.4} />
+      <directionalLight 
+        position={[10, 10, 5]} 
+        intensity={1}
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-far={50}
+        shadow-camera-left={-20}
+        shadow-camera-right={20}
+        shadow-camera-top={20}
+        shadow-camera-bottom={-20}
+      />
+      <pointLight 
+        position={[-10, 8, -5]} 
+        intensity={0.3}
+        castShadow
+      />
       
-      {/* Grid */}
+      {/* Grid with shadow receiving capability */}
       {showGrid && (
-        <Grid
-          position={[0, 0, 0]}
-          args={[20, 20]}
-          cellSize={1}
-          cellThickness={0.5}
-          cellColor={'#6f6f6f'}
-          sectionSize={5}
-          sectionThickness={1}
-          sectionColor={'#9d4b4b'}
-          fadeDistance={25}
-          fadeStrength={1}
-          followCamera={false}
-          infiniteGrid={true}
-        />
+        <>
+          <Grid
+            position={[0, 0, 0]}
+            args={[20, 20]}
+            cellSize={1}
+            cellThickness={0.5}
+            cellColor={'#6f6f6f'}
+            sectionSize={5}
+            sectionThickness={1}
+            sectionColor={'#9d4b4b'}
+            fadeDistance={25}
+            fadeStrength={1}
+            followCamera={false}
+            infiniteGrid={true}
+          />
+          {/* Invisible plane to receive shadows */}
+          <mesh
+            position={[0, 0, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            receiveShadow
+          >
+            <planeGeometry args={[100, 100]} />
+            <meshStandardMaterial 
+              transparent 
+              opacity={0}
+              shadowSide={2}
+            />
+          </mesh>
+        </>
       )}
       
       {/* Drawing plane - invisible but catches pointer events */}
@@ -169,8 +202,8 @@ const Scene3D: React.FC<Scene3DProps> = ({
         return <Shape3D key={`shape-${index}`} obj={obj} />;
       })}
       
-      {/* Show current drawing path preview */}
-      {isDrawing && currentPath && currentPath.length > 0 && mode === 'draw' && !isPanning && (
+      {/* Show current drawing path preview with better visibility */}
+      {isDrawing && currentPath && currentPath.length > 1 && mode === 'draw' && !isPanning && (
         <DrawingPath3D
           points={currentPath}
           color={color || '#ffffff'}
@@ -179,7 +212,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Show shape preview */}
+      {/* Show shape preview with improved rendering */}
       {isDrawing && selectedShape && previewStartPoint && previewEndPoint && mode !== 'draw' && !isPanning && (
         <ShapePreview3D
           startPoint={previewStartPoint}
@@ -198,6 +231,8 @@ const Scene3D: React.FC<Scene3DProps> = ({
         enableRotate={!isDrawing && !isPanning}
         minDistance={1}
         maxDistance={50}
+        dampingFactor={0.05}
+        enableDamping={true}
       />
     </>
   );
