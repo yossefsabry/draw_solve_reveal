@@ -30,6 +30,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   const [startPoint, setStartPoint] = useState<{ x: number, y: number } | null>(null);
   const [previewEndPoint, setPreviewEndPoint] = useState<{ x: number, y: number } | null>(null);
   const [currentPosition, setCurrentPosition] = useState({ x: 0, y: 0, z: 0 });
+  const [isPanning, setIsPanning] = useState(false);
   const { keyPressed } = useKeyboardControl();
   
   const handlePointerDown = (e: any) => {
@@ -168,7 +169,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   
   return (
     <div className="w-full h-full relative">
-      <PositionIndicator position={currentPosition} />
+      <PositionIndicator position={currentPosition} isPanning={isPanning} />
       <Canvas
         camera={{ position: [5, 5, 5], fov: 75 }}
         style={{ background: '#1a1a1a' }}

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useThree } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import { AnyDrawingObject, DrawingMode } from '../types';
@@ -40,11 +40,81 @@ const Scene3D: React.FC<Scene3DProps> = ({
 }) => {
   const { camera } = useThree();
   const controlsRef = useRef<any>();
+  const [isPanning, setIsPanning] = useState(false);
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+  const [isAltPressed, setIsAltPressed] = useState(false);
   
   useEffect(() => {
     camera.position.set(5, 5, 5);
     camera.lookAt(0, 0, 0);
   }, [camera]);
+
+  // Handle keyboard events for Alt key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey) {
+        setIsAltPressed(true);
+        if (controlsRef.current) {
+          controlsRef.current.enabled = false;
+        }
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (!e.altKey) {
+        setIsAltPressed(false);
+        setIsPanning(false);
+        if (controlsRef.current) {
+          controlsRef.current.enabled = true;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // Handle mouse events for panning
+  const handleMouseDown = (e: any) => {
+    if (isAltPressed) {
+      setIsPanning(true);
+      setLastMousePos({ x: e.clientX, y: e.clientY });
+      e.stopPropagation();
+    } else if (onPointerDown) {
+      onPointerDown(e);
+    }
+  };
+
+  const handleMouseMove = (e: any) => {
+    if (isPanning && isAltPressed) {
+      const deltaX = e.clientX - lastMousePos.x;
+      const deltaY = e.clientY - lastMousePos.y;
+      
+      // Pan the camera based on mouse movement
+      const panSpeed = 0.01;
+      camera.position.x -= deltaX * panSpeed;
+      camera.position.y += deltaY * panSpeed;
+      
+      setLastMousePos({ x: e.clientX, y: e.clientY });
+      e.stopPropagation();
+    } else if (onPointerMove && !isAltPressed) {
+      onPointerMove(e);
+    }
+  };
+
+  const handleMouseUp = (e: any) => {
+    if (isPanning) {
+      setIsPanning(false);
+      e.stopPropagation();
+    } else if (onPointerUp) {
+      onPointerUp(e);
+    }
+  };
   
   return (
     <>
@@ -75,9 +145,9 @@ const Scene3D: React.FC<Scene3DProps> = ({
       <mesh
         position={[0, 0, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
+        onPointerDown={handleMouseDown}
+        onPointerMove={handleMouseMove}
+        onPointerUp={handleMouseUp}
         visible={false}
       >
         <planeGeometry args={[100, 100]} />
@@ -100,7 +170,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
       })}
       
       {/* Show current drawing path preview */}
-      {isDrawing && currentPath && currentPath.length > 0 && mode === 'draw' && (
+      {isDrawing && currentPath && currentPath.length > 0 && mode === 'draw' && !isPanning && (
         <DrawingPath3D
           points={currentPath}
           color={color || '#ffffff'}
@@ -110,7 +180,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
       )}
       
       {/* Show shape preview */}
-      {isDrawing && selectedShape && previewStartPoint && previewEndPoint && mode !== 'draw' && (
+      {isDrawing && selectedShape && previewStartPoint && previewEndPoint && mode !== 'draw' && !isPanning && (
         <ShapePreview3D
           startPoint={previewStartPoint}
           endPoint={previewEndPoint}
@@ -120,12 +190,12 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Controls - disable when drawing */}
+      {/* Controls - disable when drawing or panning */}
       <OrbitControls 
         ref={controlsRef}
-        enablePan={!isDrawing}
-        enableZoom={!isDrawing}
-        enableRotate={!isDrawing}
+        enablePan={!isDrawing && !isPanning}
+        enableZoom={!isDrawing && !isPanning}
+        enableRotate={!isDrawing && !isPanning}
         minDistance={1}
         maxDistance={50}
       />
