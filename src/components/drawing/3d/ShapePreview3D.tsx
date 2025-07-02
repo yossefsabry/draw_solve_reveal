@@ -21,8 +21,8 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
   
   useEffect(() => {
     if (meshRef.current && shapeType === 'line' && startPoint && endPoint) {
-      const start = new THREE.Vector3(startPoint.x / 50, 0, -startPoint.y / 50);
-      const end = new THREE.Vector3(endPoint.x / 50, 0, -endPoint.y / 50);
+      const start = new THREE.Vector3(startPoint.x / 50, 0.5, -startPoint.y / 50);
+      const end = new THREE.Vector3(endPoint.x / 50, 0.5, -endPoint.y / 50);
       meshRef.current.lookAt(end);
     }
   }, [startPoint, endPoint, shapeType]);
@@ -37,7 +37,7 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
     const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
     
     return (
-      <mesh position={[centerX, depth / 2, centerZ]}>
+      <mesh position={[centerX, depth / 2 + 0.5, centerZ]}>
         <boxGeometry args={[width, depth, height]} />
         <meshStandardMaterial color={color} transparent opacity={0.7} />
       </mesh>
@@ -51,7 +51,7 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
     ) / 50;
     
     return (
-      <mesh position={[startPoint.x / 50, 0.05, -startPoint.y / 50]}>
+      <mesh position={[startPoint.x / 50, 0.55, -startPoint.y / 50]}>
         <cylinderGeometry args={[radius, radius, 0.1, 32]} />
         <meshStandardMaterial color={color} transparent opacity={0.7} />
       </mesh>
@@ -59,8 +59,8 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
   }
   
   if (shapeType === 'line') {
-    const start = new THREE.Vector3(startPoint.x / 50, 0, -startPoint.y / 50);
-    const end = new THREE.Vector3(endPoint.x / 50, 0, -endPoint.y / 50);
+    const start = new THREE.Vector3(startPoint.x / 50, 0.5, -startPoint.y / 50);
+    const end = new THREE.Vector3(endPoint.x / 50, 0.5, -endPoint.y / 50);
     const direction = end.clone().sub(start);
     const length = direction.length();
     const center = start.clone().add(end).multiplyScalar(0.5);

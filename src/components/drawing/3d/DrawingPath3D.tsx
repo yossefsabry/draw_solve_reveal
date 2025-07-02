@@ -17,7 +17,8 @@ const DrawingPath3D: React.FC<DrawingPath3DProps> = ({
 }) => {
   if (!points || points.length < 2) return null;
   
-  const linePoints = points.map(p => new THREE.Vector3(p.x / 50, 0, -p.y / 50));
+  // Position all drawing paths above the grid (y = 0.5)
+  const linePoints = points.map(p => new THREE.Vector3(p.x / 50, 0.5, -p.y / 50));
   
   // Create a tube geometry for 3D line effect
   const curve = new THREE.CatmullRomCurve3(linePoints);

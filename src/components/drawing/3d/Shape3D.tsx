@@ -27,7 +27,7 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
     return (
       <mesh 
         ref={meshRef}
-        position={[(obj.x || 0) / 50 + width / 2, depth / 2, -(obj.y || 0) / 50 - height / 2]}
+        position={[(obj.x || 0) / 50 + width / 2, depth / 2 + 0.5, -(obj.y || 0) / 50 - height / 2]}
       >
         <boxGeometry args={[width, depth, height]} />
         <meshStandardMaterial color={obj.color} />
@@ -42,7 +42,7 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
     return (
       <mesh 
         ref={meshRef}
-        position={[(obj.x || 0) / 50, height / 2, -(obj.y || 0) / 50]}
+        position={[(obj.x || 0) / 50, height / 2 + 0.5, -(obj.y || 0) / 50]}
       >
         <cylinderGeometry args={[radius, radius, height, 32]} />
         <meshStandardMaterial color={obj.color} />
@@ -51,8 +51,8 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
   }
   
   if (obj.type === 'line') {
-    const start = new THREE.Vector3((obj.x1 || 0) / 50, 0, -(obj.y1 || 0) / 50);
-    const end = new THREE.Vector3((obj.x2 || 0) / 50, 0, -(obj.y2 || 0) / 50);
+    const start = new THREE.Vector3((obj.x1 || 0) / 50, 0.5, -(obj.y1 || 0) / 50);
+    const end = new THREE.Vector3((obj.x2 || 0) / 50, 0.5, -(obj.y2 || 0) / 50);
     const direction = end.clone().sub(start);
     const length = direction.length();
     const center = start.clone().add(end).multiplyScalar(0.5);
@@ -75,7 +75,7 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
   if (obj.type === 'text' || obj.type === 'math') {
     return (
       <Text
-        position={[(obj.x || 0) / 50, 0.1, -(obj.y || 0) / 50]}
+        position={[(obj.x || 0) / 50, 0.6, -(obj.y || 0) / 50]}
         fontSize={(obj.fontSize || 16) / 50}
         color={obj.color}
         anchorX="left"
