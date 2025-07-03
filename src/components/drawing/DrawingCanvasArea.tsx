@@ -255,6 +255,10 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         ctx.beginPath();
         ctx.arc(obj.x!, obj.y!, obj.radius!, 0, 2 * Math.PI);
         ctx.stroke();
+      } else if (obj.type === "ellipse") {
+        ctx.beginPath();
+        ctx.ellipse(obj.x + obj.radiusX, obj.y + obj.radiusY, obj.radiusX, obj.radiusY, 0, 0, 2 * Math.PI);
+        ctx.stroke();
       } else if (obj.type === "line") {
         ctx.beginPath();
         ctx.moveTo(obj.x1!, obj.y1!);
@@ -291,40 +295,40 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         ctx.stroke();
       } else if (obj.type === "person") {
         // Draw stick figure
-        const centerX = obj.x1!;
-        const centerY = obj.y1!;
-        const size = Math.abs(obj.x2! - obj.x1!) / 2;
+        const centerX = (obj.x1! + obj.x2!) / 2;
+        const centerY = (obj.y1! + obj.y2!) / 2;
+        const size = Math.abs(obj.x2! - obj.x1!) / 4;
         
         ctx.beginPath();
         // Head
-        ctx.arc(centerX, centerY - size * 0.7, size * 0.2, 0, 2 * Math.PI);
+        ctx.arc(centerX, obj.y1! + size, size * 0.5, 0, 2 * Math.PI);
         ctx.stroke();
         
         // Body
         ctx.beginPath();
-        ctx.moveTo(centerX, centerY - size * 0.5);
-        ctx.lineTo(centerX, centerY + size * 0.2);
+        ctx.moveTo(centerX, obj.y1! + size * 1.5);
+        ctx.lineTo(centerX, obj.y2! - size);
         ctx.stroke();
         
         // Arms
         ctx.beginPath();
-        ctx.moveTo(centerX - size * 0.3, centerY - size * 0.2);
-        ctx.lineTo(centerX + size * 0.3, centerY - size * 0.2);
+        ctx.moveTo(centerX - size, obj.y1! + size * 2.5);
+        ctx.lineTo(centerX + size, obj.y1! + size * 2.5);
         ctx.stroke();
         
         // Legs
         ctx.beginPath();
-        ctx.moveTo(centerX, centerY + size * 0.2);
-        ctx.lineTo(centerX - size * 0.3, centerY + size * 0.6);
-        ctx.moveTo(centerX, centerY + size * 0.2);
-        ctx.lineTo(centerX + size * 0.3, centerY + size * 0.6);
+        ctx.moveTo(centerX, obj.y2! - size);
+        ctx.lineTo(centerX - size, obj.y2!);
+        ctx.moveTo(centerX, obj.y2! - size);
+        ctx.lineTo(centerX + size, obj.y2!);
         ctx.stroke();
       } else if (obj.type === "house") {
         // Draw house
-        const x = Math.min(obj.x1!, obj.x2!);
-        const y = Math.min(obj.y1!, obj.y2!);
         const width = Math.abs(obj.x2! - obj.x1!);
         const height = Math.abs(obj.y2! - obj.y1!);
+        const x = Math.min(obj.x1!, obj.x2!);
+        const y = Math.min(obj.y1!, obj.y2!);
         
         // Base
         ctx.beginPath();
@@ -359,6 +363,239 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
           else ctx.lineTo(x, y);
         }
         ctx.closePath();
+        ctx.stroke();
+      } else if (obj.type === "cube") {
+        // Draw cube with 3D effect
+        const cubeSize = obj.size!;
+        const x = obj.x!;
+        const y = obj.y!;
+        const offset3d = cubeSize * 0.2;
+        
+        // Front face
+        ctx.beginPath();
+        ctx.rect(x, y, cubeSize, cubeSize);
+        ctx.stroke();
+        
+        // Back face
+        ctx.beginPath();
+        ctx.rect(x + offset3d, y - offset3d, cubeSize, cubeSize);
+        ctx.stroke();
+        
+        // Connecting lines
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + offset3d, y - offset3d);
+        ctx.moveTo(x + cubeSize, y);
+        ctx.lineTo(x + cubeSize + offset3d, y - offset3d);
+        ctx.moveTo(x, y + cubeSize);
+        ctx.lineTo(x + offset3d, y + cubeSize - offset3d);
+        ctx.moveTo(x + cubeSize, y + cubeSize);
+        ctx.lineTo(x + cubeSize + offset3d, y + cubeSize - offset3d);
+        ctx.stroke();
+      } else if (obj.type === "cylinder") {
+        // Draw cylinder
+        const x = obj.x!;
+        const y = obj.y!;
+        const radius = obj.radius!;
+        const height = obj.height!;
+        
+        // Top ellipse
+        ctx.beginPath();
+        ctx.ellipse(x + radius, y, radius, radius * 0.3, 0, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // Bottom ellipse
+        ctx.beginPath();
+        ctx.ellipse(x + radius, y + height, radius, radius * 0.3, 0, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // Side lines
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + height);
+        ctx.moveTo(x + radius * 2, y);
+        ctx.lineTo(x + radius * 2, y + height);
+        ctx.stroke();
+      } else if (obj.type === "pyramid") {
+        // Draw pyramid
+        const x = obj.x!;
+        const y = obj.y!;
+        const size = obj.size!;
+        const height = obj.height!;
+        
+        // Base
+        ctx.beginPath();
+        ctx.rect(x, y + height * 0.7, size, height * 0.3);
+        ctx.stroke();
+        
+        // Triangular faces
+        ctx.beginPath();
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(x + size / 2, y);
+        ctx.lineTo(x + size, y + height);
+        ctx.moveTo(x + size / 2, y);
+        ctx.lineTo(x + size, y + height * 0.7);
+        ctx.stroke();
+      } else if (obj.type === "cone") {
+        // Draw cone
+        const x = obj.x!;
+        const y = obj.y!;
+        const radius = obj.radius!;
+        const height = obj.height!;
+        
+        // Base circle
+        ctx.beginPath();
+        ctx.ellipse(x + radius, y + height, radius, radius * 0.3, 0, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // Cone sides
+        ctx.beginPath();
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(x + radius, y);
+        ctx.moveTo(x + radius * 2, y + height);
+        ctx.lineTo(x + radius, y);
+        ctx.stroke();
+      } else if (obj.type === "cuboid") {
+        // Draw cuboid
+        const x = obj.x!;
+        const y = obj.y!;
+        const width = obj.width!;
+        const height = obj.height!;
+        const offset3d = width * 0.15;
+        
+        // Front face
+        ctx.beginPath();
+        ctx.rect(x, y, width, height);
+        ctx.stroke();
+        
+        // Back face
+        ctx.beginPath();
+        ctx.rect(x + offset3d, y - offset3d, width, height);
+        ctx.stroke();
+        
+        // Connecting lines
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + offset3d, y - offset3d);
+        ctx.moveTo(x + width, y);
+        ctx.lineTo(x + width + offset3d, y - offset3d);
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(x + offset3d, y + height - offset3d);
+        ctx.moveTo(x + width, y + height);
+        ctx.lineTo(x + width + offset3d, y + height - offset3d);
+        ctx.stroke();
+      } else if (obj.type === "hexagonalPrism") {
+        // Draw hexagonal prism
+        const x = obj.x!;
+        const y = obj.y!;
+        const radius = obj.radius!;
+        const height = obj.height!;
+        const centerX = x + radius;
+        const centerY = y + height / 2;
+        
+        // Top hexagon
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i;
+          const ptX = centerX + radius * Math.cos(angle);
+          const ptY = centerY - height / 2 + radius * 0.2 * Math.sin(angle);
+          if (i === 0) ctx.moveTo(ptX, ptY);
+          else ctx.lineTo(ptX, ptY);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Bottom hexagon
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i;
+          const ptX = centerX + radius * Math.cos(angle);
+          const ptY = centerY + height / 2 + radius * 0.2 * Math.sin(angle);
+          if (i === 0) ctx.moveTo(ptX, ptY);
+          else ctx.lineTo(ptX, ptY);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Vertical lines
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i;
+          const ptX = centerX + radius * Math.cos(angle);
+          const y1 = centerY - height / 2 + radius * 0.2 * Math.sin(angle);
+          const y2 = centerY + height / 2 + radius * 0.2 * Math.sin(angle);
+          ctx.beginPath();
+          ctx.moveTo(ptX, y1);
+          ctx.lineTo(ptX, y2);
+          ctx.stroke();
+        }
+      } else if (obj.type === "sphere") {
+        // Draw sphere
+        const x = obj.x!;
+        const y = obj.y!;
+        const radius = obj.radius!;
+        
+        // Main circle
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // Horizontal ellipse
+        ctx.beginPath();
+        ctx.ellipse(x, y, radius, radius * 0.3, 0, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // Vertical ellipse
+        ctx.beginPath();
+        ctx.ellipse(x, y, radius * 0.3, radius, 0, 0, 2 * Math.PI);
+        ctx.stroke();
+      } else if (obj.type === "hemisphere") {
+        // Draw hemisphere
+        const x = obj.x!;
+        const y = obj.y!;
+        const radius = obj.radius!;
+        
+        // Half circle
+        ctx.beginPath();
+        ctx.arc(x, y, radius, Math.PI, 2 * Math.PI);
+        ctx.stroke();
+        
+        // Base ellipse
+        ctx.beginPath();
+        ctx.ellipse(x, y, radius, radius * 0.3, 0, 0, Math.PI);
+        ctx.lineTo(x + radius, y);
+        ctx.stroke();
+      } else if (obj.type === "triangularPrism") {
+        // Draw triangular prism
+        const x = obj.x!;
+        const y = obj.y!;
+        const width = obj.width!;
+        const height = obj.height!;
+        const offset3d = width * 0.15;
+        
+        // Front triangle
+        ctx.beginPath();
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(x + width / 2, y);
+        ctx.lineTo(x + width, y + height);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Back triangle
+        ctx.beginPath();
+        ctx.moveTo(x + offset3d, y + height - offset3d);
+        ctx.lineTo(x + width / 2 + offset3d, y - offset3d);
+        ctx.lineTo(x + width + offset3d, y + height - offset3d);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Connecting lines
+        ctx.beginPath();
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(x + offset3d, y + height - offset3d);
+        ctx.moveTo(x + width / 2, y);
+        ctx.lineTo(x + width / 2 + offset3d, y - offset3d);
+        ctx.moveTo(x + width, y + height);
+        ctx.lineTo(x + width + offset3d, y + height - offset3d);
         ctx.stroke();
       }
       ctx.restore();
