@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AnyDrawingObject, DrawingMode } from './types';
@@ -322,10 +323,10 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'star':
           newObject = {
             type: 'star',
-            x: (startPoint.x + finalEndPoint.x) / 2,
-            y: (startPoint.y + finalEndPoint.y) / 2,
-            outerRadius: width / 2,
-            innerRadius: width / 4,
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: finalEndPoint.x,
+            y2: finalEndPoint.y,
             color,
             lineWidth: brushSize
           };
@@ -333,10 +334,10 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'person':
           newObject = {
             type: 'person',
-            x: (startPoint.x + finalEndPoint.x) / 2,
-            y: (startPoint.y + finalEndPoint.y) / 2,
-            width: width,
-            height: height,
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: finalEndPoint.x,
+            y2: finalEndPoint.y,
             color,
             lineWidth: brushSize
           };
@@ -344,10 +345,10 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'house':
           newObject = {
             type: 'house',
-            x: minX,
-            y: minY,
-            width: width,
-            height: height,
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: finalEndPoint.x,
+            y2: finalEndPoint.y,
             color,
             lineWidth: brushSize
           };
