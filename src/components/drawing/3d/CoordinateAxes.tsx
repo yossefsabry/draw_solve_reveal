@@ -6,66 +6,72 @@ import * as THREE from 'three';
 const CoordinateAxes: React.FC = () => {
   return (
     <group>
-      {/* X-axis (Red) */}
+      {/* X-axis (Subtle Red) */}
       <group>
         <Text
-          position={[25, 2, 0]}
-          fontSize={2}
-          color="red"
+          position={[20, 1, 0]}
+          fontSize={1.5}
+          color="#ff9999"
           anchorX="center"
           anchorY="middle"
+          material-transparent={true}
+          material-opacity={0.6}
         >
           X
         </Text>
-        <mesh position={[10, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
-          <coneGeometry args={[1, 3, 8]} />
-          <meshBasicMaterial color="red" />
+        <mesh position={[8, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          <coneGeometry args={[0.5, 2, 8]} />
+          <meshBasicMaterial color="#ff9999" transparent opacity={0.5} />
         </mesh>
-        <mesh position={[5, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
-          <cylinderGeometry args={[0.2, 0.2, 20, 8]} />
-          <meshBasicMaterial color="red" />
+        <mesh position={[4, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          <cylinderGeometry args={[0.1, 0.1, 16, 8]} />
+          <meshBasicMaterial color="#ff9999" transparent opacity={0.4} />
         </mesh>
       </group>
 
-      {/* Y-axis (Green) */}
+      {/* Y-axis (Subtle Green) */}
       <group>
         <Text
-          position={[0, 25, 0]}
-          fontSize={2}
-          color="green"
+          position={[0, 20, 0]}
+          fontSize={1.5}
+          color="#99ff99"
           anchorX="center"
           anchorY="middle"
+          material-transparent={true}
+          material-opacity={0.6}
         >
           Y
         </Text>
-        <mesh position={[0, 10, 0]}>
-          <coneGeometry args={[1, 3, 8]} />
-          <meshBasicMaterial color="green" />
+        <mesh position={[0, 8, 0]}>
+          <coneGeometry args={[0.5, 2, 8]} />
+          <meshBasicMaterial color="#99ff99" transparent opacity={0.5} />
         </mesh>
-        <mesh position={[0, 5, 0]}>
-          <cylinderGeometry args={[0.2, 0.2, 20, 8]} />
-          <meshBasicMaterial color="green" />
+        <mesh position={[0, 4, 0]}>
+          <cylinderGeometry args={[0.1, 0.1, 16, 8]} />
+          <meshBasicMaterial color="#99ff99" transparent opacity={0.4} />
         </mesh>
       </group>
 
-      {/* Z-axis (Blue) */}
+      {/* Z-axis (Subtle Blue) */}
       <group>
         <Text
-          position={[0, 2, 25]}
-          fontSize={2}
-          color="blue"
+          position={[0, 1, 20]}
+          fontSize={1.5}
+          color="#9999ff"
           anchorX="center"
           anchorY="middle"
+          material-transparent={true}
+          material-opacity={0.6}
         >
           Z
         </Text>
-        <mesh position={[0, 0, 10]} rotation={[Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[1, 3, 8]} />
-          <meshBasicMaterial color="blue" />
+        <mesh position={[0, 0, 8]} rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.5, 2, 8]} />
+          <meshBasicMaterial color="#9999ff" transparent opacity={0.5} />
         </mesh>
-        <mesh position={[0, 0, 5]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.2, 0.2, 20, 8]} />
-          <meshBasicMaterial color="blue" />
+        <mesh position={[0, 0, 4]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.1, 0.1, 16, 8]} />
+          <meshBasicMaterial color="#9999ff" transparent opacity={0.4} />
         </mesh>
       </group>
     </group>

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
@@ -7,6 +6,7 @@ import Shape3D from './Shape3D';
 import DrawingPath3D from './DrawingPath3D';
 import ShapePreview3D from './ShapePreview3D';
 import CoordinateAxes from './CoordinateAxes';
+import CoordinateIndicator from './CoordinateIndicator';
 import * as THREE from 'three';
 
 interface Scene3DProps {
@@ -46,7 +46,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
   
   useEffect(() => {
     // Position camera to show the full grid plate
-    camera.position.set(20, 20, 20);
+    camera.position.set(25, 25, 25);
     camera.lookAt(0, 0, 0);
     
     // Enable shadows for better visual quality
@@ -54,7 +54,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
     gl.shadowMap.type = THREE.PCFSoftShadowMap;
   }, [camera, gl]);
 
-  // Enhanced zoom to cursor functionality
+  // Enhanced zoom to cursor functionality - fixed rotation issue
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (!controlsRef.current || !planeRef.current) return;
@@ -74,32 +74,32 @@ const Scene3D: React.FC<Scene3DProps> = ({
       if (intersects.length > 0) {
         const intersectionPoint = intersects[0].point;
         
-        // Smooth zoom factor
-        const zoomSpeed = 0.08;
+        // Increased zoom speed for faster zooming
+        const zoomSpeed = 0.3;
         const zoomFactor = e.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed;
         
         // Calculate direction from camera to intersection point
         const direction = intersectionPoint.clone().sub(camera.position);
         const currentDistance = direction.length();
         
-        // Calculate new distance with smooth transition
+        // Calculate new distance with faster transition
         const newDistance = currentDistance * zoomFactor;
         
         // Clamp zoom distance for better control
-        const minDistance = 3;
-        const maxDistance = 100;
+        const minDistance = 2;
+        const maxDistance = 150;
         const clampedDistance = Math.max(minDistance, Math.min(maxDistance, newDistance));
         
-        // Update camera position smoothly
+        // Update camera position smoothly but faster
         direction.normalize();
         const newPosition = intersectionPoint.clone().sub(direction.multiplyScalar(clampedDistance));
         
-        // Smooth transition
-        camera.position.lerp(newPosition, 0.15);
+        // Faster transition and prevent rotation during zoom
+        camera.position.lerp(newPosition, 0.4);
         
-        // Update orbit controls target to the intersection point
+        // Keep the target stable to prevent rotation
         if (controlsRef.current) {
-          controlsRef.current.target.lerp(intersectionPoint, 0.15);
+          controlsRef.current.target.copy(intersectionPoint);
           controlsRef.current.update();
         }
       }
@@ -134,45 +134,50 @@ const Scene3D: React.FC<Scene3DProps> = ({
   
   return (
     <>
+      {/* Coordinate Indicator in top right */}
+      <CoordinateIndicator />
+      
       {/* Enhanced Lighting with shadows */}
-      <ambientLight intensity={0.6} />
+      <ambientLight intensity={0.7} />
       <directionalLight 
-        position={[30, 30, 20]} 
-        intensity={1.5}
+        position={[40, 40, 30]} 
+        intensity={1.2}
         castShadow
         shadow-mapSize-width={4096}
         shadow-mapSize-height={4096}
-        shadow-camera-far={200}
-        shadow-camera-left={-60}
-        shadow-camera-right={60}
-        shadow-camera-top={60}
-        shadow-camera-bottom={-60}
+        shadow-camera-far={300}
+        shadow-camera-left={-100}
+        shadow-camera-right={100}
+        shadow-camera-top={100}
+        shadow-camera-bottom={-100}
       />
       <pointLight 
-        position={[-30, 25, -20]} 
-        intensity={0.5}
+        position={[-40, 30, -30]} 
+        intensity={0.4}
         castShadow
       />
       
-      {/* Coordinate Axes */}
+      {/* Subtle Coordinate Axes */}
       {showGrid && <CoordinateAxes />}
       
-      {/* Large Rectangular Grid Plate with soft pink color */}
+      {/* Large Rectangular Grid Plate with very subtle pink color */}
       {showGrid && (
         <>
           <Grid
             position={[0, 0, 0]}
-            args={[120, 80]} 
+            args={[200, 150]} 
             cellSize={2}
-            cellThickness={0.8}
-            cellColor={'#ff69b4'} 
+            cellThickness={0.3}
+            cellColor={'#ffb3d9'} 
             sectionSize={10}
-            sectionThickness={1.5}
-            sectionColor={'#ff1493'} 
-            fadeDistance={200}
-            fadeStrength={0.5} 
+            sectionThickness={0.5}
+            sectionColor={'#ff99cc'} 
+            fadeDistance={400}
+            fadeStrength={0.8} 
             followCamera={false}
             infiniteGrid={false}
+            material-opacity={0.2}
+            material-transparent={true}
           />
           {/* Invisible plane to receive shadows and catch pointer events */}
           <mesh
@@ -185,7 +190,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
             onPointerUp={handleMouseUp}
             visible={false}
           >
-            <planeGeometry args={[300, 300]} />
+            <planeGeometry args={[400, 300]} />
             <meshStandardMaterial 
               transparent 
               opacity={0}
@@ -231,19 +236,19 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Enhanced Orbit Controls - removed pan, enhanced zoom and rotation */}
+      {/* Enhanced Orbit Controls - stable rotation, no zoom */}
       <OrbitControls 
         ref={controlsRef}
         enablePan={false} 
         enableZoom={false} 
         enableRotate={true} 
         enableDamping={true}
-        dampingFactor={0.05} 
-        rotateSpeed={0.6}
+        dampingFactor={0.08} 
+        rotateSpeed={0.5}
         autoRotate={false}
         target={[0, 0, 0]}
-        minDistance={3}
-        maxDistance={100}
+        minDistance={2}
+        maxDistance={150}
       />
     </>
   );
