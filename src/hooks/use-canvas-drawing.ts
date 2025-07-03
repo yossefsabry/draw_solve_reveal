@@ -54,7 +54,7 @@ export const useCanvasDrawing = ({
     cursorPosition, getPointerPosition, updateCursorPosition, handleMouseLeave 
   } = usePointerPosition(scale, offset);
   const { 
-    startFreeDrawing, continueFreeDrawing, finishFreeDrawing, currentPath 
+    drawingPath, startDrawingPath, addToDrawingPath, finishDrawingPath 
   } = useFreeDrawing({
     color: mode === "erase" ? "#000000" : color,
     brushSize,
@@ -104,7 +104,7 @@ export const useCanvasDrawing = ({
     lastMousePosRef.current = pos;
     
     if (mode === "draw" || mode === "erase") {
-      startFreeDrawing(pos);
+      startDrawingPath(pos);
     }
   };
   
@@ -116,7 +116,7 @@ export const useCanvasDrawing = ({
     // Apply straight line constraints when drawing
     if (isDrawing && (mode === "draw" || mode === "erase") && lastMousePosRef.current) {
       if (keyPressed.shift || (keyPressed.ctrl && keyPressed.shift)) {
-        const startPos = currentPath[0] || lastMousePosRef.current;
+        const startPos = drawingPath[0] || lastMousePosRef.current;
         const deltaX = pos.x - startPos.x;
         const deltaY = pos.y - startPos.y;
         
@@ -162,7 +162,7 @@ export const useCanvasDrawing = ({
     const currentPos = pos;
     
     if (mode === "draw" || mode === "erase") {
-      continueFreeDrawing(currentPos);
+      addToDrawingPath(currentPos, drawingLayerRef.current);
     }
     
     lastMousePosRef.current = currentPos;
@@ -178,7 +178,7 @@ export const useCanvasDrawing = ({
     if (!isDrawing) return;
     
     if (mode === "draw" || mode === "erase") {
-      finishFreeDrawing();
+      finishDrawingPath();
     }
     
     // Reset references and state
@@ -203,7 +203,7 @@ export const useCanvasDrawing = ({
     keyPressed,
     setDirectScale,
     cursorPosition,
-    currentPath,
+    drawingPath,
     // History functions
     undo,
     redo,

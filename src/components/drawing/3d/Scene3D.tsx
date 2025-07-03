@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useThree } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
@@ -6,7 +5,6 @@ import { AnyDrawingObject, DrawingMode } from '../types';
 import Shape3D from './Shape3D';
 import DrawingPath3D from './DrawingPath3D';
 import ShapePreview3D from './ShapePreview3D';
-import * as THREE from 'three';
 
 interface Scene3DProps {
   objects: AnyDrawingObject[];
@@ -39,21 +37,19 @@ const Scene3D: React.FC<Scene3DProps> = ({
   selectedShape,
   mode
 }) => {
-  const { camera, gl, size } = useThree();
+  const { camera, gl } = useThree();
   const controlsRef = useRef<any>();
   const [isPanning, setIsPanning] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   const [isAltPressed, setIsAltPressed] = useState(false);
   
   useEffect(() => {
-    // Set better initial camera position to show full grid
-    camera.position.set(10, 15, 10);
+    camera.position.set(5, 5, 5);
     camera.lookAt(0, 0, 0);
     
-    // Enable shadows with better quality
+    // Enable shadows for better visual quality
     gl.shadowMap.enabled = true;
-    gl.shadowMap.type = THREE.PCFSoftShadowMap;
-    gl.setClearColor('#1a1a1a');
+    gl.shadowMap.type = 2; // PCFSoftShadowMap
   }, [camera, gl]);
 
   // Handle keyboard events for Alt key
@@ -86,7 +82,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
     };
   }, []);
 
-  // Handle mouse events for panning with zoom-to-cursor
+  // Handle mouse events for panning
   const handleMouseDown = (e: any) => {
     if (isAltPressed) {
       setIsPanning(true);
@@ -104,18 +100,8 @@ const Scene3D: React.FC<Scene3DProps> = ({
       
       // Pan the camera based on mouse movement
       const panSpeed = 0.01;
-      const right = new THREE.Vector3();
-      const up = new THREE.Vector3();
-      
-      camera.getWorldDirection(new THREE.Vector3());
-      right.setFromMatrixColumn(camera.matrix, 0);
-      up.setFromMatrixColumn(camera.matrix, 1);
-      
-      right.multiplyScalar(-deltaX * panSpeed);
-      up.multiplyScalar(deltaY * panSpeed);
-      
-      camera.position.add(right);
-      camera.position.add(up);
+      camera.position.x -= deltaX * panSpeed;
+      camera.position.y += deltaY * panSpeed;
       
       setLastMousePos({ x: e.clientX, y: e.clientY });
       e.stopPropagation();
@@ -132,96 +118,53 @@ const Scene3D: React.FC<Scene3DProps> = ({
       onPointerUp(e);
     }
   };
-
-  // Handle wheel events for zoom-to-cursor
-  const handleWheel = (e: any) => {
-    if (!controlsRef.current) return;
-    
-    e.stopPropagation();
-    
-    const delta = e.deltaY;
-    const zoomSpeed = 0.1;
-    
-    // Get mouse position in normalized device coordinates
-    const mouse = new THREE.Vector2();
-    mouse.x = (e.clientX / size.width) * 2 - 1;
-    mouse.y = -(e.clientY / size.height) * 2 + 1;
-    
-    // Create raycaster
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, camera);
-    
-    // Find intersection with grid plane
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const intersection = new THREE.Vector3();
-    raycaster.ray.intersectPlane(plane, intersection);
-    
-    // Calculate zoom direction
-    const direction = new THREE.Vector3();
-    direction.subVectors(intersection, camera.position).normalize();
-    
-    // Apply zoom
-    const zoomAmount = delta > 0 ? zoomSpeed : -zoomSpeed;
-    camera.position.addScaledVector(direction, zoomAmount);
-    
-    // Clamp camera distance
-    const distance = camera.position.length();
-    if (distance < 2) {
-      camera.position.normalize().multiplyScalar(2);
-    } else if (distance > 100) {
-      camera.position.normalize().multiplyScalar(100);
-    }
-  };
   
   return (
     <>
-      {/* Enhanced Lighting with better shadows */}
-      <ambientLight intensity={0.3} />
+      {/* Enhanced Lighting with shadows */}
+      <ambientLight intensity={0.4} />
       <directionalLight 
-        position={[20, 20, 10]} 
-        intensity={1.2}
-        castShadow
-        shadow-mapSize-width={4096}
-        shadow-mapSize-height={4096}
-        shadow-camera-far={100}
-        shadow-camera-left={-50}
-        shadow-camera-right={50}
-        shadow-camera-top={50}
-        shadow-camera-bottom={-50}
-        shadow-bias={-0.0001}
-      />
-      <pointLight 
-        position={[-20, 15, -10]} 
-        intensity={0.4}
+        position={[10, 10, 5]} 
+        intensity={1}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
+        shadow-camera-far={50}
+        shadow-camera-left={-20}
+        shadow-camera-right={20}
+        shadow-camera-top={20}
+        shadow-camera-bottom={-20}
+      />
+      <pointLight 
+        position={[-10, 8, -5]} 
+        intensity={0.3}
+        castShadow
       />
       
-      {/* Enhanced Grid with better visibility */}
+      {/* Grid with shadow receiving capability */}
       {showGrid && (
         <>
           <Grid
             position={[0, 0, 0]}
-            args={[100, 100]}
-            cellSize={2}
-            cellThickness={0.8}
-            cellColor={'#444444'}
-            sectionSize={10}
-            sectionThickness={1.5}
-            sectionColor={'#666666'}
-            fadeDistance={80}
+            args={[20, 20]}
+            cellSize={1}
+            cellThickness={0.5}
+            cellColor={'#6f6f6f'}
+            sectionSize={5}
+            sectionThickness={1}
+            sectionColor={'#9d4b4b'}
+            fadeDistance={25}
             fadeStrength={1}
             followCamera={false}
             infiniteGrid={true}
           />
-          {/* Enhanced shadow receiving plane */}
+          {/* Invisible plane to receive shadows */}
           <mesh
-            position={[0, -0.01, 0]}
+            position={[0, 0, 0]}
             rotation={[-Math.PI / 2, 0, 0]}
             receiveShadow
           >
-            <planeGeometry args={[200, 200]} />
+            <planeGeometry args={[100, 100]} />
             <meshStandardMaterial 
               transparent 
               opacity={0}
@@ -238,14 +181,13 @@ const Scene3D: React.FC<Scene3DProps> = ({
         onPointerDown={handleMouseDown}
         onPointerMove={handleMouseMove}
         onPointerUp={handleMouseUp}
-        onWheel={handleWheel}
         visible={false}
       >
-        <planeGeometry args={[200, 200]} />
+        <planeGeometry args={[100, 100]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
       
-      {/* Render all objects with better positioning */}
+      {/* Render all objects */}
       {objects.map((obj, index) => {
         if (obj.type === 'draw') {
           return (
@@ -260,7 +202,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
         return <Shape3D key={`shape-${index}`} obj={obj} />;
       })}
       
-      {/* Show current drawing path preview */}
+      {/* Show current drawing path preview with better visibility */}
       {isDrawing && currentPath && currentPath.length > 1 && mode === 'draw' && !isPanning && (
         <DrawingPath3D
           points={currentPath}
@@ -270,7 +212,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Show shape preview */}
+      {/* Show shape preview with improved rendering */}
       {isDrawing && selectedShape && previewStartPoint && previewEndPoint && mode !== 'draw' && !isPanning && (
         <ShapePreview3D
           startPoint={previewStartPoint}
@@ -281,20 +223,16 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Enhanced Controls */}
+      {/* Controls - disable when drawing or panning */}
       <OrbitControls 
         ref={controlsRef}
         enablePan={!isDrawing && !isPanning}
         enableZoom={!isDrawing && !isPanning}
         enableRotate={!isDrawing && !isPanning}
-        minDistance={2}
-        maxDistance={100}
-        maxPolarAngle={Math.PI / 2.1}
+        minDistance={1}
+        maxDistance={50}
         dampingFactor={0.05}
         enableDamping={true}
-        panSpeed={1}
-        rotateSpeed={0.5}
-        zoomSpeed={0.8}
       />
     </>
   );

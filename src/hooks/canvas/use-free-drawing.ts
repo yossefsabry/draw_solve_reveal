@@ -22,19 +22,19 @@ export const useFreeDrawing = ({
   keyPressed,
   mode
 }: UseFreeDrawingProps) => {
-  const [currentPath, setCurrentPath] = useState<{ x: number; y: number }[]>([]);
+  const [drawingPath, setDrawingPath] = useState<{ x: number; y: number }[]>([]);
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
   
-  // Start free drawing
-  const startFreeDrawing = (pos: { x: number; y: number }) => {
-    setCurrentPath([pos]);
+  // Start a new drawing path
+  const startDrawingPath = (pos: { x: number; y: number }) => {
+    setDrawingPath([pos]);
     lastPosRef.current = pos;
     startPosRef.current = pos;
   };
   
-  // Continue free drawing
-  const continueFreeDrawing = (pos: { x: number; y: number }) => {
+  // Add to the current drawing path with improved performance
+  const addToDrawingPath = (pos: { x: number; y: number }, canvas: HTMLCanvasElement | null) => {
     // Determine straight line constraints
     let currentPos = pos;
     
@@ -58,19 +58,60 @@ export const useFreeDrawing = ({
       }
     }
     
-    setCurrentPath(prev => [...prev, currentPos]);
+    setDrawingPath(prev => [...prev, currentPos]);
+    
+    // Draw directly to canvas with optimized performance
+    if (canvas && lastPosRef.current) {
+      const ctx = canvas.getContext('2d', { willReadFrequently: false });
+      if (ctx) {
+        ctx.save();
+        ctx.translate(offset.x, offset.y);
+        ctx.scale(scale, scale);
+        
+        // Basic pen settings
+        ctx.strokeStyle = color;
+        ctx.lineWidth = brushSize;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.globalAlpha = 1.0;
+        
+        // Handle eraser mode
+        if (mode === "erase") {
+          ctx.globalCompositeOperation = "destination-out";
+        } else {
+          ctx.globalCompositeOperation = "source-over";
+        }
+        
+        // Optimized line drawing
+        ctx.beginPath();
+        ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
+        
+        if (keyPressed.ctrl && startPosRef.current) {
+          // Draw straight line when Ctrl is pressed
+          ctx.moveTo(startPosRef.current.x, startPosRef.current.y);
+          ctx.lineTo(currentPos.x, currentPos.y);
+        } else {
+          // Simple line to for better performance
+          ctx.lineTo(currentPos.x, currentPos.y);
+        }
+        
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+    
     lastPosRef.current = currentPos;
   };
   
-  // Finish free drawing
-  const finishFreeDrawing = (endPos?: { x: number; y: number }) => {
-    if (currentPath.length > 1) {
-      let pathToSave = currentPath;
+  // Complete the drawing and add it to objects
+  const finishDrawingPath = () => {
+    if (drawingPath.length > 1) {
+      let pathToSave = drawingPath;
       
       // If Ctrl was pressed, only save start and end points for clean straight lines
       if (keyPressed.ctrl && startPosRef.current) {
-        const finalEndPoint = endPos || currentPath[currentPath.length - 1];
-        pathToSave = [startPosRef.current, finalEndPoint];
+        const endPoint = drawingPath[drawingPath.length - 1];
+        pathToSave = [startPosRef.current, endPoint];
       }
       
       // Create new drawing object
@@ -88,22 +129,23 @@ export const useFreeDrawing = ({
       }
       
       setObjects([...objects, newObject]);
-      setCurrentPath([]);
+      setDrawingPath([]);
       lastPosRef.current = null;
       startPosRef.current = null;
       return newObject;
     }
     
-    setCurrentPath([]);
+    setDrawingPath([]);
     lastPosRef.current = null;
     startPosRef.current = null;
     return null;
   };
 
   return {
-    startFreeDrawing,
-    continueFreeDrawing,
-    finishFreeDrawing,
-    currentPath
+    drawingPath,
+    lastPosRef,
+    startDrawingPath,
+    addToDrawingPath,
+    finishDrawingPath
   };
 };
