@@ -287,8 +287,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'triangle':
           newObject = {
             type: 'triangle',
-            x: startPoint.x,
-            y: startPoint.y,
+            x1: startPoint.x,
+            y1: startPoint.y,
             x2: finalEndPoint.x,
             y2: finalEndPoint.y,
             x3: startPoint.x,

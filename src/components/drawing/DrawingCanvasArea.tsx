@@ -89,7 +89,8 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     offset: zoomOffset,
     objects,
     setObjects,
-    keyPressed
+    keyPressed,
+    mode
   });
 
   // Sync zoom and offset with parent component

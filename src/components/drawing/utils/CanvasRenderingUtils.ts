@@ -1,5 +1,57 @@
 import { AnyDrawingObject } from "../types";
 
+// Main canvas rendering function
+export const renderCanvas = (
+  canvas: HTMLCanvasElement,
+  objects: AnyDrawingObject[],
+  showGrid: boolean,
+  scale: number,
+  offset: { x: number; y: number },
+  currentPath?: { x: number; y: number }[],
+  color?: string,
+  brushSize?: number,
+  isDrawing?: boolean
+): void => {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const visibleWidth = canvas.width;
+  const visibleHeight = canvas.height;
+
+  // Clear canvas with black background
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, visibleWidth, visibleHeight);
+
+  // Draw grid if enabled
+  if (showGrid) {
+    drawGrid(ctx, visibleWidth, visibleHeight, scale, offset);
+  }
+
+  // Draw all objects
+  drawObjects(ctx, objects, visibleWidth, visibleHeight, scale, offset);
+
+  // Draw current drawing path if provided
+  if (isDrawing && currentPath && currentPath.length > 1 && color && brushSize) {
+    ctx.save();
+    ctx.translate(offset.x, offset.y);
+    ctx.scale(scale, scale);
+    
+    ctx.strokeStyle = color;
+    ctx.lineWidth = brushSize;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    
+    ctx.beginPath();
+    ctx.moveTo(currentPath[0].x, currentPath[0].y);
+    currentPath.forEach(point => {
+      ctx.lineTo(point.x, point.y);
+    });
+    ctx.stroke();
+    
+    ctx.restore();
+  }
+};
+
 // Determine if an object is visible in the current viewport
 export const isObjectVisible = (
   obj: AnyDrawingObject, 
