@@ -1,4 +1,3 @@
-
 import { ShapeTool, AnyDrawingObject } from "./types";
 
 // Find object at position for selection
@@ -27,8 +26,7 @@ const isPointInObject = (obj: AnyDrawingObject, x: number, y: number): boolean =
              y >= obj.y && y <= obj.y + obj.height;
     
     case 'circle':
-      const distance = Math.sqrt(Math.pow(x - obj.x, 2) + Math.pow(y - obj.y, 2));
-      return distance <= obj.radius;
+      return Math.sqrt(Math.pow(x - obj.x, 2) + Math.pow(y - obj.y, 2)) <= obj.radius;
     
     case 'ellipse':
       const dx = (x - obj.x) / obj.radiusX;
@@ -68,6 +66,39 @@ const isPointInObject = (obj: AnyDrawingObject, x: number, y: number): boolean =
     case 'polygon':
       if (!obj.points || obj.points.length < 3) return false;
       return isPointInPolygon(x, y, obj.points);
+    
+    case 'cube':
+      return x >= obj.x && x <= obj.x + obj.size &&
+             y >= obj.y && y <= obj.y + obj.size;
+    
+    case 'cylinder':
+      const cylinderRadius = Math.sqrt(Math.pow(x - obj.x, 2) + Math.pow(y - obj.y, 2));
+      return cylinderRadius <= obj.radius && y >= obj.y && y <= obj.y + obj.height;
+    
+    case 'pyramid':
+      return isPointInTriangle(x, y, obj.x, obj.y, obj.x + obj.size / 2, obj.y, obj.x + obj.size, obj.y + obj.height);
+    
+    case 'cone':
+      return isPointInTriangle(x, y, obj.x, obj.y, obj.x + obj.radius, obj.y, obj.x + obj.radius, obj.y + obj.height);
+    
+    case 'cuboid':
+      return x >= obj.x && x <= obj.x + obj.width &&
+             y >= obj.y && y <= obj.y + obj.height;
+    
+    case 'hexagonalPrism':
+      // For 2D, treat as bounding box
+      return x >= obj.x && x <= obj.x + obj.radius * 2 &&
+             y >= obj.y && y <= obj.y + obj.height;
+    
+    case 'sphere':
+      return Math.sqrt(Math.pow(x - obj.x, 2) + Math.pow(y - obj.y, 2)) <= obj.radius;
+    
+    case 'hemisphere':
+      const distanceToCenter = Math.sqrt(Math.pow(x - obj.x, 2) + Math.pow(y - obj.y, 2));
+      return distanceToCenter <= obj.radius && y >= obj.y;
+    
+    case 'triangularPrism':
+      return isPointInTriangle(x, y, obj.x, obj.y, obj.x + obj.width, obj.y, obj.x + obj.width / 2, obj.y + obj.height);
     
     default:
       return false;
@@ -219,6 +250,95 @@ export const createShapeObject = (
         color,
         lineWidth
       };
+    case 'cube':
+      return {
+        type: 'cube',
+        x: Math.min(startX, endX),
+        y: Math.min(startY, endY),
+        size: Math.max(Math.abs(endX - startX), Math.abs(endY - startY)),
+        color,
+        lineWidth
+      };
+    case 'cylinder':
+      return {
+        type: 'cylinder',
+        x: Math.min(startX, endX),
+        y: Math.min(startY, endY),
+        radius: Math.abs(endX - startX) / 2,
+        height: Math.abs(endY - startY),
+        color,
+        lineWidth
+      };
+    case 'pyramid':
+      return {
+        type: 'pyramid',
+        x: Math.min(startX, endX),
+        y: Math.min(startY, endY),
+        size: Math.abs(endX - startX),
+        height: Math.abs(endY - startY),
+        color,
+        lineWidth
+      };
+    case 'cone':
+      return {
+        type: 'cone',
+        x: Math.min(startX, endX),
+        y: Math.min(startY, endY),
+        radius: Math.abs(endX - startX) / 2,
+        height: Math.abs(endY - startY),
+        color,
+        lineWidth
+      };
+    case 'cuboid':
+      return {
+        type: 'cuboid',
+        x: Math.min(startX, endX),
+        y: Math.min(startY, endY),
+        width: Math.abs(endX - startX),
+        height: Math.abs(endY - startY),
+        depth: Math.abs(endX - startX) * 0.5,
+        color,
+        lineWidth
+      };
+    case 'hexagonalPrism':
+      return {
+        type: 'hexagonalPrism',
+        x: Math.min(startX, endX),
+        y: Math.min(startY, endY),
+        radius: Math.abs(endX - startX) / 2,
+        height: Math.abs(endY - startY),
+        color,
+        lineWidth
+      };
+    case 'sphere':
+      return {
+        type: 'sphere',
+        x: (startX + endX) / 2,
+        y: (startY + endY) / 2,
+        radius: Math.abs(endX - startX) / 2,
+        color,
+        lineWidth
+      };
+    case 'hemisphere':
+      return {
+        type: 'hemisphere',
+        x: (startX + endX) / 2,
+        y: (startY + endY) / 2,
+        radius: Math.abs(endX - startX) / 2,
+        color,
+        lineWidth
+      };
+    case 'triangularPrism':
+      return {
+        type: 'triangularPrism',
+        x: Math.min(startX, endX),
+        y: Math.min(startY, endY),
+        width: Math.abs(endX - startX),
+        height: Math.abs(endY - startY),
+        depth: Math.abs(endX - startX) * 0.5,
+        color,
+        lineWidth
+      };
     default:
       return null;
   }
@@ -262,6 +382,47 @@ export const drawShapePreview = (
       // Simple rectangle preview for complex shapes
       ctx.rect(Math.min(startX, endX), Math.min(startY, endY), 
                Math.abs(endX - startX), Math.abs(endY - startY));
+      break;
+    case 'cube':
+      ctx.rect(Math.min(startX, endX), Math.min(startY, endY), Math.abs(endX - startX), Math.abs(endY - startY));
+      break;
+    case 'cylinder':
+      ctx.ellipse((startX + endX) / 2, (startY + endY) / 2, Math.abs(endX - startX) / 2, Math.abs(endY - startY) / 2, 0, 0, 2 * Math.PI);
+      break;
+    case 'pyramid':
+    case 'cone':
+      ctx.moveTo(startX, endY);
+      ctx.lineTo((startX + endX) / 2, startY);
+      ctx.lineTo(endX, endY);
+      ctx.closePath();
+      break;
+    case 'cuboid':
+      ctx.rect(Math.min(startX, endX), Math.min(startY, endY), Math.abs(endX - startX), Math.abs(endY - startY));
+      break;
+    case 'hexagonalPrism':
+      const cx = (startX + endX) / 2;
+      const cy = (startY + endY) / 2;
+      const r = Math.abs(endX - startX) / 2;
+      ctx.moveTo(cx + r, cy);
+      for (let i = 1; i <= 6; i++) {
+        const angle = (i * Math.PI) / 3;
+        ctx.lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+      }
+      ctx.closePath();
+      break;
+    case 'sphere':
+      ctx.arc((startX + endX) / 2, (startY + endY) / 2, Math.abs(endX - startX) / 2, 0, 2 * Math.PI);
+      break;
+    case 'hemisphere':
+      ctx.arc((startX + endX) / 2, (startY + endY) / 2, Math.abs(endX - startX) / 2, Math.PI, 2 * Math.PI);
+      ctx.lineTo((startX + endX) / 2 + Math.abs(endX - startX) / 2, (startY + endY) / 2);
+      ctx.closePath();
+      break;
+    case 'triangularPrism':
+      ctx.moveTo(startX, endY);
+      ctx.lineTo((startX + endX) / 2, startY);
+      ctx.lineTo(endX, endY);
+      ctx.closePath();
       break;
   }
   

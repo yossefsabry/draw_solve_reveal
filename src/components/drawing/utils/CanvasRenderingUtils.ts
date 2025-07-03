@@ -1,4 +1,3 @@
-
 import { AnyDrawingObject } from "../types";
 
 // Determine if an object is visible in the current viewport
@@ -185,6 +184,33 @@ export const drawObjects = (
         break;
       case 'draw':
         drawPath(ctx, obj);
+        break;
+      case 'cube':
+        drawCube(ctx, obj);
+        break;
+      case 'cylinder':
+        drawCylinder(ctx, obj);
+        break;
+      case 'pyramid':
+        drawPyramid(ctx, obj);
+        break;
+      case 'cone':
+        drawCone(ctx, obj);
+        break;
+      case 'cuboid':
+        drawCuboid(ctx, obj);
+        break;
+      case 'hexagonalPrism':
+        drawHexagonalPrism(ctx, obj);
+        break;
+      case 'sphere':
+        drawSphere(ctx, obj);
+        break;
+      case 'hemisphere':
+        drawHemisphere(ctx, obj);
+        break;
+      case 'triangularPrism':
+        drawTriangularPrism(ctx, obj);
         break;
     }
     
@@ -405,4 +431,126 @@ function drawPath(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
   }
   
   ctx.stroke();
+}
+
+function drawCube(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'cube') return;
+  ctx.beginPath();
+  ctx.rect(obj.x, obj.y, obj.size, obj.size);
+  ctx.stroke();
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fillRect(obj.x, obj.y, obj.size, obj.size);
+  ctx.globalAlpha = 1.0;
+}
+
+function drawCylinder(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'cylinder') return;
+  ctx.beginPath();
+  ctx.ellipse(obj.x + obj.radius, obj.y + obj.height / 2, obj.radius, obj.height / 2, 0, 0, 2 * Math.PI);
+  ctx.stroke();
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.ellipse(obj.x + obj.radius, obj.y + obj.height / 2, obj.radius, obj.height / 2, 0, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+}
+
+function drawPyramid(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'pyramid') return;
+  ctx.beginPath();
+  ctx.moveTo(obj.x, obj.y + obj.height);
+  ctx.lineTo(obj.x + obj.size / 2, obj.y);
+  ctx.lineTo(obj.x + obj.size, obj.y + obj.height);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+}
+
+function drawCone(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'cone') return;
+  ctx.beginPath();
+  ctx.moveTo(obj.x, obj.y + obj.height);
+  ctx.lineTo(obj.x + obj.radius, obj.y);
+  ctx.lineTo(obj.x + obj.radius * 2, obj.y + obj.height);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+}
+
+function drawCuboid(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'cuboid') return;
+  ctx.beginPath();
+  ctx.rect(obj.x, obj.y, obj.width, obj.height);
+  ctx.stroke();
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+  ctx.globalAlpha = 1.0;
+}
+
+function drawHexagonalPrism(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'hexagonalPrism') return;
+  const cx = obj.x + obj.radius;
+  const cy = obj.y + obj.height / 2;
+  const r = obj.radius;
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+}
+
+function drawSphere(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'sphere') return;
+  ctx.beginPath();
+  ctx.arc(obj.x, obj.y, obj.radius, 0, 2 * Math.PI);
+  ctx.stroke();
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.arc(obj.x, obj.y, obj.radius, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+}
+
+function drawHemisphere(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'hemisphere') return;
+  ctx.beginPath();
+  ctx.arc(obj.x, obj.y, obj.radius, Math.PI, 2 * Math.PI);
+  ctx.lineTo(obj.x + obj.radius, obj.y);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+}
+
+function drawTriangularPrism(ctx: CanvasRenderingContext2D, obj: AnyDrawingObject) {
+  if (obj.type !== 'triangularPrism') return;
+  ctx.beginPath();
+  ctx.moveTo(obj.x, obj.y + obj.height);
+  ctx.lineTo(obj.x + obj.width / 2, obj.y);
+  ctx.lineTo(obj.x + obj.width, obj.y + obj.height);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.globalAlpha = 0.1;
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
 }

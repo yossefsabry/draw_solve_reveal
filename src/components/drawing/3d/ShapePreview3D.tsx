@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 
@@ -277,6 +276,108 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
           />
         </mesh>
       </group>
+    );
+  }
+  
+  if (shapeType === 'cube') {
+    const size = Math.abs(endPoint.x - startPoint.x) / 50;
+    const centerX = (startPoint.x + endPoint.x) / 2 / 50;
+    const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
+    return (
+      <mesh position={[centerX, size / 2 + 1, centerZ]} castShadow>
+        <boxGeometry args={[size, size, size]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (shapeType === 'cylinder') {
+    const radius = Math.abs(endPoint.x - startPoint.x) / 100;
+    const height = Math.abs(endPoint.y - startPoint.y) / 50;
+    const centerX = (startPoint.x + endPoint.x) / 2 / 50;
+    const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
+    return (
+      <mesh position={[centerX, height / 2 + 1, centerZ]} castShadow>
+        <cylinderGeometry args={[radius, radius, height, 32]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (shapeType === 'pyramid') {
+    const size = Math.abs(endPoint.x - startPoint.x) / 50;
+    const height = Math.abs(endPoint.y - startPoint.y) / 50;
+    const centerX = (startPoint.x + endPoint.x) / 2 / 50;
+    const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
+    return (
+      <mesh position={[centerX, height / 2 + 1, centerZ]} castShadow>
+        <coneGeometry args={[size / 2, height, 4]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (shapeType === 'cone') {
+    const radius = Math.abs(endPoint.x - startPoint.x) / 100;
+    const height = Math.abs(endPoint.y - startPoint.y) / 50;
+    const centerX = (startPoint.x + endPoint.x) / 2 / 50;
+    const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
+    return (
+      <mesh position={[centerX, height / 2 + 1, centerZ]} castShadow>
+        <coneGeometry args={[radius, height, 32]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (shapeType === 'cuboid') {
+    const width = Math.abs(endPoint.x - startPoint.x) / 50;
+    const height = Math.abs(endPoint.y - startPoint.y) / 50;
+    const depth = Math.abs((endPoint.z || 0) - (startPoint.z || 0)) / 50 || width * 0.5;
+    const centerX = (startPoint.x + endPoint.x) / 2 / 50;
+    const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
+    return (
+      <mesh position={[centerX, height / 2 + 1, centerZ]} castShadow>
+        <boxGeometry args={[width, height, depth]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (shapeType === 'hexagonalPrism') {
+    const radius = Math.abs(endPoint.x - startPoint.x) / 100;
+    const height = Math.abs(endPoint.y - startPoint.y) / 50;
+    const centerX = (startPoint.x + endPoint.x) / 2 / 50;
+    const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
+    return (
+      <mesh position={[centerX, height / 2 + 1, centerZ]} castShadow>
+        <cylinderGeometry args={[radius, radius, height, 6]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (shapeType === 'sphere') {
+    const radius = Math.abs(endPoint.x - startPoint.x) / 100;
+    const centerX = (startPoint.x + endPoint.x) / 2 / 50;
+    const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
+    return (
+      <mesh position={[centerX, radius + 1, centerZ]} castShadow>
+        <sphereGeometry args={[radius, 32, 32]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (shapeType === 'hemisphere') {
+    const radius = Math.abs(endPoint.x - startPoint.x) / 100;
+    const centerX = (startPoint.x + endPoint.x) / 2 / 50;
+    const centerZ = -(startPoint.y + endPoint.y) / 2 / 50;
+    return (
+      <mesh position={[centerX, radius + 1, centerZ]} castShadow>
+        <sphereGeometry args={[radius, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} metalness={0.3} roughness={0.3} />
+      </mesh>
     );
   }
   

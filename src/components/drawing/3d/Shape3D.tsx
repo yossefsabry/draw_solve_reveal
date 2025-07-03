@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
@@ -334,6 +333,108 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
         color={obj.color || '#ffffff'} 
         lineWidth={obj.lineWidth || 2} 
       />
+    );
+  }
+  
+  if (obj.type === 'cube') {
+    const size = Math.abs(obj.size || 50) / 50;
+    const centerX = (obj.x || 0) / 50 + size / 2;
+    const centerZ = -((obj.y || 0) / 50 + size / 2);
+    return (
+      <mesh ref={meshRef} position={[centerX, size / 2 + 1, centerZ]} castShadow receiveShadow>
+        <boxGeometry args={[size, size, size]} />
+        <meshStandardMaterial color={obj.color || '#e74c3c'} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (obj.type === 'cylinder') {
+    const radius = Math.abs(obj.radius || 25) / 50;
+    const height = Math.abs(obj.height || 50) / 50;
+    const centerX = (obj.x || 0) / 50;
+    const centerZ = -((obj.y || 0) / 50);
+    return (
+      <mesh ref={meshRef} position={[centerX, height / 2 + 1, centerZ]} castShadow receiveShadow>
+        <cylinderGeometry args={[radius, radius, height, 32]} />
+        <meshStandardMaterial color={obj.color || '#9b59b6'} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (obj.type === 'pyramid') {
+    const size = Math.abs(obj.size || 50) / 50;
+    const height = Math.abs(obj.height || 50) / 50;
+    const centerX = (obj.x || 0) / 50;
+    const centerZ = -((obj.y || 0) / 50);
+    return (
+      <mesh ref={meshRef} position={[centerX, height / 2 + 1, centerZ]} castShadow receiveShadow>
+        <coneGeometry args={[size / 2, height, 4]} />
+        <meshStandardMaterial color={obj.color || '#27ae60'} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (obj.type === 'cone') {
+    const radius = Math.abs(obj.radius || 25) / 50;
+    const height = Math.abs(obj.height || 50) / 50;
+    const centerX = (obj.x || 0) / 50;
+    const centerZ = -((obj.y || 0) / 50);
+    return (
+      <mesh ref={meshRef} position={[centerX, height / 2 + 1, centerZ]} castShadow receiveShadow>
+        <coneGeometry args={[radius, height, 32]} />
+        <meshStandardMaterial color={obj.color || '#f1c40f'} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (obj.type === 'cuboid') {
+    const width = Math.abs(obj.width || 50) / 50;
+    const height = Math.abs(obj.height || 30) / 50;
+    const depth = Math.abs(obj.depth || 25) / 50;
+    const centerX = (obj.x || 0) / 50 + width / 2;
+    const centerZ = -((obj.y || 0) / 50 + depth / 2);
+    return (
+      <mesh ref={meshRef} position={[centerX, height / 2 + 1, centerZ]} castShadow receiveShadow>
+        <boxGeometry args={[width, height, depth]} />
+        <meshStandardMaterial color={obj.color || '#8e44ad'} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (obj.type === 'hexagonalPrism') {
+    const radius = Math.abs(obj.radius || 25) / 50;
+    const height = Math.abs(obj.height || 50) / 50;
+    const centerX = (obj.x || 0) / 50;
+    const centerZ = -((obj.y || 0) / 50);
+    return (
+      <mesh ref={meshRef} position={[centerX, height / 2 + 1, centerZ]} castShadow receiveShadow>
+        <cylinderGeometry args={[radius, radius, height, 6]} />
+        <meshStandardMaterial color={obj.color || '#e67e22'} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (obj.type === 'sphere') {
+    const radius = Math.abs(obj.radius || 25) / 50;
+    const centerX = (obj.x || 0) / 50;
+    const centerZ = -((obj.y || 0) / 50);
+    return (
+      <mesh ref={meshRef} position={[centerX, radius + 1, centerZ]} castShadow receiveShadow>
+        <sphereGeometry args={[radius, 32, 32]} />
+        <meshStandardMaterial color={obj.color || '#3498db'} metalness={0.3} roughness={0.3} />
+      </mesh>
+    );
+  }
+  
+  if (obj.type === 'hemisphere') {
+    const radius = Math.abs(obj.radius || 25) / 50;
+    const centerX = (obj.x || 0) / 50;
+    const centerZ = -((obj.y || 0) / 50);
+    return (
+      <mesh ref={meshRef} position={[centerX, radius + 1, centerZ]} castShadow receiveShadow>
+        <sphereGeometry args={[radius, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color={obj.color || '#00bfff'} metalness={0.3} roughness={0.3} />
+      </mesh>
     );
   }
   

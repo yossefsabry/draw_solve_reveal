@@ -128,7 +128,96 @@ export interface StarObject {
   lineWidth: number;
 }
 
-export type AnyDrawingObject = DrawObject | RectangleObject | CircleObject | EllipseObject | LineObject | ArrowObject | TriangleObject | PolygonObject | TextObject | MathResult | PersonObject | HouseObject | StarObject;
+export interface CubeObject {
+  type: 'cube';
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  lineWidth: number;
+}
+
+export interface CylinderObject {
+  type: 'cylinder';
+  x: number;
+  y: number;
+  radius: number;
+  height: number;
+  color: string;
+  lineWidth: number;
+}
+
+export interface PyramidObject {
+  type: 'pyramid';
+  x: number;
+  y: number;
+  size: number;
+  height: number;
+  color: string;
+  lineWidth: number;
+}
+
+export interface ConeObject {
+  type: 'cone';
+  x: number;
+  y: number;
+  radius: number;
+  height: number;
+  color: string;
+  lineWidth: number;
+}
+
+export interface CuboidObject {
+  type: 'cuboid';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  depth: number;
+  color: string;
+  lineWidth: number;
+}
+
+export interface HexagonalPrismObject {
+  type: 'hexagonalPrism';
+  x: number;
+  y: number;
+  radius: number;
+  height: number;
+  color: string;
+  lineWidth: number;
+}
+
+export interface SphereObject {
+  type: 'sphere';
+  x: number;
+  y: number;
+  radius: number;
+  color: string;
+  lineWidth: number;
+}
+
+export interface HemisphereObject {
+  type: 'hemisphere';
+  x: number;
+  y: number;
+  radius: number;
+  color: string;
+  lineWidth: number;
+}
+
+export interface TriangularPrismObject {
+  type: 'triangularPrism';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  depth: number;
+  color: string;
+  lineWidth: number;
+}
+
+export type AnyDrawingObject = DrawObject | RectangleObject | CircleObject | EllipseObject | LineObject | ArrowObject | TriangleObject | PolygonObject | TextObject | MathResult | PersonObject | HouseObject | StarObject | CubeObject | CylinderObject | PyramidObject | ConeObject | CuboidObject | HexagonalPrismObject | SphereObject | HemisphereObject | TriangularPrismObject;
 
 export type DrawingMode = "draw" | "erase" | "text";
-export type ShapeTool = "rectangle" | "circle" | "line" | "arrow" | "triangle" | "ellipse" | "polygon" | "person" | "house" | "star";
+export type ShapeTool = "rectangle" | "circle" | "line" | "arrow" | "triangle" | "ellipse" | "polygon" | "person" | "house" | "star" | "cube" | "cylinder" | "pyramid" | "cone" | "cuboid" | "hexagonalPrism" | "sphere" | "hemisphere" | "triangularPrism";

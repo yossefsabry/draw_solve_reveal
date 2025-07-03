@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AnyDrawingObject, DrawingMode } from './types';
@@ -118,44 +117,145 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
       setObjects([...objects, newObject]);
     } else if (selectedShape && startPoint) {
       let newObject: AnyDrawingObject | null = null;
-      
-      if (selectedShape === 'rectangle') {
-        const width = Math.abs(endPoint.x - startPoint.x);
-        const height = Math.abs(endPoint.y - startPoint.y);
-        newObject = {
-          type: 'rectangle',
-          x: Math.min(startPoint.x, endPoint.x),
-          y: Math.min(startPoint.y, endPoint.y),
-          width,
-          height,
-          color,
-          lineWidth: brushSize
-        };
-      } else if (selectedShape === 'circle') {
-        const radius = Math.sqrt(
-          Math.pow(endPoint.x - startPoint.x, 2) + 
-          Math.pow(endPoint.y - startPoint.y, 2)
-        );
-        newObject = {
-          type: 'circle',
-          x: startPoint.x,
-          y: startPoint.y,
-          radius,
-          color,
-          lineWidth: brushSize
-        };
-      } else if (selectedShape === 'line') {
-        newObject = {
-          type: 'line',
-          x1: startPoint.x,
-          y1: startPoint.y,
-          x2: endPoint.x,
-          y2: endPoint.y,
-          color,
-          lineWidth: brushSize
-        };
+      const minX = Math.min(startPoint.x, endPoint.x);
+      const minY = Math.min(startPoint.y, endPoint.y);
+      const maxX = Math.max(startPoint.x, endPoint.x);
+      const maxY = Math.max(startPoint.y, endPoint.y);
+      const width = Math.abs(endPoint.x - startPoint.x);
+      const height = Math.abs(endPoint.y - startPoint.y);
+      switch (selectedShape) {
+        case 'rectangle':
+          newObject = {
+            type: 'rectangle',
+            x: minX,
+            y: minY,
+            width,
+            height,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'circle':
+          newObject = {
+            type: 'circle',
+            x: startPoint.x,
+            y: startPoint.y,
+            radius: Math.sqrt(Math.pow(endPoint.x - startPoint.x, 2) + Math.pow(endPoint.y - startPoint.y, 2)),
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'line':
+          newObject = {
+            type: 'line',
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: endPoint.x,
+            y2: endPoint.y,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'cube':
+          newObject = {
+            type: 'cube',
+            x: minX,
+            y: minY,
+            size: Math.max(width, height),
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'cylinder':
+          newObject = {
+            type: 'cylinder',
+            x: (startPoint.x + endPoint.x) / 2,
+            y: (startPoint.y + endPoint.y) / 2,
+            radius: width / 2,
+            height: height,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'pyramid':
+          newObject = {
+            type: 'pyramid',
+            x: (startPoint.x + endPoint.x) / 2,
+            y: (startPoint.y + endPoint.y) / 2,
+            size: width,
+            height: height,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'cone':
+          newObject = {
+            type: 'cone',
+            x: (startPoint.x + endPoint.x) / 2,
+            y: (startPoint.y + endPoint.y) / 2,
+            radius: width / 2,
+            height: height,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'cuboid':
+          newObject = {
+            type: 'cuboid',
+            x: minX,
+            y: minY,
+            width,
+            height,
+            depth: width * 0.5,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'hexagonalPrism':
+          newObject = {
+            type: 'hexagonalPrism',
+            x: (startPoint.x + endPoint.x) / 2,
+            y: (startPoint.y + endPoint.y) / 2,
+            radius: width / 2,
+            height: height,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'sphere':
+          newObject = {
+            type: 'sphere',
+            x: (startPoint.x + endPoint.x) / 2,
+            y: (startPoint.y + endPoint.y) / 2,
+            radius: width / 2,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'hemisphere':
+          newObject = {
+            type: 'hemisphere',
+            x: (startPoint.x + endPoint.x) / 2,
+            y: (startPoint.y + endPoint.y) / 2,
+            radius: width / 2,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'triangularPrism':
+          newObject = {
+            type: 'triangularPrism',
+            x: minX,
+            y: minY,
+            width,
+            height,
+            depth: width * 0.5,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        // Add more shapes as needed
       }
-      
       if (newObject) {
         setObjects([...objects, newObject]);
       }
