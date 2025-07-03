@@ -1,10 +1,12 @@
+
 import React, { useEffect, useRef, useState } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import { AnyDrawingObject, DrawingMode } from '../types';
 import Shape3D from './Shape3D';
 import DrawingPath3D from './DrawingPath3D';
 import ShapePreview3D from './ShapePreview3D';
+import * as THREE from 'three';
 
 interface Scene3DProps {
   objects: AnyDrawingObject[];
@@ -37,22 +39,24 @@ const Scene3D: React.FC<Scene3DProps> = ({
   selectedShape,
   mode
 }) => {
-  const { camera, gl } = useThree();
+  const { camera, gl, raycaster, mouse } = useThree();
   const controlsRef = useRef<any>();
   const [isPanning, setIsPanning] = useState(false);
-  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   const [isAltPressed, setIsAltPressed] = useState(false);
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+  const planeRef = useRef<THREE.Mesh>(null);
   
   useEffect(() => {
-    camera.position.set(5, 5, 5);
+    // Position camera to show the full grid plate
+    camera.position.set(10, 10, 10);
     camera.lookAt(0, 0, 0);
     
     // Enable shadows for better visual quality
     gl.shadowMap.enabled = true;
-    gl.shadowMap.type = 2; // PCFSoftShadowMap
+    gl.shadowMap.type = THREE.PCFSoftShadowMap;
   }, [camera, gl]);
 
-  // Handle keyboard events for Alt key
+  // Handle keyboard events for Alt key (panning)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.altKey) {
@@ -82,6 +86,53 @@ const Scene3D: React.FC<Scene3DProps> = ({
     };
   }, []);
 
+  // Handle zoom to cursor functionality
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (!controlsRef.current) return;
+      
+      e.preventDefault();
+      
+      // Get mouse position in normalized device coordinates
+      const rect = gl.domElement.getBoundingClientRect();
+      const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      
+      // Update raycaster with mouse position
+      raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+      
+      // Find intersection with the drawing plane
+      if (planeRef.current) {
+        const intersects = raycaster.intersectObject(planeRef.current);
+        if (intersects.length > 0) {
+          const point = intersects[0].point;
+          
+          // Zoom towards the intersection point
+          const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+          const direction = point.clone().sub(camera.position).normalize();
+          const distance = camera.position.distanceTo(point);
+          const newDistance = distance * zoomFactor;
+          
+          // Clamp zoom distance
+          const clampedDistance = Math.max(2, Math.min(50, newDistance));
+          camera.position.copy(point.clone().sub(direction.multiplyScalar(clampedDistance)));
+          
+          if (controlsRef.current) {
+            controlsRef.current.target.copy(point);
+            controlsRef.current.update();
+          }
+        }
+      }
+    };
+
+    const canvas = gl.domElement;
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      canvas.removeEventListener('wheel', handleWheel);
+    };
+  }, [camera, gl, raycaster]);
+
   // Handle mouse events for panning
   const handleMouseDown = (e: any) => {
     if (isAltPressed) {
@@ -100,8 +151,20 @@ const Scene3D: React.FC<Scene3DProps> = ({
       
       // Pan the camera based on mouse movement
       const panSpeed = 0.01;
-      camera.position.x -= deltaX * panSpeed;
-      camera.position.y += deltaY * panSpeed;
+      const right = new THREE.Vector3();
+      const up = new THREE.Vector3();
+      
+      camera.getWorldDirection(new THREE.Vector3());
+      right.setFromMatrixColumn(camera.matrix, 0);
+      up.setFromMatrixColumn(camera.matrix, 1);
+      
+      const panVector = right.multiplyScalar(-deltaX * panSpeed).add(up.multiplyScalar(deltaY * panSpeed));
+      camera.position.add(panVector);
+      
+      if (controlsRef.current) {
+        controlsRef.current.target.add(panVector);
+        controlsRef.current.update();
+      }
       
       setLastMousePos({ x: e.clientX, y: e.clientY });
       e.stopPropagation();
@@ -122,49 +185,54 @@ const Scene3D: React.FC<Scene3DProps> = ({
   return (
     <>
       {/* Enhanced Lighting with shadows */}
-      <ambientLight intensity={0.4} />
+      <ambientLight intensity={0.5} />
       <directionalLight 
-        position={[10, 10, 5]} 
-        intensity={1}
+        position={[15, 15, 10]} 
+        intensity={1.2}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-far={50}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
+        shadow-camera-far={100}
+        shadow-camera-left={-30}
+        shadow-camera-right={30}
+        shadow-camera-top={30}
+        shadow-camera-bottom={-30}
       />
       <pointLight 
-        position={[-10, 8, -5]} 
-        intensity={0.3}
+        position={[-15, 12, -10]} 
+        intensity={0.4}
         castShadow
       />
       
-      {/* Grid with shadow receiving capability */}
+      {/* Large Grid Plate - positioned as the base */}
       {showGrid && (
         <>
           <Grid
             position={[0, 0, 0]}
-            args={[20, 20]}
+            args={[50, 50]}
             cellSize={1}
-            cellThickness={0.5}
-            cellColor={'#6f6f6f'}
-            sectionSize={5}
-            sectionThickness={1}
-            sectionColor={'#9d4b4b'}
-            fadeDistance={25}
-            fadeStrength={1}
+            cellThickness={0.6}
+            cellColor={'#444444'}
+            sectionSize={10}
+            sectionThickness={1.2}
+            sectionColor={'#666666'}
+            fadeDistance={100}
+            fadeStrength={0.8}
             followCamera={false}
-            infiniteGrid={true}
+            infiniteGrid={false}
           />
-          {/* Invisible plane to receive shadows */}
+          {/* Invisible plane to receive shadows and catch pointer events */}
           <mesh
+            ref={planeRef}
             position={[0, 0, 0]}
             rotation={[-Math.PI / 2, 0, 0]}
             receiveShadow
+            onPointerDown={handleMouseDown}
+            onPointerMove={handleMouseMove}
+            onPointerUp={handleMouseUp}
+            visible={false}
           >
-            <planeGeometry args={[100, 100]} />
+            <planeGeometry args={[200, 200]} />
             <meshStandardMaterial 
               transparent 
               opacity={0}
@@ -174,20 +242,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
         </>
       )}
       
-      {/* Drawing plane - invisible but catches pointer events */}
-      <mesh
-        position={[0, 0, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        onPointerDown={handleMouseDown}
-        onPointerMove={handleMouseMove}
-        onPointerUp={handleMouseUp}
-        visible={false}
-      >
-        <planeGeometry args={[100, 100]} />
-        <meshBasicMaterial transparent opacity={0} />
-      </mesh>
-      
-      {/* Render all objects */}
+      {/* Render all objects above the grid plate */}
       {objects.map((obj, index) => {
         if (obj.type === 'draw') {
           return (
@@ -202,7 +257,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
         return <Shape3D key={`shape-${index}`} obj={obj} />;
       })}
       
-      {/* Show current drawing path preview with better visibility */}
+      {/* Show current drawing path preview */}
       {isDrawing && currentPath && currentPath.length > 1 && mode === 'draw' && !isPanning && (
         <DrawingPath3D
           points={currentPath}
@@ -212,7 +267,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Show shape preview with improved rendering */}
+      {/* Show shape preview */}
       {isDrawing && selectedShape && previewStartPoint && previewEndPoint && mode !== 'draw' && !isPanning && (
         <ShapePreview3D
           startPoint={previewStartPoint}
@@ -223,16 +278,20 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Controls - disable when drawing or panning */}
+      {/* Enhanced Orbit Controls */}
       <OrbitControls 
         ref={controlsRef}
         enablePan={!isDrawing && !isPanning}
-        enableZoom={!isDrawing && !isPanning}
+        enableZoom={false} // We handle zoom manually for cursor-based zooming
         enableRotate={!isDrawing && !isPanning}
-        minDistance={1}
+        minDistance={2}
         maxDistance={50}
-        dampingFactor={0.05}
+        dampingFactor={0.08}
         enableDamping={true}
+        rotateSpeed={0.8}
+        panSpeed={0.8}
+        autoRotate={false}
+        target={[0, 0, 0]}
       />
     </>
   );

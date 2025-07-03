@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AnyDrawingObject, DrawingMode } from './types';
 import { useKeyboardControl } from '@/hooks/canvas/use-keyboard-control';
@@ -123,6 +124,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
       const maxY = Math.max(startPoint.y, endPoint.y);
       const width = Math.abs(endPoint.x - startPoint.x);
       const height = Math.abs(endPoint.y - startPoint.y);
+      
       switch (selectedShape) {
         case 'rectangle':
           newObject = {
@@ -148,6 +150,63 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'line':
           newObject = {
             type: 'line',
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: endPoint.x,
+            y2: endPoint.y,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'arrow':
+          newObject = {
+            type: 'arrow',
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: endPoint.x,
+            y2: endPoint.y,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'triangle':
+          newObject = {
+            type: 'triangle',
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: endPoint.x,
+            y2: endPoint.y,
+            x3: (startPoint.x + endPoint.x) / 2,
+            y3: startPoint.y - height,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'star':
+          newObject = {
+            type: 'star',
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: endPoint.x,
+            y2: endPoint.y,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'person':
+          newObject = {
+            type: 'person',
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: endPoint.x,
+            y2: endPoint.y,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'house':
+          newObject = {
+            type: 'house',
             x1: startPoint.x,
             y1: startPoint.y,
             x2: endPoint.x,
@@ -254,8 +313,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
             lineWidth: brushSize
           };
           break;
-        // Add more shapes as needed
       }
+      
       if (newObject) {
         setObjects([...objects, newObject]);
       }
@@ -271,7 +330,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
     <div className="w-full h-full relative">
       <PositionIndicator position={currentPosition} isPanning={isPanning} />
       <Canvas
-        camera={{ position: [5, 5, 5], fov: 75 }}
+        camera={{ position: [8, 8, 8], fov: 60 }}
         style={{ background: '#1a1a1a' }}
       >
         <Scene3D 
