@@ -46,6 +46,9 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
     
     if (mode === 'draw') {
       setCurrentPath([worldPoint]);
+    } else {
+      // For shapes, initialize preview
+      setPreviewEndPoint(worldPoint);
     }
   };
   
@@ -92,10 +95,34 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         }
       }
       
-      setCurrentPath(prev => [...prev.slice(0, 1), finalPoint]);
+      setCurrentPath(prev => {
+        const newPath = [...prev];
+        if (newPath.length === 1) {
+          newPath.push(finalPoint);
+        } else {
+          newPath[newPath.length - 1] = finalPoint;
+        }
+        return newPath;
+      });
     } else {
-      // For shapes, just update the preview end point
-      setPreviewEndPoint(worldPoint);
+      // For shapes, update the preview end point
+      let finalEndPoint = worldPoint;
+      
+      // Handle straight lines for line and arrow shapes
+      if ((selectedShape === 'line' || selectedShape === 'arrow') && keyPressed.ctrl && startPoint) {
+        const deltaX = Math.abs(worldPoint.x - startPoint.x);
+        const deltaY = Math.abs(worldPoint.y - startPoint.y);
+        
+        if (deltaX >= deltaY) {
+          // Horizontal line
+          finalEndPoint = { x: worldPoint.x, y: startPoint.y };
+        } else {
+          // Vertical line
+          finalEndPoint = { x: startPoint.x, y: worldPoint.y };
+        }
+      }
+      
+      setPreviewEndPoint(finalEndPoint);
     }
   };
   
@@ -117,12 +144,15 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
       setObjects([...objects, newObject]);
     } else if (selectedShape && startPoint) {
       let newObject: AnyDrawingObject | null = null;
-      const minX = Math.min(startPoint.x, endPoint.x);
-      const minY = Math.min(startPoint.y, endPoint.y);
-      const maxX = Math.max(startPoint.x, endPoint.x);
-      const maxY = Math.max(startPoint.y, endPoint.y);
-      const width = Math.abs(endPoint.x - startPoint.x);
-      const height = Math.abs(endPoint.y - startPoint.y);
+      let finalEndPoint = previewEndPoint || endPoint;
+      
+      const minX = Math.min(startPoint.x, finalEndPoint.x);
+      const minY = Math.min(startPoint.y, finalEndPoint.y);
+      const maxX = Math.max(startPoint.x, finalEndPoint.x);
+      const maxY = Math.max(startPoint.y, finalEndPoint.y);
+      const width = Math.abs(finalEndPoint.x - startPoint.x);
+      const height = Math.abs(finalEndPoint.y - startPoint.y);
+      
       switch (selectedShape) {
         case 'rectangle':
           newObject = {
@@ -140,7 +170,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
             type: 'circle',
             x: startPoint.x,
             y: startPoint.y,
-            radius: Math.sqrt(Math.pow(endPoint.x - startPoint.x, 2) + Math.pow(endPoint.y - startPoint.y, 2)),
+            radius: Math.sqrt(Math.pow(finalEndPoint.x - startPoint.x, 2) + Math.pow(finalEndPoint.y - startPoint.y, 2)),
             color,
             lineWidth: brushSize
           };
@@ -150,8 +180,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
             type: 'line',
             x1: startPoint.x,
             y1: startPoint.y,
-            x2: endPoint.x,
-            y2: endPoint.y,
+            x2: finalEndPoint.x,
+            y2: finalEndPoint.y,
             color,
             lineWidth: brushSize
           };
@@ -169,8 +199,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'cylinder':
           newObject = {
             type: 'cylinder',
-            x: (startPoint.x + endPoint.x) / 2,
-            y: (startPoint.y + endPoint.y) / 2,
+            x: (startPoint.x + finalEndPoint.x) / 2,
+            y: (startPoint.y + finalEndPoint.y) / 2,
             radius: width / 2,
             height: height,
             color,
@@ -180,8 +210,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'pyramid':
           newObject = {
             type: 'pyramid',
-            x: (startPoint.x + endPoint.x) / 2,
-            y: (startPoint.y + endPoint.y) / 2,
+            x: (startPoint.x + finalEndPoint.x) / 2,
+            y: (startPoint.y + finalEndPoint.y) / 2,
             size: width,
             height: height,
             color,
@@ -191,8 +221,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'cone':
           newObject = {
             type: 'cone',
-            x: (startPoint.x + endPoint.x) / 2,
-            y: (startPoint.y + endPoint.y) / 2,
+            x: (startPoint.x + finalEndPoint.x) / 2,
+            y: (startPoint.y + finalEndPoint.y) / 2,
             radius: width / 2,
             height: height,
             color,
@@ -214,8 +244,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'hexagonalPrism':
           newObject = {
             type: 'hexagonalPrism',
-            x: (startPoint.x + endPoint.x) / 2,
-            y: (startPoint.y + endPoint.y) / 2,
+            x: (startPoint.x + finalEndPoint.x) / 2,
+            y: (startPoint.y + finalEndPoint.y) / 2,
             radius: width / 2,
             height: height,
             color,
@@ -225,8 +255,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'sphere':
           newObject = {
             type: 'sphere',
-            x: (startPoint.x + endPoint.x) / 2,
-            y: (startPoint.y + endPoint.y) / 2,
+            x: (startPoint.x + finalEndPoint.x) / 2,
+            y: (startPoint.y + finalEndPoint.y) / 2,
             radius: width / 2,
             color,
             lineWidth: brushSize
@@ -235,8 +265,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         case 'hemisphere':
           newObject = {
             type: 'hemisphere',
-            x: (startPoint.x + endPoint.x) / 2,
-            y: (startPoint.y + endPoint.y) / 2,
+            x: (startPoint.x + finalEndPoint.x) / 2,
+            y: (startPoint.y + finalEndPoint.y) / 2,
             radius: width / 2,
             color,
             lineWidth: brushSize
@@ -254,8 +284,76 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
             lineWidth: brushSize
           };
           break;
-        // Add more shapes as needed
+        case 'triangle':
+          newObject = {
+            type: 'triangle',
+            x: startPoint.x,
+            y: startPoint.y,
+            x2: finalEndPoint.x,
+            y2: finalEndPoint.y,
+            x3: startPoint.x,
+            y3: finalEndPoint.y,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'ellipse':
+          newObject = {
+            type: 'ellipse',
+            x: (startPoint.x + finalEndPoint.x) / 2,
+            y: (startPoint.y + finalEndPoint.y) / 2,
+            radiusX: width / 2,
+            radiusY: height / 2,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'arrow':
+          newObject = {
+            type: 'arrow',
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: finalEndPoint.x,
+            y2: finalEndPoint.y,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'star':
+          newObject = {
+            type: 'star',
+            x: (startPoint.x + finalEndPoint.x) / 2,
+            y: (startPoint.y + finalEndPoint.y) / 2,
+            outerRadius: width / 2,
+            innerRadius: width / 4,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'person':
+          newObject = {
+            type: 'person',
+            x: (startPoint.x + finalEndPoint.x) / 2,
+            y: (startPoint.y + finalEndPoint.y) / 2,
+            width: width,
+            height: height,
+            color,
+            lineWidth: brushSize
+          };
+          break;
+        case 'house':
+          newObject = {
+            type: 'house',
+            x: minX,
+            y: minY,
+            width: width,
+            height: height,
+            color,
+            lineWidth: brushSize
+          };
+          break;
       }
+      
       if (newObject) {
         setObjects([...objects, newObject]);
       }
@@ -271,7 +369,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
     <div className="w-full h-full relative">
       <PositionIndicator position={currentPosition} isPanning={isPanning} />
       <Canvas
-        camera={{ position: [5, 5, 5], fov: 75 }}
+        camera={{ position: [10, 15, 10], fov: 75 }}
         style={{ background: '#1a1a1a' }}
       >
         <Scene3D 
