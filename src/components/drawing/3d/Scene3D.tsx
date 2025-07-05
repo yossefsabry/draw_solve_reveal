@@ -23,7 +23,6 @@ interface Scene3DProps {
   isDrawing?: boolean;
   selectedShape?: string;
   mode?: DrawingMode;
-  isSpaceDown?: boolean;
 }
 
 const Scene3D: React.FC<Scene3DProps> = ({ 
@@ -39,15 +38,12 @@ const Scene3D: React.FC<Scene3DProps> = ({
   brushSize,
   isDrawing,
   selectedShape,
-  mode,
-  isSpaceDown = false
+  mode
 }) => {
   const { camera, gl, raycaster } = useThree();
   const controlsRef = useRef<any>();
   const planeRef = useRef<THREE.Mesh>(null);
-  const [isPanning, setIsPanning] = useState(false);
-  const panStart = useRef<{ x: number; y: number; cameraPos: THREE.Vector3; target: THREE.Vector3 } | null>(null);
-
+  
   useEffect(() => {
     // Position camera to show the full grid plate
     camera.position.set(25, 25, 25);
@@ -61,139 +57,76 @@ const Scene3D: React.FC<Scene3DProps> = ({
   // Enhanced zoom to cursor functionality - fixed rotation issue
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
+      if (!controlsRef.current || !planeRef.current) return;
+      
       e.preventDefault();
-      // Reverse zoom direction
-      const zoomSpeed = 0.1;
+      
       // Get mouse position in normalized device coordinates
       const rect = gl.domElement.getBoundingClientRect();
       const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      // Raycast to find intersection point on the grid/plane
+      
+      // Update raycaster with mouse position
       raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
-      let intersectionPoint = null;
-      if (planeRef.current) {
-        const intersects = raycaster.intersectObject(planeRef.current);
-        if (intersects.length > 0) {
-          intersectionPoint = intersects[0].point;
-        }
-      }
-      // Calculate zoom direction (reverse)
-      const delta = e.deltaY < 0 ? 1 : -1; // Reverse: scroll up = zoom in
-      // Clamp distance
-      const minDistance = 2;
-      const maxDistance = 150;
-      if (intersectionPoint) {
-        // Vector from intersection to camera
-        const toCamera = camera.position.clone().sub(intersectionPoint);
-        const currentDistance = toCamera.length();
-        let newDistance = currentDistance * (1 - delta * zoomSpeed);
-        newDistance = Math.max(minDistance, Math.min(maxDistance, newDistance));
-        // New camera position along the same ray
-        const newCameraPos = intersectionPoint.clone().add(toCamera.normalize().multiplyScalar(newDistance));
-        camera.position.copy(newCameraPos);
-        camera.lookAt(intersectionPoint);
+      
+      // Find intersection with the drawing plane
+      const intersects = raycaster.intersectObject(planeRef.current);
+      if (intersects.length > 0) {
+        const intersectionPoint = intersects[0].point;
+        
+        // Increased zoom speed for faster zooming
+        const zoomSpeed = 0.3;
+        const zoomFactor = e.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed;
+        
+        // Calculate direction from camera to intersection point
+        const direction = intersectionPoint.clone().sub(camera.position);
+        const currentDistance = direction.length();
+        
+        // Calculate new distance with faster transition
+        const newDistance = currentDistance * zoomFactor;
+        
+        // Clamp zoom distance for better control
+        const minDistance = 2;
+        const maxDistance = 150;
+        const clampedDistance = Math.max(minDistance, Math.min(maxDistance, newDistance));
+        
+        // Update camera position smoothly but faster
+        direction.normalize();
+        const newPosition = intersectionPoint.clone().sub(direction.multiplyScalar(clampedDistance));
+        
+        // Faster transition and prevent rotation during zoom
+        camera.position.lerp(newPosition, 0.4);
+        
+        // Keep the target stable to prevent rotation
         if (controlsRef.current) {
           controlsRef.current.target.copy(intersectionPoint);
           controlsRef.current.update();
         }
       }
     };
+
     const canvas = gl.domElement;
     canvas.addEventListener('wheel', handleWheel, { passive: false });
+
     return () => {
       canvas.removeEventListener('wheel', handleWheel);
     };
   }, [camera, gl, raycaster]);
 
-  // --- Modern Panning Logic ---
-  useEffect(() => {
-    const handlePointerDown = (e: MouseEvent) => {
-      // Only pan with space + left mouse
-      if (isSpaceDown && e.button === 0) {
-        setIsPanning(true);
-        panStart.current = {
-          x: e.clientX,
-          y: e.clientY,
-          cameraPos: camera.position.clone(),
-          target: controlsRef.current ? controlsRef.current.target.clone() : new THREE.Vector3(0, 0, 0)
-        };
-      }
-    };
-    const handlePointerMove = (e: MouseEvent) => {
-      if (isPanning && panStart.current) {
-        // Calculate mouse movement
-        const dx = e.clientX - panStart.current.x;
-        const dy = e.clientY - panStart.current.y;
-        // Pan speed factor (adjust as needed)
-        const panSpeed = 0.02 * camera.position.length() / 25;
-        // Get camera right and up vectors
-        const right = new THREE.Vector3();
-        camera.getWorldDirection(right);
-        right.cross(camera.up).normalize();
-        const up = camera.up.clone().normalize();
-        // Calculate pan offset
-        const offset = right.multiplyScalar(-dx * panSpeed).add(up.multiplyScalar(dy * panSpeed));
-        // Move camera and target
-        camera.position.copy(panStart.current.cameraPos.clone().add(offset));
-        if (controlsRef.current) {
-          controlsRef.current.target.copy(panStart.current.target.clone().add(offset));
-          controlsRef.current.update();
-        }
-      }
-    };
-    const handlePointerUp = (e: MouseEvent) => {
-      if (isPanning) {
-        setIsPanning(false);
-        panStart.current = null;
-      }
-    };
-    window.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
-  }, [isSpaceDown, camera]);
-
-  // --- OrbitControls: only for right mouse drag (button 2) ---
-  // Always enabled, but only allow rotation if right mouse is down and not panning
-  const [isRotating, setIsRotating] = useState(false);
-  useEffect(() => {
-    const handlePointerDown = (e: MouseEvent) => {
-      if (!isSpaceDown && e.button === 2) {
-        setIsRotating(true);
-      }
-    };
-    const handlePointerUp = (e: MouseEvent) => {
-      if (isRotating && e.button === 2) {
-        setIsRotating(false);
-      }
-    };
-    window.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('pointerup', handlePointerUp);
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
-  }, [isSpaceDown, isRotating]);
-
-  // --- Drawing logic: only when not panning or rotating ---
+  // Handle mouse events for drawing
   const handleMouseDown = (e: any) => {
-    if (isPanning || isRotating) return;
     if (onPointerDown) {
       onPointerDown(e);
     }
   };
+
   const handleMouseMove = (e: any) => {
-    if (isPanning || isRotating) return;
     if (onPointerMove) {
       onPointerMove(e);
     }
   };
+
   const handleMouseUp = (e: any) => {
-    if (isPanning || isRotating) return;
     if (onPointerUp) {
       onPointerUp(e);
     }
@@ -201,7 +134,8 @@ const Scene3D: React.FC<Scene3DProps> = ({
   
   return (
     <>
-      {/* Removed Coordinate Indicator in top right */}
+      {/* Coordinate Indicator in top right */}
+      <CoordinateIndicator />
       
       {/* Enhanced Lighting with shadows */}
       <ambientLight intensity={0.7} />
@@ -223,7 +157,8 @@ const Scene3D: React.FC<Scene3DProps> = ({
         castShadow
       />
       
-      {/* Removed Subtle Coordinate Axes */}
+      {/* Subtle Coordinate Axes */}
+      {showGrid && <CoordinateAxes />}
       
       {/* Large Rectangular Grid Plate with very subtle pink color */}
       {showGrid && (
@@ -301,15 +236,14 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* OrbitControls: always rendered, but only enabled when spacebar is held */}
-      <OrbitControls
+      {/* Enhanced Orbit Controls - stable rotation, no zoom */}
+      <OrbitControls 
         ref={controlsRef}
-        enabled={isRotating}
-        enablePan={false}
-        enableZoom={false}
-        enableRotate={true}
+        enablePan={false} 
+        enableZoom={false} 
+        enableRotate={true} 
         enableDamping={true}
-        dampingFactor={0.08}
+        dampingFactor={0.08} 
         rotateSpeed={0.5}
         autoRotate={false}
         target={[0, 0, 0]}

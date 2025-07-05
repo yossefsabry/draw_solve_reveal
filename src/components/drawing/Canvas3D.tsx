@@ -1,8 +1,10 @@
+
 import React, { useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AnyDrawingObject, DrawingMode } from './types';
 import { useKeyboardControl } from '@/hooks/canvas/use-keyboard-control';
 import Scene3D from './3d/Scene3D';
+import PositionIndicator from './3d/PositionIndicator';
 
 interface Canvas3DProps {
   color: string;
@@ -33,40 +35,50 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   
   const handlePointerDown = (e: any) => {
     if (keyPressed.space) return;
+    
     e.stopPropagation();
+    
     const point = e.point;
     // Convert 3D intersection to 2D coordinates
     const worldPoint = { x: point.x * 50, y: -point.z * 50 };
+    
     setIsDrawing(true);
     setStartPoint(worldPoint);
+    
     if (mode === 'draw') {
       setCurrentPath([worldPoint]);
     }
   };
   
   const handlePointerMove = (e: any) => {
-    if (keyPressed.space) return;
     const point = e.point;
     // Convert 3D intersection to 2D coordinates
     const worldPoint = { x: point.x * 50, y: -point.z * 50 };
+    
+    // Update position indicator
     setCurrentPosition({
       x: worldPoint.x,
       y: worldPoint.y,
       z: point.y * 50
     });
-    if (!isDrawing) return;
+    
+    if (!isDrawing || keyPressed.space) return;
+    
     e.stopPropagation();
+    
     if (mode === 'draw') {
       // Handle straight line drawing with Shift
       let finalPoint = worldPoint;
       if (keyPressed.shift && startPoint) {
         const deltaX = Math.abs(worldPoint.x - startPoint.x);
         const deltaY = Math.abs(worldPoint.y - startPoint.y);
+        
         if (keyPressed.ctrl) {
           // Snap to 90-degree increments
           const angle = Math.atan2(worldPoint.y - startPoint.y, worldPoint.x - startPoint.x);
           const snapAngle = Math.round(angle / (Math.PI / 2)) * (Math.PI / 2);
           const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+          
           finalPoint = {
             x: startPoint.x + Math.cos(snapAngle) * distance,
             y: startPoint.y + Math.sin(snapAngle) * distance
@@ -80,6 +92,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
           }
         }
       }
+      
       setCurrentPath(prev => [...prev.slice(0, 1), finalPoint]);
     } else {
       // For shapes, just update the preview end point
@@ -88,11 +101,13 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   };
   
   const handlePointerUp = (e: any) => {
-    if (keyPressed.space) return;
-    if (!isDrawing) return;
+    if (!isDrawing || keyPressed.space) return;
+    
     e.stopPropagation();
+    
     const point = e.point;
     const endPoint = { x: point.x * 50, y: -point.z * 50 };
+    
     if (mode === 'draw' && currentPath.length > 1) {
       const newObject: AnyDrawingObject = {
         type: 'draw',
@@ -304,6 +319,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         setObjects([...objects, newObject]);
       }
     }
+    
     setIsDrawing(false);
     setCurrentPath([]);
     setStartPoint(null);
@@ -312,6 +328,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   
   return (
     <div className="w-full h-full relative">
+      <PositionIndicator position={currentPosition} isPanning={isPanning} />
       <Canvas
         camera={{ position: [8, 8, 8], fov: 60 }}
         style={{ background: '#1a1a1a' }}
