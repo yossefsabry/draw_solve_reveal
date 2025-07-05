@@ -53,15 +53,31 @@ const Scene3D: React.FC<Scene3DProps> = ({
     gl.shadowMap.type = THREE.PCFSoftShadowMap;
   }, [camera, gl]);
 
-  // Simple 2D-like zoom functionality
+  // Zoom to cursor functionality
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (!controlsRef.current) return;
       
       e.preventDefault();
       
-      // Simple zoom factor - faster response
-      const zoomSpeed = 0.1;
+      // Get mouse position in normalized device coordinates (-1 to +1)
+      const canvas = gl.domElement;
+      const rect = canvas.getBoundingClientRect();
+      const mouse = new THREE.Vector2();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      
+      // Create raycaster from mouse position
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+      
+      // Find intersection with the grid plane
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const intersectionPoint = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersectionPoint);
+      
+      // Zoom parameters
+      const zoomSpeed = 0.3;
       const zoomFactor = e.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed;
       
       // Get current distance from target
@@ -74,6 +90,12 @@ const Scene3D: React.FC<Scene3DProps> = ({
       
       // Calculate direction from target to camera
       const direction = camera.position.clone().sub(controlsRef.current.target).normalize();
+      
+      // Move target towards intersection point for zoom-to-cursor effect
+      if (intersectionPoint) {
+        const targetShift = intersectionPoint.clone().sub(controlsRef.current.target).multiplyScalar(0.1);
+        controlsRef.current.target.add(targetShift);
+      }
       
       // Set new camera position maintaining the same angle
       const newPosition = controlsRef.current.target.clone().add(direction.multiplyScalar(newDistance));
