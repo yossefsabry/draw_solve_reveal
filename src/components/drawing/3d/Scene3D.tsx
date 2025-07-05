@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
@@ -5,8 +6,6 @@ import { AnyDrawingObject, DrawingMode } from '../types';
 import Shape3D from './Shape3D';
 import DrawingPath3D from './DrawingPath3D';
 import ShapePreview3D from './ShapePreview3D';
-import CoordinateAxes from './CoordinateAxes';
-import CoordinateIndicator from './CoordinateIndicator';
 import * as THREE from 'three';
 
 interface Scene3DProps {
@@ -54,55 +53,34 @@ const Scene3D: React.FC<Scene3DProps> = ({
     gl.shadowMap.type = THREE.PCFSoftShadowMap;
   }, [camera, gl]);
 
-  // Enhanced zoom to cursor functionality - fixed rotation issue
+  // Simple 2D-like zoom functionality
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
-      if (!controlsRef.current || !planeRef.current) return;
+      if (!controlsRef.current) return;
       
       e.preventDefault();
       
-      // Get mouse position in normalized device coordinates
-      const rect = gl.domElement.getBoundingClientRect();
-      const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      // Simple zoom factor - faster response
+      const zoomSpeed = 0.1;
+      const zoomFactor = e.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed;
       
-      // Update raycaster with mouse position
-      raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+      // Get current distance from target
+      const currentDistance = camera.position.distanceTo(controlsRef.current.target);
       
-      // Find intersection with the drawing plane
-      const intersects = raycaster.intersectObject(planeRef.current);
-      if (intersects.length > 0) {
-        const intersectionPoint = intersects[0].point;
-        
-        // Increased zoom speed for faster zooming
-        const zoomSpeed = 0.3;
-        const zoomFactor = e.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed;
-        
-        // Calculate direction from camera to intersection point
-        const direction = intersectionPoint.clone().sub(camera.position);
-        const currentDistance = direction.length();
-        
-        // Calculate new distance with faster transition
-        const newDistance = currentDistance * zoomFactor;
-        
-        // Clamp zoom distance for better control
-        const minDistance = 2;
-        const maxDistance = 150;
-        const clampedDistance = Math.max(minDistance, Math.min(maxDistance, newDistance));
-        
-        // Update camera position smoothly but faster
-        direction.normalize();
-        const newPosition = intersectionPoint.clone().sub(direction.multiplyScalar(clampedDistance));
-        
-        // Faster transition and prevent rotation during zoom
-        camera.position.lerp(newPosition, 0.4);
-        
-        // Keep the target stable to prevent rotation
-        if (controlsRef.current) {
-          controlsRef.current.target.copy(intersectionPoint);
-          controlsRef.current.update();
-        }
-      }
+      // Calculate new distance with limits
+      const minDistance = 5;
+      const maxDistance = 100;
+      const newDistance = Math.max(minDistance, Math.min(maxDistance, currentDistance * zoomFactor));
+      
+      // Calculate direction from target to camera
+      const direction = camera.position.clone().sub(controlsRef.current.target).normalize();
+      
+      // Set new camera position maintaining the same angle
+      const newPosition = controlsRef.current.target.clone().add(direction.multiplyScalar(newDistance));
+      camera.position.copy(newPosition);
+      
+      // Update controls
+      controlsRef.current.update();
     };
 
     const canvas = gl.domElement;
@@ -111,7 +89,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
     return () => {
       canvas.removeEventListener('wheel', handleWheel);
     };
-  }, [camera, gl, raycaster]);
+  }, [camera, gl]);
 
   // Handle mouse events for drawing
   const handleMouseDown = (e: any) => {
@@ -134,9 +112,6 @@ const Scene3D: React.FC<Scene3DProps> = ({
   
   return (
     <>
-      {/* Coordinate Indicator in top right */}
-      <CoordinateIndicator />
-      
       {/* Enhanced Lighting with shadows */}
       <ambientLight intensity={0.7} />
       <directionalLight 
@@ -156,9 +131,6 @@ const Scene3D: React.FC<Scene3DProps> = ({
         intensity={0.4}
         castShadow
       />
-      
-      {/* Subtle Coordinate Axes */}
-      {showGrid && <CoordinateAxes />}
       
       {/* Large Rectangular Grid Plate with very subtle pink color */}
       {showGrid && (
@@ -236,7 +208,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Enhanced Orbit Controls - stable rotation, no zoom */}
+      {/* Orbit Controls - rotation only, no zoom */}
       <OrbitControls 
         ref={controlsRef}
         enablePan={false} 
@@ -247,8 +219,8 @@ const Scene3D: React.FC<Scene3DProps> = ({
         rotateSpeed={0.5}
         autoRotate={false}
         target={[0, 0, 0]}
-        minDistance={2}
-        maxDistance={150}
+        minDistance={5}
+        maxDistance={100}
       />
     </>
   );
