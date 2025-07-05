@@ -53,14 +53,14 @@ const Scene3D: React.FC<Scene3DProps> = ({
     gl.shadowMap.type = THREE.PCFSoftShadowMap;
   }, [camera, gl]);
 
-  // Improved zoom to cursor functionality
+  // Highly accurate zoom to cursor functionality
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (!controlsRef.current) return;
       
       e.preventDefault();
       
-      // Get mouse position in normalized device coordinates (-1 to +1)
+      // Get precise mouse position in normalized device coordinates (-1 to +1)
       const canvas = gl.domElement;
       const rect = canvas.getBoundingClientRect();
       const mouse = new THREE.Vector2();
@@ -71,13 +71,15 @@ const Scene3D: React.FC<Scene3DProps> = ({
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(mouse, camera);
       
-      // Find intersection with the grid plane (y = 0)
+      // Find intersection with the grid plane (y = 0) more precisely
       const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
       const intersectionPoint = new THREE.Vector3();
       const hasIntersection = raycaster.ray.intersectPlane(plane, intersectionPoint);
       
-      // Zoom parameters
-      const zoomSpeed = 0.3;
+      if (!hasIntersection) return;
+      
+      // Zoom parameters - slower for more precision
+      const zoomSpeed = 0.15;
       const zoomFactor = e.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed;
       
       // Get current distance from target
@@ -88,24 +90,27 @@ const Scene3D: React.FC<Scene3DProps> = ({
       const maxDistance = 100;
       const newDistance = Math.max(minDistance, Math.min(maxDistance, currentDistance * zoomFactor));
       
-      // Calculate zoom ratio for target adjustment
-      const zoomRatio = (currentDistance - newDistance) / currentDistance;
+      // Only proceed if distance actually changes
+      if (Math.abs(newDistance - currentDistance) < 0.01) return;
       
-      // Move target towards intersection point for zoom-to-cursor effect
-      if (hasIntersection && intersectionPoint) {
-        // Calculate the vector from current target to intersection point
-        const targetToIntersection = intersectionPoint.clone().sub(controlsRef.current.target);
-        
-        // Move target by a portion of this vector based on zoom amount
-        const targetShift = targetToIntersection.multiplyScalar(zoomRatio * 0.5);
-        controlsRef.current.target.add(targetShift);
-      }
+      // Calculate the zoom factor for target adjustment
+      const actualZoomFactor = newDistance / currentDistance;
       
-      // Calculate direction from target to camera
-      const direction = camera.position.clone().sub(controlsRef.current.target).normalize();
+      // Get the vector from camera to intersection point
+      const cameraToIntersection = intersectionPoint.clone().sub(camera.position);
       
-      // Set new camera position maintaining the same angle
-      const newPosition = controlsRef.current.target.clone().add(direction.multiplyScalar(newDistance));
+      // Calculate how much to move the target
+      const targetAdjustment = cameraToIntersection.clone().multiplyScalar(1 - 1 / actualZoomFactor);
+      
+      // Update the target position
+      const newTarget = controlsRef.current.target.clone().add(targetAdjustment);
+      controlsRef.current.target.copy(newTarget);
+      
+      // Calculate direction from new target to camera
+      const direction = camera.position.clone().sub(newTarget).normalize();
+      
+      // Set new camera position
+      const newPosition = newTarget.clone().add(direction.multiplyScalar(newDistance));
       camera.position.copy(newPosition);
       
       // Update controls
