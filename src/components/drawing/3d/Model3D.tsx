@@ -1,8 +1,8 @@
 
 import React, { useRef, useState } from 'react';
 import { useLoader, useFrame } from '@react-three/fiber';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { useDrag } from '@use-gesture/react';
 import * as THREE from 'three';
 
