@@ -54,7 +54,6 @@ const Scene3D: React.FC<Scene3DProps> = ({
     // Enhanced shadow settings for better visual quality
     gl.shadowMap.enabled = true;
     gl.shadowMap.type = THREE.PCFSoftShadowMap;
-    gl.antialias = true;
     gl.toneMapping = THREE.ACESFilmicToneMapping;
     gl.toneMappingExposure = 1.2;
   }, [camera, gl]);
@@ -200,9 +199,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
         shadow-mapSize-height={2048}
       />
       <hemisphereLight 
-        skyColor={0xffffff} 
-        groundColor={0x444444} 
-        intensity={0.4} 
+        args={[0xffffff, 0x444444, 0.4]}
       />
       
       {/* Enhanced Grid System */}
