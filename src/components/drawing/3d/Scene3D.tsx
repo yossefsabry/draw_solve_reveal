@@ -39,12 +39,9 @@ const Scene3D: React.FC<Scene3DProps> = ({
   selectedShape,
   mode
 }) => {
-  const { camera, gl, raycaster } = useThree();
+  const { camera, gl } = useThree();
   const controlsRef = useRef<any>();
   const planeRef = useRef<THREE.Mesh>(null);
-  const [gridMode, setGridMode] = useState<'standard' | 'detailed' | 'minimal'>('standard');
-  const [showAxes, setShowAxes] = useState(true);
-  const [showLabels, setShowLabels] = useState(true);
   
   useEffect(() => {
     // Enhanced camera positioning for better 3D perspective
@@ -138,41 +135,6 @@ const Scene3D: React.FC<Scene3DProps> = ({
       onPointerUp(e);
     }
   };
-
-  // Grid configuration based on mode
-  const getGridConfig = () => {
-    switch (gridMode) {
-      case 'detailed':
-        return {
-          cellSize: 1,
-          sectionSize: 5,
-          cellThickness: 0.5,
-          sectionThickness: 1.0,
-          cellColor: '#ffb3d9',
-          sectionColor: '#ff80cc'
-        };
-      case 'minimal':
-        return {
-          cellSize: 5,
-          sectionSize: 25,
-          cellThickness: 0.2,
-          sectionThickness: 0.4,
-          cellColor: '#ffccee',
-          sectionColor: '#ff99dd'
-        };
-      default: // standard
-        return {
-          cellSize: 2,
-          sectionSize: 10,
-          cellThickness: 0.3,
-          sectionThickness: 0.6,
-          cellColor: '#ffb3d9',
-          sectionColor: '#ff99cc'
-        };
-    }
-  };
-
-  const gridConfig = getGridConfig();
   
   return (
     <>
@@ -204,99 +166,61 @@ const Scene3D: React.FC<Scene3DProps> = ({
       
       {/* Enhanced Grid System */}
       {showGrid && (
-        <>
-          <Grid
-            position={[0, 0, 0]}
-            args={[250, 200]} 
-            cellSize={gridConfig.cellSize}
-            cellThickness={gridConfig.cellThickness}
-            cellColor={gridConfig.cellColor} 
-            sectionSize={gridConfig.sectionSize}
-            sectionThickness={gridConfig.sectionThickness}
-            sectionColor={gridConfig.sectionColor} 
-            fadeDistance={500}
-            fadeStrength={0.9} 
-            followCamera={false}
-            infiniteGrid={false}
-            material-opacity={0.25}
-            material-transparent={true}
-          />
-          
-          {/* Secondary grid for fine details */}
-          {gridMode === 'detailed' && (
-            <Grid
-              position={[0, 0.01, 0]}
-              args={[100, 80]} 
-              cellSize={0.5}
-              cellThickness={0.2}
-              cellColor={'#ffe6f5'} 
-              sectionSize={2.5}
-              sectionThickness={0.3}
-              sectionColor={'#ffccee'} 
-              fadeDistance={200}
-              fadeStrength={1.2} 
-              followCamera={false}
-              infiniteGrid={false}
-              material-opacity={0.15}
-              material-transparent={true}
-            />
-          )}
-        </>
+        <Grid
+          position={[0, 0, 0]}
+          args={[200, 200]} 
+          cellSize={2}
+          cellThickness={0.5}
+          cellColor={'#ffb3d9'} 
+          sectionSize={10}
+          sectionThickness={1.0}
+          sectionColor={'#ff80cc'} 
+          fadeDistance={400}
+          fadeStrength={1} 
+          followCamera={false}
+          infiniteGrid={false}
+        />
       )}
 
       {/* Coordinate Axes */}
-      {showAxes && (
-        <>
-          {/* X-axis (Red) */}
-          <Box args={[100, 0.2, 0.2]} position={[0, 0.1, 0]}>
-            <meshBasicMaterial color="red" transparent opacity={0.7} />
-          </Box>
-          {/* Z-axis (Blue) */}
-          <Box args={[0.2, 0.2, 100]} position={[0, 0.1, 0]}>
-            <meshBasicMaterial color="blue" transparent opacity={0.7} />
-          </Box>
-          {/* Y-axis (Green) */}
-          <Box args={[0.2, 50, 0.2]} position={[0, 25, 0]}>
-            <meshBasicMaterial color="green" transparent opacity={0.7} />
-          </Box>
-        </>
-      )}
+      <Box args={[100, 0.2, 0.2]} position={[0, 0.1, 0]}>
+        <meshBasicMaterial color="red" transparent opacity={0.7} />
+      </Box>
+      <Box args={[0.2, 0.2, 100]} position={[0, 0.1, 0]}>
+        <meshBasicMaterial color="blue" transparent opacity={0.7} />
+      </Box>
+      <Box args={[0.2, 50, 0.2]} position={[0, 25, 0]}>
+        <meshBasicMaterial color="green" transparent opacity={0.7} />
+      </Box>
 
       {/* Coordinate Labels */}
-      {showLabels && (
-        <>
-          <Text
-            position={[25, 2, 0]}
-            rotation={[0, 0, 0]}
-            fontSize={2}
-            color="red"
-            anchorX="center"
-            anchorY="middle"
-          >
-            X
-          </Text>
-          <Text
-            position={[0, 27, 0]}
-            rotation={[0, 0, 0]}
-            fontSize={2}
-            color="green"
-            anchorX="center"
-            anchorY="middle"
-          >
-            Y
-          </Text>
-          <Text
-            position={[0, 2, 25]}
-            rotation={[0, 0, 0]}
-            fontSize={2}
-            color="blue"
-            anchorX="center"
-            anchorY="middle"
-          >
-            Z
-          </Text>
-        </>
-      )}
+      <Text
+        position={[25, 2, 0]}
+        fontSize={2}
+        color="red"
+        anchorX="center"
+        anchorY="middle"
+      >
+        X
+      </Text>
+      <Text
+        position={[0, 27, 0]}
+        fontSize={2}
+        color="green"
+        anchorX="center"
+        anchorY="middle"
+      >
+        Y
+      </Text>
+      <Text
+        position={[0, 2, 25]}
+        fontSize={2}
+        color="blue"
+        anchorX="center"
+        anchorY="middle"
+      >
+        Z
+      </Text>
 
       {/* Origin marker */}
       <Box args={[1, 1, 1]} position={[0, 0.5, 0]}>
@@ -304,8 +228,6 @@ const Scene3D: React.FC<Scene3DProps> = ({
           color="#ff6b9d" 
           transparent 
           opacity={0.8}
-          emissive="#ff6b9d"
-          emissiveIntensity={0.2}
         />
       </Box>
 
@@ -324,7 +246,6 @@ const Scene3D: React.FC<Scene3DProps> = ({
         <meshStandardMaterial 
           transparent 
           opacity={0}
-          shadowSide={2}
         />
       </mesh>
       
