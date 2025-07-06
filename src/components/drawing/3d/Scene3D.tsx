@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Grid, Text, Box } from '@react-three/drei';
+import { OrbitControls, Grid } from '@react-three/drei';
 import { AnyDrawingObject, DrawingMode } from '../types';
 import Shape3D from './Shape3D';
 import DrawingPath3D from './DrawingPath3D';
@@ -42,75 +42,79 @@ const Scene3D: React.FC<Scene3DProps> = ({
   const { camera, gl, raycaster } = useThree();
   const controlsRef = useRef<any>();
   const planeRef = useRef<THREE.Mesh>(null);
-  const [gridMode, setGridMode] = useState<'standard' | 'detailed' | 'minimal'>('standard');
-  const [showAxes, setShowAxes] = useState(true);
-  const [showLabels, setShowLabels] = useState(true);
   
   useEffect(() => {
-    // Enhanced camera positioning for better 3D perspective
-    camera.position.set(30, 30, 30);
+    // Position camera to show the full grid plate
+    camera.position.set(25, 25, 25);
     camera.lookAt(0, 0, 0);
     
-    // Enhanced shadow settings for better visual quality
+    // Enable shadows for better visual quality
     gl.shadowMap.enabled = true;
     gl.shadowMap.type = THREE.PCFSoftShadowMap;
-    gl.antialias = true;
-    gl.toneMapping = THREE.ACESFilmicToneMapping;
-    gl.toneMappingExposure = 1.2;
   }, [camera, gl]);
 
-  // Enhanced zoom to cursor functionality with better precision
+  // Highly accurate zoom to cursor functionality
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (!controlsRef.current) return;
       
       e.preventDefault();
       
-      // Get precise mouse position
+      // Get precise mouse position in normalized device coordinates (-1 to +1)
       const canvas = gl.domElement;
       const rect = canvas.getBoundingClientRect();
       const mouse = new THREE.Vector2();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       
-      // Enhanced raycasting with multiple intersection attempts
+      // Create raycaster from mouse position
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(mouse, camera);
       
-      // Primary intersection with grid plane
-      const gridPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      // Find intersection with the grid plane (y = 0) more precisely
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
       const intersectionPoint = new THREE.Vector3();
-      const hasIntersection = raycaster.ray.intersectPlane(gridPlane, intersectionPoint);
+      const hasIntersection = raycaster.ray.intersectPlane(plane, intersectionPoint);
       
-      // Enhanced zoom parameters
-      const zoomSpeed = e.shiftKey ? 0.15 : 0.1; // Slower zoom with Shift
+      if (!hasIntersection) return;
+      
+      // Zoom parameters - slower for more precision
+      const zoomSpeed = 0.15;
       const zoomFactor = e.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed;
       
-      // Get current distance with better precision
+      // Get current distance from target
       const currentDistance = camera.position.distanceTo(controlsRef.current.target);
       
-      // Dynamic zoom limits based on current view
-      const minDistance = 3;
-      const maxDistance = 150;
+      // Calculate new distance with limits
+      const minDistance = 5;
+      const maxDistance = 100;
       const newDistance = Math.max(minDistance, Math.min(maxDistance, currentDistance * zoomFactor));
       
-      if (hasIntersection && intersectionPoint) {
-        // Calculate precise zoom direction
-        const targetToIntersection = intersectionPoint.clone().sub(controlsRef.current.target);
-        const zoomIntensity = (currentDistance - newDistance) / currentDistance;
-        
-        // Smooth target transition for accurate cursor tracking
-        const targetShift = targetToIntersection.multiplyScalar(zoomIntensity * 0.7);
-        controlsRef.current.target.add(targetShift);
-        
-        // Maintain view angle while zooming
-        const direction = camera.position.clone().sub(controlsRef.current.target).normalize();
-        const newPosition = controlsRef.current.target.clone().add(direction.multiplyScalar(newDistance));
-        
-        // Smooth camera transition
-        camera.position.copy(newPosition);
-        controlsRef.current.update();
-      }
+      // Only proceed if distance actually changes
+      if (Math.abs(newDistance - currentDistance) < 0.01) return;
+      
+      // Calculate the zoom factor for target adjustment
+      const actualZoomFactor = newDistance / currentDistance;
+      
+      // Get the vector from camera to intersection point
+      const cameraToIntersection = intersectionPoint.clone().sub(camera.position);
+      
+      // Calculate how much to move the target
+      const targetAdjustment = cameraToIntersection.clone().multiplyScalar(1 - 1 / actualZoomFactor);
+      
+      // Update the target position
+      const newTarget = controlsRef.current.target.clone().add(targetAdjustment);
+      controlsRef.current.target.copy(newTarget);
+      
+      // Calculate direction from new target to camera
+      const direction = camera.position.clone().sub(newTarget).normalize();
+      
+      // Set new camera position
+      const newPosition = newTarget.clone().add(direction.multiplyScalar(newDistance));
+      camera.position.copy(newPosition);
+      
+      // Update controls
+      controlsRef.current.update();
     };
 
     const canvas = gl.domElement;
@@ -139,197 +143,68 @@ const Scene3D: React.FC<Scene3DProps> = ({
       onPointerUp(e);
     }
   };
-
-  // Grid configuration based on mode
-  const getGridConfig = () => {
-    switch (gridMode) {
-      case 'detailed':
-        return {
-          cellSize: 1,
-          sectionSize: 5,
-          cellThickness: 0.5,
-          sectionThickness: 1.0,
-          cellColor: '#ffb3d9',
-          sectionColor: '#ff80cc'
-        };
-      case 'minimal':
-        return {
-          cellSize: 5,
-          sectionSize: 25,
-          cellThickness: 0.2,
-          sectionThickness: 0.4,
-          cellColor: '#ffccee',
-          sectionColor: '#ff99dd'
-        };
-      default: // standard
-        return {
-          cellSize: 2,
-          sectionSize: 10,
-          cellThickness: 0.3,
-          sectionThickness: 0.6,
-          cellColor: '#ffb3d9',
-          sectionColor: '#ff99cc'
-        };
-    }
-  };
-
-  const gridConfig = getGridConfig();
   
   return (
     <>
-      {/* Enhanced lighting system */}
-      <ambientLight intensity={0.8} />
+      {/* Enhanced Lighting with shadows */}
+      <ambientLight intensity={0.7} />
       <directionalLight 
-        position={[50, 50, 40]} 
-        intensity={1.5}
+        position={[40, 40, 30]} 
+        intensity={1.2}
         castShadow
         shadow-mapSize-width={4096}
         shadow-mapSize-height={4096}
-        shadow-camera-far={400}
-        shadow-camera-left={-150}
-        shadow-camera-right={150}
-        shadow-camera-top={150}
-        shadow-camera-bottom={-150}
-        shadow-bias={-0.0001}
+        shadow-camera-far={300}
+        shadow-camera-left={-100}
+        shadow-camera-right={100}
+        shadow-camera-top={100}
+        shadow-camera-bottom={-100}
       />
       <pointLight 
-        position={[-50, 40, -40]} 
-        intensity={0.6}
+        position={[-40, 30, -30]} 
+        intensity={0.4}
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-      />
-      <hemisphereLight 
-        skyColor={0xffffff} 
-        groundColor={0x444444} 
-        intensity={0.4} 
       />
       
-      {/* Enhanced Grid System */}
+      {/* Large Rectangular Grid Plate with very subtle pink color */}
       {showGrid && (
         <>
           <Grid
             position={[0, 0, 0]}
-            args={[250, 200]} 
-            cellSize={gridConfig.cellSize}
-            cellThickness={gridConfig.cellThickness}
-            cellColor={gridConfig.cellColor} 
-            sectionSize={gridConfig.sectionSize}
-            sectionThickness={gridConfig.sectionThickness}
-            sectionColor={gridConfig.sectionColor} 
-            fadeDistance={500}
-            fadeStrength={0.9} 
+            args={[200, 150]} 
+            cellSize={2}
+            cellThickness={0.3}
+            cellColor={'#ffb3d9'} 
+            sectionSize={10}
+            sectionThickness={0.5}
+            sectionColor={'#ff99cc'} 
+            fadeDistance={400}
+            fadeStrength={0.8} 
             followCamera={false}
             infiniteGrid={false}
-            material-opacity={0.25}
+            material-opacity={0.2}
             material-transparent={true}
           />
-          
-          {/* Secondary grid for fine details */}
-          {gridMode === 'detailed' && (
-            <Grid
-              position={[0, 0.01, 0]}
-              args={[100, 80]} 
-              cellSize={0.5}
-              cellThickness={0.2}
-              cellColor={'#ffe6f5'} 
-              sectionSize={2.5}
-              sectionThickness={0.3}
-              sectionColor={'#ffccee'} 
-              fadeDistance={200}
-              fadeStrength={1.2} 
-              followCamera={false}
-              infiniteGrid={false}
-              material-opacity={0.15}
-              material-transparent={true}
+          {/* Invisible plane to receive shadows and catch pointer events */}
+          <mesh
+            ref={planeRef}
+            position={[0, 0, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            receiveShadow
+            onPointerDown={handleMouseDown}
+            onPointerMove={handleMouseMove}
+            onPointerUp={handleMouseUp}
+            visible={false}
+          >
+            <planeGeometry args={[400, 300]} />
+            <meshStandardMaterial 
+              transparent 
+              opacity={0}
+              shadowSide={2}
             />
-          )}
+          </mesh>
         </>
       )}
-
-      {/* Coordinate Axes */}
-      {showAxes && (
-        <>
-          {/* X-axis (Red) */}
-          <Box args={[100, 0.2, 0.2]} position={[0, 0.1, 0]}>
-            <meshBasicMaterial color="red" transparent opacity={0.7} />
-          </Box>
-          {/* Z-axis (Blue) */}
-          <Box args={[0.2, 0.2, 100]} position={[0, 0.1, 0]}>
-            <meshBasicMaterial color="blue" transparent opacity={0.7} />
-          </Box>
-          {/* Y-axis (Green) */}
-          <Box args={[0.2, 50, 0.2]} position={[0, 25, 0]}>
-            <meshBasicMaterial color="green" transparent opacity={0.7} />
-          </Box>
-        </>
-      )}
-
-      {/* Coordinate Labels */}
-      {showLabels && (
-        <>
-          <Text
-            position={[25, 2, 0]}
-            rotation={[0, 0, 0]}
-            fontSize={2}
-            color="red"
-            anchorX="center"
-            anchorY="middle"
-          >
-            X
-          </Text>
-          <Text
-            position={[0, 27, 0]}
-            rotation={[0, 0, 0]}
-            fontSize={2}
-            color="green"
-            anchorX="center"
-            anchorY="middle"
-          >
-            Y
-          </Text>
-          <Text
-            position={[0, 2, 25]}
-            rotation={[0, 0, 0]}
-            fontSize={2}
-            color="blue"
-            anchorX="center"
-            anchorY="middle"
-          >
-            Z
-          </Text>
-        </>
-      )}
-
-      {/* Origin marker */}
-      <Box args={[1, 1, 1]} position={[0, 0.5, 0]}>
-        <meshStandardMaterial 
-          color="#ff6b9d" 
-          transparent 
-          opacity={0.8}
-          emissive="#ff6b9d"
-          emissiveIntensity={0.2}
-        />
-      </Box>
-
-      {/* Interactive plane for drawing */}
-      <mesh
-        ref={planeRef}
-        position={[0, 0, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        receiveShadow
-        onPointerDown={handleMouseDown}
-        onPointerMove={handleMouseMove}
-        onPointerUp={handleMouseUp}
-        visible={false}
-      >
-        <planeGeometry args={[500, 400]} />
-        <meshStandardMaterial 
-          transparent 
-          opacity={0}
-          shadowSide={2}
-        />
-      </mesh>
       
       {/* Render all objects above the grid plate */}
       {objects.map((obj, index) => {
@@ -366,22 +241,19 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Enhanced Orbit Controls */}
+      {/* Orbit Controls - rotation only, no zoom */}
       <OrbitControls 
         ref={controlsRef}
-        enablePan={true} 
+        enablePan={false} 
         enableZoom={false} 
         enableRotate={true} 
         enableDamping={true}
-        dampingFactor={0.05} 
-        rotateSpeed={0.8}
-        panSpeed={1.2}
+        dampingFactor={0.08} 
+        rotateSpeed={0.5}
         autoRotate={false}
         target={[0, 0, 0]}
-        minDistance={3}
-        maxDistance={150}
-        maxPolarAngle={Math.PI * 0.95}
-        minPolarAngle={0.1}
+        minDistance={5}
+        maxDistance={100}
       />
     </>
   );

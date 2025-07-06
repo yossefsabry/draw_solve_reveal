@@ -5,7 +5,6 @@ import { AnyDrawingObject, DrawingMode } from './types';
 import { useKeyboardControl } from '@/hooks/canvas/use-keyboard-control';
 import Scene3D from './3d/Scene3D';
 import PositionIndicator from './3d/PositionIndicator';
-import GridControls3D from './3d/GridControls3D';
 
 interface Canvas3DProps {
   color: string;
@@ -32,13 +31,6 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   const [previewEndPoint, setPreviewEndPoint] = useState<{ x: number, y: number } | null>(null);
   const [currentPosition, setCurrentPosition] = useState({ x: 0, y: 0, z: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  
-  // New 3D grid states
-  const [gridEnabled, setGridEnabled] = useState(showGrid);
-  const [gridMode, setGridMode] = useState<'standard' | 'detailed' | 'minimal'>('standard');
-  const [showAxes, setShowAxes] = useState(true);
-  const [showLabels, setShowLabels] = useState(true);
-  
   const { keyPressed } = useKeyboardControl();
   
   const handlePointerDown = (e: any) => {
@@ -336,34 +328,14 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   
   return (
     <div className="w-full h-full relative">
-      {/* 3D Grid Controls */}
-      <div className="absolute top-4 right-4 z-10">
-        <GridControls3D
-          showGrid={gridEnabled}
-          gridMode={gridMode}
-          showAxes={showAxes}
-          showLabels={showLabels}
-          onToggleGrid={() => setGridEnabled(!gridEnabled)}
-          onGridModeChange={setGridMode}
-          onToggleAxes={() => setShowAxes(!showAxes)}
-          onToggleLabels={() => setShowLabels(!showLabels)}
-        />
-      </div>
-
       <PositionIndicator position={currentPosition} isPanning={isPanning} />
-      
       <Canvas
-        camera={{ position: [30, 30, 30], fov: 60 }}
-        style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }}
-        gl={{ 
-          antialias: true, 
-          alpha: false,
-          powerPreference: "high-performance"
-        }}
+        camera={{ position: [8, 8, 8], fov: 60 }}
+        style={{ background: '#1a1a1a' }}
       >
         <Scene3D 
           objects={objects} 
-          showGrid={gridEnabled}
+          showGrid={showGrid}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
