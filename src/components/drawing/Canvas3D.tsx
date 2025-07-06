@@ -5,6 +5,10 @@ import { AnyDrawingObject, DrawingMode } from './types';
 import { useKeyboardControl } from '@/hooks/canvas/use-keyboard-control';
 import Scene3D from './3d/Scene3D';
 import PositionIndicator from './3d/PositionIndicator';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import axios from 'axios';
 
 interface Canvas3DProps {
   color: string;
@@ -31,6 +35,9 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   const [previewEndPoint, setPreviewEndPoint] = useState<{ x: number, y: number } | null>(null);
   const [currentPosition, setCurrentPosition] = useState({ x: 0, y: 0, z: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [inputText, setInputText] = useState('');
+  const [isSolving, setIsSolving] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { keyPressed } = useKeyboardControl();
   
   const handlePointerDown = (e: any) => {
@@ -325,30 +332,99 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
     setStartPoint(null);
     setPreviewEndPoint(null);
   };
+
+  const handleSolve = async () => {
+    if (!inputText.trim()) {
+      toast.error("Please enter a question or description!", { duration: 3000 });
+      return;
+    }
+
+    setIsSolving(true);
+    try {
+      // Capture the 3D canvas as an image
+      const canvas = document.querySelector('canvas');
+      if (!canvas) throw new Error("Canvas not available");
+      
+      const imageData = canvas.toDataURL('image/png');
+      
+      const response = await axios({
+        method: 'post',
+        url: 'http://localhost:8900/calculate',
+        data: {
+          image: imageData,
+          question: inputText.trim(),
+          dict_of_vars: {}
+        }
+      });
+      
+      const resp = response.data;
+      console.log("3D Solve result:", resp);
+      
+      // Clear input after successful submission
+      setInputText('');
+      toast.success("Analysis completed successfully!", { duration: 3000 });
+      
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Analysis failed! Make sure the server is running.", { duration: 3000 });
+    } finally {
+      setIsSolving(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !isSolving) {
+      handleSolve();
+    }
+  };
   
   return (
-    <div className="w-full h-full relative">
-      <PositionIndicator position={currentPosition} isPanning={isPanning} />
-      <Canvas
-        camera={{ position: [8, 8, 8], fov: 60 }}
-        style={{ background: '#1a1a1a' }}
-      >
-        <Scene3D 
-          objects={objects} 
-          showGrid={showGrid}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          currentPath={currentPath}
-          previewStartPoint={startPoint}
-          previewEndPoint={previewEndPoint}
-          color={color}
-          brushSize={brushSize}
-          isDrawing={isDrawing}
-          selectedShape={selectedShape}
-          mode={mode}
-        />
-      </Canvas>
+    <div className="w-full h-full flex flex-col relative">
+      <div className="flex-1 relative">
+        <PositionIndicator position={currentPosition} isPanning={isPanning} />
+        <Canvas
+          camera={{ position: [8, 8, 8], fov: 60 }}
+          style={{ background: '#1a1a1a' }}
+        >
+          <Scene3D 
+            objects={objects} 
+            showGrid={showGrid}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            currentPath={currentPath}
+            previewStartPoint={startPoint}
+            previewEndPoint={previewEndPoint}
+            color={color}
+            brushSize={brushSize}
+            isDrawing={isDrawing}
+            selectedShape={selectedShape}
+            mode={mode}
+          />
+        </Canvas>
+      </div>
+      
+      {/* Input and Submit Section */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
+        <div className="flex items-center gap-3 min-w-[400px]">
+          <Input
+            type="text"
+            placeholder="Ask about your 3D drawing or describe what you want to analyze..."
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="flex-1 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+            disabled={isSolving}
+          />
+          <Button
+            onClick={handleSolve}
+            disabled={isSolving || !inputText.trim()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+          >
+            {isSolving ? 'Analyzing...' : 'Submit'}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
