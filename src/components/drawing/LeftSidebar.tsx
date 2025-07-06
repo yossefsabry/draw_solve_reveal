@@ -1,13 +1,13 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Pencil, Eraser, Download, ZoomIn, ZoomOut, Type, Shapes } from "lucide-react";
+import { Pencil, Eraser, Download, ZoomIn, ZoomOut, Type, Shapes, Hand } from "lucide-react";
 import ShapeSelector, { ShapeType } from "./ShapeSelector";
 
 const tools = [
   { name: "Draw", icon: <Pencil className="text-foreground" />, mode: "draw" },
   { name: "Erase", icon: <Eraser className="text-foreground" />, mode: "erase" },
   { name: "Text", icon: <Type className="text-foreground" />, mode: "text" },
+  { name: "Move", icon: <Hand className="text-foreground" />, mode: "move" },
   { name: "Shapes", icon: <Shapes className="text-foreground" />, mode: "shape" },
 ];
 
@@ -73,7 +73,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
               }`}
               style={{ width: 48, height: 48 }}
               onClick={() => handleModeChange(tool.mode)}
-              title={tool.name}
+              title={tool.mode === "move" ? "Move Tool - Click and drag to pan the canvas without drawing" : tool.name}
             >
               {tool.icon}
             </Button>

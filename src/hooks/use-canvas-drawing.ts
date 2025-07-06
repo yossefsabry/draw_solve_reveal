@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { AnyDrawingObject, DrawingMode } from "@/components/drawing/types";
 import { useZoomPan } from "./canvas/use-zoom-pan";
@@ -90,8 +89,8 @@ export const useCanvasDrawing = ({
 
   // Drawing functions with straight line support
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    // If space key is pressed, start panning instead of drawing
-    if (keyPressed.space) {
+    // If space key is pressed or move mode is active, start panning instead of drawing
+    if (keyPressed.space || mode === "move") {
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       startPanning(clientX, clientY);
@@ -112,6 +111,19 @@ export const useCanvasDrawing = ({
   const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
     // Update cursor position for guidelines
     let pos = getPointerPosition(e, lastMousePosRef.current);
+    
+    // Handle panning when move mode is active or space is pressed
+    if ((isPanning || mode === "move") && lastMousePosRef.current) {
+      const clientX = 'touches' in e ? 
+        (e.touches.length > 0 ? e.touches[0].clientX : lastMousePosRef.current.x) : 
+        e.clientX;
+      const clientY = 'touches' in e ? 
+        (e.touches.length > 0 ? e.touches[0].clientY : lastMousePosRef.current.y) : 
+        e.clientY;
+      
+      handlePanning(clientX, clientY);
+      return;
+    }
     
     // Apply straight line constraints when drawing
     if (isDrawing && (mode === "draw" || mode === "erase") && lastMousePosRef.current) {
@@ -142,19 +154,6 @@ export const useCanvasDrawing = ({
     }
     
     updateCursorPosition(pos);
-    
-    // Handle panning when space is pressed and mouse is moving
-    if (isPanning && lastMousePosRef.current) {
-      const clientX = 'touches' in e ? 
-        (e.touches.length > 0 ? e.touches[0].clientX : lastMousePosRef.current.x) : 
-        e.clientX;
-      const clientY = 'touches' in e ? 
-        (e.touches.length > 0 ? e.touches[0].clientY : lastMousePosRef.current.y) : 
-        e.clientY;
-      
-      handlePanning(clientX, clientY);
-      return;
-    }
     
     if (!isDrawing) return;
     

@@ -1,8 +1,8 @@
-
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { validateModelFile, getModelInfo, getRecommendedFormat, formatFileSize } from '@/lib/model-utils';
 
 interface UploadedModel {
   id: string;
@@ -24,48 +24,50 @@ const ModelUploader: React.FC<ModelUploaderProps> = ({ onModelUpload }) => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check file format
-    const extension = file.name.split('.').pop()?.toLowerCase();
-    let format: 'gltf' | 'glb' | 'obj';
-
-    switch (extension) {
-      case 'gltf':
-        format = 'gltf';
-        break;
-      case 'glb':
-        format = 'glb';
-        break;
-      case 'obj':
-        format = 'obj';
-        break;
-      default:
-        toast.error('Unsupported file format. Please use GLTF, GLB, or OBJ files.');
-        return;
+    // Validate the file
+    const validation = validateModelFile(file);
+    if (!validation.valid) {
+      toast.error(validation.error || 'Invalid file');
+      return;
     }
 
-    // Create object URL for the file
-    const url = URL.createObjectURL(file);
+    try {
+      // Get model information
+      const modelInfo = getModelInfo(file);
+      
+      // Show format recommendation for GLTF files
+      if (modelInfo.format === 'gltf') {
+        const recommendation = getRecommendedFormat(modelInfo.format);
+        toast.info(`GLTF file detected. For best compatibility, consider using ${recommendation}.`);
+      }
 
-    // Create model object
-    const model: UploadedModel = {
-      id: Date.now().toString(),
-      name: file.name,
-      url,
-      format,
-      position: [0, 2, 0], // Start slightly above the grid
-      scale: 1
-    };
+      // Create object URL for the file
+      const url = URL.createObjectURL(file);
 
-    onModelUpload(model);
-    toast.success(`${file.name} uploaded successfully!`);
+      // Create model object
+      const model: UploadedModel = {
+        id: Date.now().toString(),
+        name: file.name,
+        url,
+        format: modelInfo.format,
+        position: [0, 2, 0], // Start slightly above the grid
+        scale: 1
+      };
 
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      onModelUpload(model);
+      toast.success(`${file.name} (${formatFileSize(file.size)}) uploaded successfully!`);
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error uploading model:', error);
+      toast.error('Failed to upload model. Please try again.');
     }
   };
 

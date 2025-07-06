@@ -713,6 +713,15 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       return;
     }
 
+    // Handle move mode (hand gesture panning)
+    if (mode === "move") {
+      setIsPanning(true);
+      panStart.current = { x: e.clientX, y: e.clientY };
+      offsetStart.current = { ...offset };
+      e.preventDefault();
+      return;
+    }
+
     // Deselect text when clicking on canvas
     setSelectedTextIndex(null);
 
@@ -740,7 +749,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     const pos = getPos(e);
     setCursor(pos);
     
-    // Improved panning logic
+    // Improved panning logic for both space key and move mode
     if (isPanning && panStart.current && onOffsetChange) {
       const dx = e.clientX - panStart.current.x;
       const dy = e.clientY - panStart.current.y;
@@ -751,7 +760,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       return;
     }
     
-    if (!isDrawing.current || mode === "text") return;
+    if (!isDrawing.current || mode === "text" || mode === "move") return;
     
     if (mode === "draw" || mode === "erase") {
       drawingPath.current.push(pos);
@@ -931,7 +940,8 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
           width: `calc(100% - ${rulerSize}px)`,
           height: `calc(100% - ${rulerSize}px)`,
           touchAction: "none",
-          cursor: isSpaceDown ? (isPanning ? "grabbing" : "grab") : 
+          cursor: mode === "move" ? (isPanning ? "grabbing" : "grab") :
+                 isSpaceDown ? (isPanning ? "grabbing" : "grab") : 
                  mode === "erase" ? "crosshair" : 
                  mode === "text" ? "text" : "crosshair"
         }}

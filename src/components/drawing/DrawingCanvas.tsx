@@ -399,13 +399,10 @@ const DrawingCanvas: React.FC = () => {
       </div>
       
       <BottomStatusBar
-        drawingMode={drawingMode}
         mode={mode}
-        brushSize={brushSize}
         color={color}
-        is2D={is2D}
-        zoom={zoom}
-        selectedShape={selectedShape}
+        brushSize={brushSize}
+        is3D={is3D}
       />
     </div>
   );

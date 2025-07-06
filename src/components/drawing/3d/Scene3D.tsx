@@ -238,6 +238,10 @@ const Scene3D: React.FC<Scene3DProps> = ({
           position={model.position}
           scale={model.scale}
           onPositionChange={(position) => onModelPositionChange?.(model.id, position)}
+          onLoadError={(error) => {
+            console.error(`Failed to load model ${model.name}:`, error);
+            // You could add a toast notification here if you want to show errors to the user
+          }}
         />
       ))}
       

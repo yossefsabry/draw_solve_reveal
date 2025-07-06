@@ -51,7 +51,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   const { keyPressed } = useKeyboardControl();
   
   const handlePointerDown = (e: any) => {
-    if (keyPressed.space) return;
+    if (keyPressed.space || mode === 'move') return;
     
     e.stopPropagation();
     
@@ -79,7 +79,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
       z: point.y * 50
     });
     
-    if (!isDrawing || keyPressed.space) return;
+    if (!isDrawing || keyPressed.space || mode === 'move') return;
     
     e.stopPropagation();
     
@@ -118,7 +118,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   };
   
   const handlePointerUp = (e: any) => {
-    if (!isDrawing || keyPressed.space) return;
+    if (!isDrawing || keyPressed.space || mode === 'move') return;
     
     e.stopPropagation();
     
