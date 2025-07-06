@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AnyDrawingObject, DrawingMode } from './types';
@@ -404,25 +403,28 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
         </Canvas>
       </div>
       
-      {/* Input and Submit Section */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 backdrop-blur-sm rounded-lg p-4 border border-gray-700">
-        <div className="flex items-center gap-3 min-w-[400px]">
-          <Input
-            type="text"
-            placeholder="Ask about your 3D drawing or describe what you want to analyze..."
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-1 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-            disabled={isSolving}
-          />
-          <Button
-            onClick={handleSolve}
-            disabled={isSolving || !inputText.trim()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
-          >
-            {isSolving ? 'Analyzing...' : 'Submit'}
-          </Button>
+      {/* Fixed positioned input at bottom center */}
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-full max-w-lg px-4 z-50">
+        <div className="bg-black/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 shadow-xl">
+          <div className="flex items-center gap-2 w-full">
+            <Input
+              type="text"
+              placeholder="Ask about your 3D drawing..."
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1 bg-gray-800/80 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500/20"
+              disabled={isSolving}
+            />
+            <Button
+              onClick={handleSolve}
+              disabled={isSolving || !inputText.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 min-w-[80px] shrink-0"
+              size="sm"
+            >
+              {isSolving ? 'Analyzing...' : 'Submit'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
