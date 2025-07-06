@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
@@ -6,7 +5,17 @@ import { AnyDrawingObject, DrawingMode } from '../types';
 import Shape3D from './Shape3D';
 import DrawingPath3D from './DrawingPath3D';
 import ShapePreview3D from './ShapePreview3D';
+import Model3D from './Model3D';
 import * as THREE from 'three';
+
+interface UploadedModel {
+  id: string;
+  name: string;
+  url: string;
+  format: 'gltf' | 'glb' | 'obj';
+  position: [number, number, number];
+  scale: number;
+}
 
 interface Scene3DProps {
   objects: AnyDrawingObject[];
@@ -22,6 +31,8 @@ interface Scene3DProps {
   isDrawing?: boolean;
   selectedShape?: string;
   mode?: DrawingMode;
+  uploadedModels?: UploadedModel[];
+  onModelPositionChange?: (modelId: string, position: [number, number, number]) => void;
 }
 
 const Scene3D: React.FC<Scene3DProps> = ({ 
@@ -37,7 +48,9 @@ const Scene3D: React.FC<Scene3DProps> = ({
   brushSize,
   isDrawing,
   selectedShape,
-  mode
+  mode,
+  uploadedModels = [],
+  onModelPositionChange
 }) => {
   const { camera, gl, raycaster } = useThree();
   const controlsRef = useRef<any>();
@@ -201,7 +214,7 @@ const Scene3D: React.FC<Scene3DProps> = ({
         </>
       )}
       
-      {/* Render all objects above the grid plate */}
+      {/* Render all drawing objects above the grid plate */}
       {objects.map((obj, index) => {
         if (obj.type === 'draw') {
           return (
@@ -215,6 +228,18 @@ const Scene3D: React.FC<Scene3DProps> = ({
         }
         return <Shape3D key={`shape-${index}`} obj={obj} />;
       })}
+
+      {/* Render uploaded 3D models */}
+      {uploadedModels.map((model) => (
+        <Model3D
+          key={model.id}
+          url={model.url}
+          format={model.format}
+          position={model.position}
+          scale={model.scale}
+          onPositionChange={(position) => onModelPositionChange?.(model.id, position)}
+        />
+      ))}
       
       {/* Show current drawing path preview */}
       {isDrawing && currentPath && currentPath.length > 1 && mode === 'draw' && (

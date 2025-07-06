@@ -4,10 +4,20 @@ import { AnyDrawingObject, DrawingMode } from './types';
 import { useKeyboardControl } from '@/hooks/canvas/use-keyboard-control';
 import Scene3D from './3d/Scene3D';
 import PositionIndicator from './3d/PositionIndicator';
+import ModelUploader from './3d/ModelUploader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import axios from 'axios';
+
+interface UploadedModel {
+  id: string;
+  name: string;
+  url: string;
+  format: 'gltf' | 'glb' | 'obj';
+  position: [number, number, number];
+  scale: number;
+}
 
 interface Canvas3DProps {
   color: string;
@@ -36,6 +46,7 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [inputText, setInputText] = useState('');
   const [isSolving, setIsSolving] = useState(false);
+  const [uploadedModels, setUploadedModels] = useState<UploadedModel[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { keyPressed } = useKeyboardControl();
   
@@ -332,6 +343,20 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
     setPreviewEndPoint(null);
   };
 
+  const handleModelUpload = (model: UploadedModel) => {
+    setUploadedModels(prev => [...prev, model]);
+  };
+
+  const handleModelPositionChange = (modelId: string, position: [number, number, number]) => {
+    setUploadedModels(prev => 
+      prev.map(model => 
+        model.id === modelId 
+          ? { ...model, position }
+          : model
+      )
+    );
+  };
+
   const handleSolve = async () => {
     if (!inputText.trim()) {
       toast.error("Please enter a question or description!", { duration: 3000 });
@@ -379,6 +404,11 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
   
   return (
     <div className="w-full h-full flex flex-col relative">
+      {/* Model Upload Button - Top Right */}
+      <div className="absolute top-4 right-4 z-50">
+        <ModelUploader onModelUpload={handleModelUpload} />
+      </div>
+
       <div className="flex-1 relative">
         <PositionIndicator position={currentPosition} isPanning={isPanning} />
         <Canvas
@@ -399,6 +429,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
             isDrawing={isDrawing}
             selectedShape={selectedShape}
             mode={mode}
+            uploadedModels={uploadedModels}
+            onModelPositionChange={handleModelPositionChange}
           />
         </Canvas>
       </div>
