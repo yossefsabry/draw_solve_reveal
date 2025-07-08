@@ -219,5 +219,5 @@ export interface TriangularPrismObject {
 
 export type AnyDrawingObject = DrawObject | RectangleObject | CircleObject | EllipseObject | LineObject | ArrowObject | TriangleObject | PolygonObject | TextObject | MathResult | PersonObject | HouseObject | StarObject | CubeObject | CylinderObject | PyramidObject | ConeObject | CuboidObject | HexagonalPrismObject | SphereObject | HemisphereObject | TriangularPrismObject;
 
-export type DrawingMode = "draw" | "erase" | "text" | "move";
+export type DrawingMode = "draw" | "erase" | "text" | "move" | "hand";
 export type ShapeTool = "rectangle" | "circle" | "line" | "arrow" | "triangle" | "ellipse" | "polygon" | "person" | "house" | "star" | "cube" | "cylinder" | "pyramid" | "cone" | "cuboid" | "hexagonalPrism" | "sphere" | "hemisphere" | "triangularPrism";

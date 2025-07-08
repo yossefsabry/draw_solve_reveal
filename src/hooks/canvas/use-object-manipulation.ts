@@ -13,9 +13,11 @@ export const useObjectManipulation = ({
   setObjects
 }: UseObjectManipulationProps) => {
   const [selectedShape, setSelectedShape] = useState<any>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Start moving an object
   const startMovingObject = (pos: { x: number; y: number }) => {
+    setIsDragging(true);
     // Check if we're clicking on a shape
     const clickedObjectIndex = findObjectAtPosition(objects, pos.x, pos.y);
     if (clickedObjectIndex !== -1) {
@@ -155,6 +157,7 @@ export const useObjectManipulation = ({
   // Stop moving the object
   const stopMovingObject = () => {
     setSelectedShape(null);
+    setIsDragging(false);
   };
 
   return {
@@ -162,6 +165,7 @@ export const useObjectManipulation = ({
     setSelectedShape,
     startMovingObject,
     moveSelectedObject,
-    stopMovingObject
+    stopMovingObject,
+    isDragging
   };
 };

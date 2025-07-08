@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AnyDrawingObject, DrawingMode } from './types';
 import { useKeyboardControl } from '@/hooks/canvas/use-keyboard-control';
+import { use3DShapeManipulation } from '@/hooks/canvas/use-3d-shape-manipulation';
 import Scene3D from './3d/Scene3D';
 import PositionIndicator from './3d/PositionIndicator';
 import ModelUploader from './3d/ModelUploader';
@@ -416,7 +417,8 @@ const Canvas3D: React.FC<Canvas3DProps> = ({
           style={{ background: '#1a1a1a' }}
         >
           <Scene3D 
-            objects={objects} 
+            objects={objects}
+            setObjects={setObjects}
             showGrid={showGrid}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}

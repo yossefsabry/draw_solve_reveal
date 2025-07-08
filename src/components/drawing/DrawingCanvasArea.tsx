@@ -5,6 +5,7 @@ import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
 import { createShapeObject } from "./ShapeDrawingUtils";
 import { ShapeType } from "./ShapeSelector";
 import TextObject from "./TextObject";
+import { useObjectManipulation } from "@/hooks/canvas/use-object-manipulation";
 
 interface DrawingCanvasAreaProps {
   color: string;
@@ -56,6 +57,18 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   const [showTextInput, setShowTextInput] = useState(false);
   const [textInputPosition, setTextInputPosition] = useState({ x: 0, y: 0 });
   const [selectedTextIndex, setSelectedTextIndex] = useState<number | null>(null);
+
+  // Object manipulation for hand tool
+  const {
+    selectedShape: selectedManipulationShape,
+    startMovingObject,
+    moveSelectedObject,
+    stopMovingObject,
+    isDragging: isObjectDragging
+  } = useObjectManipulation({
+    objects,
+    setObjects
+  });
 
   // Optimized grid rendering - separated from main canvas
   const drawOptimizedGrid = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -713,8 +726,19 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       return;
     }
 
+    // Handle hand mode (object manipulation)
+    if (mode === "hand") {
+      const pos = getPos(e);
+      const objectSelected = startMovingObject(pos);
+      if (objectSelected) {
+        e.preventDefault();
+        return;
+      }
+      // If no object selected, fall through to panning
+    }
+
     // Handle move mode (hand gesture panning)
-    if (mode === "move") {
+    if (mode === "move" || (mode === "hand" && !selectedManipulationShape)) {
       setIsPanning(true);
       panStart.current = { x: e.clientX, y: e.clientY };
       offsetStart.current = { ...offset };
@@ -749,6 +773,12 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
     const pos = getPos(e);
     setCursor(pos);
     
+    // Handle object manipulation in hand mode
+    if (mode === "hand" && isObjectDragging) {
+      moveSelectedObject(pos);
+      return;
+    }
+
     // Improved panning logic for both space key and move mode
     if (isPanning && panStart.current && onOffsetChange) {
       const dx = e.clientX - panStart.current.x;
@@ -760,7 +790,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       return;
     }
     
-    if (!isDrawing.current || mode === "text" || mode === "move") return;
+    if (!isDrawing.current || mode === "text" || mode === "move" || mode === "hand") return;
     
     if (mode === "draw" || mode === "erase") {
       drawingPath.current.push(pos);
@@ -779,6 +809,12 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
   };
 
   const handlePointerUp = () => {
+    // Handle object manipulation in hand mode
+    if (mode === "hand" && isObjectDragging) {
+      stopMovingObject();
+      return;
+    }
+
     if (isPanning) {
       setIsPanning(false);
       panStart.current = null;
@@ -941,6 +977,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
           height: `calc(100% - ${rulerSize}px)`,
           touchAction: "none",
           cursor: mode === "move" ? (isPanning ? "grabbing" : "grab") :
+                 mode === "hand" ? (isObjectDragging ? "grabbing" : "grab") :
                  isSpaceDown ? (isPanning ? "grabbing" : "grab") : 
                  mode === "erase" ? "crosshair" : 
                  mode === "text" ? "text" : "crosshair"

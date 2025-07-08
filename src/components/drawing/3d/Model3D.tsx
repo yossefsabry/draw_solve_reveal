@@ -35,8 +35,18 @@ const ModelLoader: React.FC<{
     if (format === 'gltf' || format === 'glb') {
       const gltf = useLoader(GLTFLoader, url);
       model = gltf.scene;
+      
+      // Ensure the model is properly cloned to avoid reference issues
+      if (model) {
+        model = model.clone();
+      }
     } else if (format === 'obj') {
       model = useLoader(OBJLoader, url);
+      
+      // For OBJ files, ensure proper material setup
+      if (model) {
+        model = model.clone();
+      }
     }
 
     // Optimize model for better performance

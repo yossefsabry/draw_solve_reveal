@@ -6,6 +6,8 @@ import Shape3D from './Shape3D';
 import DrawingPath3D from './DrawingPath3D';
 import ShapePreview3D from './ShapePreview3D';
 import Model3D from './Model3D';
+import { use3DObjectManipulation } from '@/hooks/canvas/use-3d-object-manipulation';
+import { use3DShapeManipulation } from '@/hooks/canvas/use-3d-shape-manipulation';
 import * as THREE from 'three';
 
 interface UploadedModel {
@@ -19,6 +21,7 @@ interface UploadedModel {
 
 interface Scene3DProps {
   objects: AnyDrawingObject[];
+  setObjects?: (objects: AnyDrawingObject[]) => void;
   showGrid?: boolean;
   onPointerDown?: (e: any) => void;
   onPointerMove?: (e: any) => void;
@@ -36,7 +39,8 @@ interface Scene3DProps {
 }
 
 const Scene3D: React.FC<Scene3DProps> = ({ 
-  objects, 
+  objects,
+  setObjects,
   showGrid = true,
   onPointerDown,
   onPointerMove,
@@ -55,6 +59,40 @@ const Scene3D: React.FC<Scene3DProps> = ({
   const { camera, gl, raycaster } = useThree();
   const controlsRef = useRef<any>();
   const planeRef = useRef<THREE.Mesh>(null);
+  
+  // Object manipulation for hand tool (for models)
+  const {
+    selectedObject,
+    isDragging: isModelDragging,
+    startObjectManipulation,
+    moveSelectedObject,
+    stopObjectManipulation
+  } = use3DObjectManipulation({
+    objects,
+    setObjects: () => {},
+    uploadedModels,
+    onModelPositionChange,
+    camera,
+    raycaster,
+    mode: mode || 'draw'
+  });
+
+  // Shape manipulation for hand tool (for drawing objects)
+  const {
+    selectedShapeIndex,
+    isDragging: isShapeDragging,
+    startShapeManipulation,
+    moveSelectedShape,
+    stopShapeManipulation
+  } = use3DShapeManipulation({
+    objects,
+    setObjects: setObjects || (() => {}),
+    camera,
+    raycaster,
+    mode: mode || 'draw'
+  });
+
+  const isDragging = isModelDragging || isShapeDragging;
   
   useEffect(() => {
     // Position camera to show the full grid plate
@@ -134,20 +172,63 @@ const Scene3D: React.FC<Scene3DProps> = ({
     };
   }, [camera, gl]);
 
-  // Handle mouse events for drawing
+  // Handle mouse events for drawing and object manipulation
   const handleMouseDown = (e: any) => {
+    if (mode === 'hand') {
+      // Try model manipulation first
+      const modelHandled = startObjectManipulation(e);
+      if (modelHandled) {
+        // Disable orbit controls when manipulating objects
+        if (controlsRef.current) {
+          controlsRef.current.enabled = false;
+        }
+        return;
+      }
+      
+      // Try shape manipulation if no model was selected
+      const shapeHandled = startShapeManipulation(e);
+      if (shapeHandled) {
+        // Disable orbit controls when manipulating objects
+        if (controlsRef.current) {
+          controlsRef.current.enabled = false;
+        }
+        return;
+      }
+    }
+    
     if (onPointerDown) {
       onPointerDown(e);
     }
   };
 
   const handleMouseMove = (e: any) => {
+    if (mode === 'hand') {
+      if (isModelDragging) {
+        moveSelectedObject(e);
+        return;
+      }
+      if (isShapeDragging) {
+        moveSelectedShape(e);
+        return;
+      }
+    }
+    
     if (onPointerMove) {
       onPointerMove(e);
     }
   };
 
   const handleMouseUp = (e: any) => {
+    if (mode === 'hand') {
+      stopObjectManipulation();
+      stopShapeManipulation();
+      // Re-enable orbit controls
+      if (controlsRef.current) {
+        controlsRef.current.enabled = true;
+      }
+      return;
+    }
+    
     if (onPointerUp) {
       onPointerUp(e);
     }
@@ -265,12 +346,12 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Orbit Controls - rotation only, no zoom */}
+      {/* Orbit Controls - disabled when using hand tool */}
       <OrbitControls 
         ref={controlsRef}
         enablePan={false} 
         enableZoom={false} 
-        enableRotate={true} 
+        enableRotate={mode !== 'hand' || !isDragging} 
         enableDamping={true}
         dampingFactor={0.08} 
         rotateSpeed={0.5}

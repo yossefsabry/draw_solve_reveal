@@ -7,7 +7,7 @@ const tools = [
   { name: "Draw", icon: <Pencil className="text-foreground" />, mode: "draw" },
   { name: "Erase", icon: <Eraser className="text-foreground" />, mode: "erase" },
   { name: "Text", icon: <Type className="text-foreground" />, mode: "text" },
-  { name: "Move", icon: <Hand className="text-foreground" />, mode: "move" },
+  { name: "Hand", icon: <Hand className="text-foreground" />, mode: "hand" },
   { name: "Shapes", icon: <Shapes className="text-foreground" />, mode: "shape" },
 ];
 
