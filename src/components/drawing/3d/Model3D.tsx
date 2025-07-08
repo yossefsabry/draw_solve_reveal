@@ -1,4 +1,4 @@
-import React, { useRef, Suspense, useState, useEffect } from 'react';
+import React, { useRef, Suspense, useMemo } from 'react';
 import { useLoader } from '@react-three/fiber';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
@@ -23,94 +23,59 @@ const ModelPlaceholder: React.FC = () => {
   );
 };
 
-// Separate component for loading models to handle errors properly
+// Optimized model loader using React Three Fiber's useLoader
 const ModelLoader: React.FC<{ 
   url: string; 
   format: 'gltf' | 'glb' | 'obj';
   onLoadError?: (error: string) => void;
 }> = ({ url, format, onLoadError }) => {
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [model, setModel] = useState<THREE.Object3D | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  try {
+    let model;
+    
+    if (format === 'gltf' || format === 'glb') {
+      const gltf = useLoader(GLTFLoader, url);
+      model = gltf.scene;
+    } else if (format === 'obj') {
+      model = useLoader(OBJLoader, url);
+    }
 
-  useEffect(() => {
-    let isMounted = true;
-    const loadModel = async () => {
-      setIsLoading(true);
-      setLoadError(null);
-      setModel(null);
-      try {
-        if (format === 'gltf' || format === 'glb') {
-          const loader = new GLTFLoader();
-          const loadGLTF = () => new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Model loading timed out. The file may be corrupted or have missing dependencies.'));
-            }, 30000);
-            loader.load(
-              url,
-              (gltf) => {
-                clearTimeout(timeout);
-                if (isMounted) {
-                  setModel(gltf.scene);
-                  setLoadError(null); // clear error if model loads
+    // Optimize model for better performance
+    const optimizedModel = useMemo(() => {
+      if (!model) return null;
+      
+      const clonedModel = model.clone();
+      
+      // Traverse and optimize materials for better performance
+      clonedModel.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          // Enable shadows
+          child.castShadow = true;
+          child.receiveShadow = true;
+          
+          // Optimize materials
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => {
+                if (mat instanceof THREE.MeshStandardMaterial) {
+                  mat.needsUpdate = true;
                 }
-                resolve(gltf.scene);
-              },
-              undefined,
-              (error) => {
-                clearTimeout(timeout);
-                if (isMounted) setLoadError((error && typeof error === 'object' && 'message' in error) ? (error as any).message : 'Failed to load model');
-                reject(error);
-              }
-            );
-          });
-          await loadGLTF();
-        } else if (format === 'obj') {
-          const loader = new OBJLoader();
-          const loadOBJ = () => new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Model loading timed out. The file may be corrupted.'));
-            }, 30000);
-            loader.load(
-              url,
-              (obj) => {
-                clearTimeout(timeout);
-                if (isMounted) {
-                  setModel(obj);
-                  setLoadError(null); // clear error if model loads
-                }
-                resolve(obj);
-              },
-              undefined,
-              (error) => {
-                clearTimeout(timeout);
-                if (isMounted) setLoadError((error && typeof error === 'object' && 'message' in error) ? (error as any).message : 'Failed to load model');
-                reject(error);
-              }
-            );
-          });
-          await loadOBJ();
+              });
+            } else if (child.material instanceof THREE.MeshStandardMaterial) {
+              child.material.needsUpdate = true;
+            }
+          }
         }
-      } catch (error) {
-        if (isMounted) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to load model';
-          setLoadError(errorMessage);
-          onLoadError?.(errorMessage);
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-    loadModel();
-    return () => { isMounted = false; };
-  }, [url, format, onLoadError]);
+      });
+      
+      return clonedModel;
+    }, [model]);
 
-  // Only show placeholder if there is no model and either loading or error
-  if (!model && (isLoading || loadError)) {
+    return optimizedModel ? <primitive object={optimizedModel} /> : <ModelPlaceholder />;
+  } catch (error) {
+    console.error('Model loading error:', error);
+    onLoadError?.(error instanceof Error ? error.message : 'Failed to load model');
     return <ModelPlaceholder />;
   }
-  // Always show the model if present
-  return model ? <primitive object={model.clone()} /> : null;
 };
 
 // Error boundary component for 3D models

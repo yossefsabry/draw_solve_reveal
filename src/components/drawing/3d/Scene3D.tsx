@@ -61,9 +61,10 @@ const Scene3D: React.FC<Scene3DProps> = ({
     camera.position.set(25, 25, 25);
     camera.lookAt(0, 0, 0);
     
-    // Enable shadows for better visual quality
+    // Optimize renderer settings for better performance
     gl.shadowMap.enabled = true;
-    gl.shadowMap.type = THREE.PCFSoftShadowMap;
+    gl.shadowMap.type = THREE.PCFShadowMap;
+    gl.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for better performance
   }, [camera, gl]);
 
   // Improved zoom to cursor functionality
@@ -154,24 +155,23 @@ const Scene3D: React.FC<Scene3DProps> = ({
   
   return (
     <>
-      {/* Enhanced Lighting with shadows */}
-      <ambientLight intensity={0.7} />
+      {/* Optimized Lighting for better performance */}
+      <ambientLight intensity={0.6} />
       <directionalLight 
         position={[40, 40, 30]} 
-        intensity={1.2}
+        intensity={1.0}
         castShadow
-        shadow-mapSize-width={4096}
-        shadow-mapSize-height={4096}
-        shadow-camera-far={300}
-        shadow-camera-left={-100}
-        shadow-camera-right={100}
-        shadow-camera-top={100}
-        shadow-camera-bottom={-100}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-far={200}
+        shadow-camera-left={-50}
+        shadow-camera-right={50}
+        shadow-camera-top={50}
+        shadow-camera-bottom={-50}
       />
       <pointLight 
         position={[-40, 30, -30]} 
-        intensity={0.4}
-        castShadow
+        intensity={0.3}
       />
       
       {/* Large Rectangular Grid Plate with very subtle pink color */}
