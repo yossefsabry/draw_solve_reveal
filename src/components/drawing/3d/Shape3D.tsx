@@ -438,6 +438,54 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
     );
   }
   
+  if (obj.type === 'triangularPrism') {
+    // Always upright: base parallel to ground
+    const x1 = obj.x;
+    const x2 = obj.x + obj.width;
+    const yBase = obj.y + obj.height;
+    const yTop = obj.y;
+    const width = obj.width / 50;
+    const height = obj.height / 50;
+    const depth = width * 0.5;
+    // Front triangle (base on X axis, height on Y axis)
+    const p1 = new THREE.Vector3(x1 / 50, 1, -yBase / 50);
+    const p2 = new THREE.Vector3(x2 / 50, 1, -yBase / 50);
+    const p3 = new THREE.Vector3((x1 + x2) / 2 / 50, 1, -yTop / 50);
+    // Back triangle (offset in Y)
+    const p4 = new THREE.Vector3(x1 / 50, 1 + depth, -yBase / 50);
+    const p5 = new THREE.Vector3(x2 / 50, 1 + depth, -yBase / 50);
+    const p6 = new THREE.Vector3((x1 + x2) / 2 / 50, 1 + depth, -yTop / 50);
+    const vertices = new Float32Array([
+      p1.x, p1.y, p1.z,
+      p2.x, p2.y, p2.z,
+      p3.x, p3.y, p3.z,
+      p4.x, p4.y, p4.z,
+      p5.x, p5.y, p5.z,
+      p6.x, p6.y, p6.z
+    ]);
+    const indices = [
+      0, 1, 2,  // front
+      3, 5, 4,  // back
+      0, 3, 4, 0, 4, 1,  // sides
+      1, 4, 5, 1, 5, 2,
+      2, 5, 3, 2, 3, 0
+    ];
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return (
+      <mesh ref={meshRef} castShadow receiveShadow>
+        <primitive object={geometry} />
+        <meshStandardMaterial 
+          color={obj.color}
+          metalness={0.2}
+          roughness={0.3}
+        />
+      </mesh>
+    );
+  }
+  
   return null;
 };
 

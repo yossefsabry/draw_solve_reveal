@@ -136,19 +136,83 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
   }
   
   if (shapeType === 'triangle') {
-    const triangleHeight = height;
-    const triangleWidth = width;
-    
+    // Flat triangular prism (like Shape3D)
+    const x1 = startPoint.x;
+    const y1 = startPoint.y;
+    const x2 = endPoint.x;
+    const y2 = startPoint.y;
+    const x3 = (startPoint.x + endPoint.x) / 2;
+    const y3 = endPoint.y;
+    const p1 = new THREE.Vector3(x1 / 50, 1, -y1 / 50);
+    const p2 = new THREE.Vector3(x2 / 50, 1, -y2 / 50);
+    const p3 = new THREE.Vector3(x3 / 50, 1, -y3 / 50);
+    const height3d = 0.1;
+    const vertices = new Float32Array([
+      p1.x, p1.y, p1.z,
+      p2.x, p2.y, p2.z,
+      p3.x, p3.y, p3.z,
+      p1.x, p1.y + height3d, p1.z,
+      p2.x, p2.y + height3d, p2.z,
+      p3.x, p3.y + height3d, p3.z
+    ]);
+    const indices = [
+      0, 1, 2,  // bottom
+      3, 5, 4,  // top
+      0, 3, 4, 0, 4, 1,  // sides
+      1, 4, 5, 1, 5, 2,
+      2, 5, 3, 2, 3, 0
+    ];
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
     return (
-      <mesh position={[centerX, 1.1, centerZ]} castShadow>
-        <coneGeometry args={[triangleWidth / 2, triangleHeight, 3]} />
-        <meshStandardMaterial 
-          color={color} 
-          transparent 
-          opacity={0.7}
-          metalness={0.2}
-          roughness={0.3}
-        />
+      <mesh castShadow position={[0, 0, 0]}>
+        <primitive object={geometry} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} metalness={0.2} roughness={0.3} />
+      </mesh>
+    );
+  }
+  if (shapeType === 'triangularPrism') {
+    // Always upright: base parallel to ground
+    const x1 = Math.min(startPoint.x, endPoint.x);
+    const x2 = Math.max(startPoint.x, endPoint.x);
+    const yBase = Math.max(startPoint.y, endPoint.y);
+    const yTop = Math.min(startPoint.y, endPoint.y);
+    const width = (x2 - x1) / 50;
+    const height = (yBase - yTop) / 50;
+    const depth = width * 0.5;
+    // Front triangle (base on X axis, height on Y axis)
+    const p1 = new THREE.Vector3(x1 / 50, 1, -yBase / 50);
+    const p2 = new THREE.Vector3(x2 / 50, 1, -yBase / 50);
+    const p3 = new THREE.Vector3((x1 + x2) / 2 / 50, 1, -yTop / 50);
+    // Back triangle (offset in Y)
+    const p4 = new THREE.Vector3(x1 / 50, 1 + depth, -yBase / 50);
+    const p5 = new THREE.Vector3(x2 / 50, 1 + depth, -yBase / 50);
+    const p6 = new THREE.Vector3((x1 + x2) / 2 / 50, 1 + depth, -yTop / 50);
+    const vertices = new Float32Array([
+      p1.x, p1.y, p1.z,
+      p2.x, p2.y, p2.z,
+      p3.x, p3.y, p3.z,
+      p4.x, p4.y, p4.z,
+      p5.x, p5.y, p5.z,
+      p6.x, p6.y, p6.z
+    ]);
+    const indices = [
+      0, 1, 2,  // front
+      3, 5, 4,  // back
+      0, 3, 4, 0, 4, 1,  // sides
+      1, 4, 5, 1, 5, 2,
+      2, 5, 3, 2, 3, 0
+    ];
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return (
+      <mesh castShadow position={[0, 0, 0]}>
+        <primitive object={geometry} />
+        <meshStandardMaterial color={color} transparent opacity={0.7} metalness={0.2} roughness={0.3} />
       </mesh>
     );
   }

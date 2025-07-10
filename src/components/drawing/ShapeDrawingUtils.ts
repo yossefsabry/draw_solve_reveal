@@ -335,11 +335,32 @@ export const drawShapePreview = (
       ctx.lineTo(endX, endY);
       break;
     case 'triangle':
-      ctx.moveTo(startX, startY);
-      ctx.lineTo(endX, startY);
-      ctx.lineTo((startX + endX) / 2, endY);
+    case 'triangularPrism': {
+      // Draw 3D triangular prism preview
+      const triWidth = Math.abs(endX - startX);
+      const triHeight = Math.abs(endY - startY);
+      const triX = Math.min(startX, endX);
+      const triY = Math.min(startY, endY);
+      const triOffset = triWidth * 0.15;
+      // Front triangle
+      ctx.moveTo(triX, triY + triHeight);
+      ctx.lineTo(triX + triWidth / 2, triY);
+      ctx.lineTo(triX + triWidth, triY + triHeight);
       ctx.closePath();
+      // Back triangle
+      ctx.moveTo(triX + triOffset, triY + triHeight - triOffset);
+      ctx.lineTo(triX + triWidth / 2 + triOffset, triY - triOffset);
+      ctx.lineTo(triX + triWidth + triOffset, triY + triHeight - triOffset);
+      ctx.closePath();
+      // Connecting lines
+      ctx.moveTo(triX, triY + triHeight);
+      ctx.lineTo(triX + triOffset, triY + triHeight - triOffset);
+      ctx.moveTo(triX + triWidth / 2, triY);
+      ctx.lineTo(triX + triWidth / 2 + triOffset, triY - triOffset);
+      ctx.moveTo(triX + triWidth, triY + triHeight);
+      ctx.lineTo(triX + triWidth + triOffset, triY + triHeight - triOffset);
       break;
+    }
     case 'person':
       // Draw stick figure preview
       const centerX2 = (startX + endX) / 2;

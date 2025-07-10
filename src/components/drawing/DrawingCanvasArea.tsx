@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import Rulers from "./Rulers";
 import TextInputBox from "./TextInputBox";
 import { AnyDrawingObject, DrawingMode, ShapeTool } from "./types";
-import { createShapeObject } from "./ShapeDrawingUtils";
+import { createShapeObject, drawShapePreview } from "./ShapeDrawingUtils";
 import { ShapeType } from "./ShapeSelector";
 import TextObject from "./TextObject";
 import { useObjectManipulation } from "@/hooks/canvas/use-object-manipulation";
@@ -640,7 +640,7 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
       ctx.strokeStyle = color;
       ctx.lineWidth = brushSize / zoom;
       ctx.setLineDash([4 / zoom, 4 / zoom]);
-      
+      // Use drawShapePreview for triangle and triangularPrism
       if (shapePreview.type === "rectangle") {
         ctx.strokeRect(shapePreview.x!, shapePreview.y!, shapePreview.width!, shapePreview.height!);
       } else if (shapePreview.type === "circle") {
@@ -652,8 +652,62 @@ const DrawingCanvasArea: React.FC<DrawingCanvasAreaProps> = ({
         ctx.moveTo(shapePreview.x1!, shapePreview.y1!);
         ctx.lineTo(shapePreview.x2!, shapePreview.y2!);
         ctx.stroke();
+      } else if (shapePreview.type === "triangle") {
+        // Preview a flat triangular prism (like 3D)
+        const tri = shapePreview as import("./types").TriangleObject;
+        // Calculate the three points of the triangle
+        const p1 = { x: tri.x1, y: tri.y1 };
+        const p2 = { x: tri.x2, y: tri.y2 };
+        const p3 = { x: tri.x3, y: tri.y3 };
+        // Offset for 3D effect
+        const offset = 12; // px
+        const p1b = { x: p1.x + offset, y: p1.y - offset };
+        const p2b = { x: p2.x + offset, y: p2.y - offset };
+        const p3b = { x: p3.x + offset, y: p3.y - offset };
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y);
+        ctx.closePath();
+        ctx.moveTo(p1b.x, p1b.y);
+        ctx.lineTo(p2b.x, p2b.y);
+        ctx.lineTo(p3b.x, p3b.y);
+        ctx.closePath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p1b.x, p1b.y);
+        ctx.moveTo(p2.x, p2.y);
+        ctx.lineTo(p2b.x, p2b.y);
+        ctx.moveTo(p3.x, p3.y);
+        ctx.lineTo(p3b.x, p3b.y);
+        ctx.stroke();
+      } else if (shapePreview.type === "triangularPrism") {
+        // Preview a 3D triangular prism (like 3D)
+        const prism = shapePreview as import("./types").TriangularPrismObject;
+        const x = prism.x;
+        const y = prism.y;
+        const width = prism.width;
+        const height = prism.height;
+        const offset3d = width * 0.15;
+        // Front triangle
+        ctx.beginPath();
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(x + width / 2, y);
+        ctx.lineTo(x + width, y + height);
+        ctx.closePath();
+        // Back triangle
+        ctx.moveTo(x + offset3d, y + height - offset3d);
+        ctx.lineTo(x + width / 2 + offset3d, y - offset3d);
+        ctx.lineTo(x + width + offset3d, y + height - offset3d);
+        ctx.closePath();
+        // Connecting lines
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(x + offset3d, y + height - offset3d);
+        ctx.moveTo(x + width / 2, y);
+        ctx.lineTo(x + width / 2 + offset3d, y - offset3d);
+        ctx.moveTo(x + width, y + height);
+        ctx.lineTo(x + width + offset3d, y + height - offset3d);
+        ctx.stroke();
       }
-      
       ctx.setLineDash([]);
       ctx.restore();
     }
