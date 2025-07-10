@@ -29,64 +29,63 @@ const ModelLoader: React.FC<{
   format: 'gltf' | 'glb' | 'obj';
   onLoadError?: (error: string) => void;
 }> = ({ url, format, onLoadError }) => {
-  let model;
-  
   try {
+    let model;
+    
     if (format === 'gltf' || format === 'glb') {
       const gltf = useLoader(GLTFLoader, url);
-      console.log(`Successfully loaded ${format} model:`, gltf);
-      console.log(`Scene from ${format}:`, gltf.scene);
-      console.log(`Scene children:`, gltf.scene?.children);
       model = gltf.scene;
       
-      if (!model) {
-        console.error(`No scene found in ${format} file`);
-        onLoadError?.(`No scene found in ${format} file`);
-        return <ModelPlaceholder />;
+      // Ensure the model is properly cloned to avoid reference issues
+      if (model) {
+        model = model.clone();
       }
     } else if (format === 'obj') {
-      const obj = useLoader(OBJLoader, url);
-      console.log('Successfully loaded OBJ model:', obj);
-      model = obj;
+      model = useLoader(OBJLoader, url);
+      
+      // For OBJ files, ensure proper material setup
+      if (model) {
+        model = model.clone();
+      }
     }
-  } catch (error) {
-    console.error(`Error loading ${format} model from ${url}:`, error);
-    onLoadError?.(error instanceof Error ? error.message : `Failed to load ${format} model`);
-    return <ModelPlaceholder />;
-  }
 
-  // Optimize model for better performance
-  const optimizedModel = useMemo(() => {
-    if (!model) return null;
-    
-    const clonedModel = model.clone();
-    
-    // Traverse and optimize materials for better performance
-    clonedModel.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        // Enable shadows
-        child.castShadow = true;
-        child.receiveShadow = true;
-        
-        // Optimize materials
-        if (child.material) {
-          if (Array.isArray(child.material)) {
-            child.material.forEach(mat => {
-              if (mat instanceof THREE.MeshStandardMaterial) {
-                mat.needsUpdate = true;
-              }
-            });
-          } else if (child.material instanceof THREE.MeshStandardMaterial) {
-            child.material.needsUpdate = true;
+    // Optimize model for better performance
+    const optimizedModel = useMemo(() => {
+      if (!model) return null;
+      
+      const clonedModel = model.clone();
+      
+      // Traverse and optimize materials for better performance
+      clonedModel.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          // Enable shadows
+          child.castShadow = true;
+          child.receiveShadow = true;
+          
+          // Optimize materials
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => {
+                if (mat instanceof THREE.MeshStandardMaterial) {
+                  mat.needsUpdate = true;
+                }
+              });
+            } else if (child.material instanceof THREE.MeshStandardMaterial) {
+              child.material.needsUpdate = true;
+            }
           }
         }
-      }
-    });
-    
-    return clonedModel;
-  }, [model]);
+      });
+      
+      return clonedModel;
+    }, [model]);
 
-  return optimizedModel ? <primitive object={optimizedModel} /> : <ModelPlaceholder />;
+    return optimizedModel ? <primitive object={optimizedModel} /> : <ModelPlaceholder />;
+  } catch (error) {
+    console.error('Model loading error:', error);
+    onLoadError?.(error instanceof Error ? error.message : 'Failed to load model');
+    return <ModelPlaceholder />;
+  }
 };
 
 // Error boundary component for 3D models
@@ -133,7 +132,6 @@ const Model3D: React.FC<Model3DProps> = ({
       ref={meshRef}
       position={position}
       scale={[scale, scale, scale]}
-      userData={{ modelId: url, type: '3d-model' }} // Add metadata for selection
     >
       <ModelErrorBoundary onError={onLoadError}>
         <Suspense fallback={<ModelPlaceholder />}>

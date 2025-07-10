@@ -57,53 +57,14 @@ export const use3DObjectManipulation = ({
 
     if (!hasIntersection) return false;
 
-    // Use the scene to get all 3D objects for raycasting
-    const scene = event.target?.parent?.parent?.scene || event.target?.scene;
-    const objects3D = scene ? scene.children : [];
-    
-    // Get all intersected objects from raycaster 
-    const intersects = raycaster.intersectObjects(objects3D, true);
-    console.log('Raycaster intersects:', intersects);
-    
     // Check for uploaded models first (they're typically on top)
     for (let i = uploadedModels.length - 1; i >= 0; i--) {
       const model = uploadedModels[i];
       const modelPosition = new THREE.Vector3(...model.position);
-      
-      // Check distance for approximate detection
       const distance = intersectionPoint.distanceTo(modelPosition);
-      const withinBounds = distance < model.scale * 4; // Larger detection area
       
-      // Check if any intersected object belongs to this model by checking userData or position
-      const modelIntersected = intersects.some(intersect => {
-        // Check if the intersected object or its ancestors have model metadata
-        let current = intersect.object;
-        let depth = 0;
-        while (current && depth < 15) { // Check up the hierarchy
-          if (current.userData?.modelId === model.url || 
-              current.userData?.type === '3d-model') {
-            return true;
-          }
-          
-          // Also check position matching
-          const pos = current.position;
-          if (pos && 
-              Math.abs(pos.x - model.position[0]) < 1 &&
-              Math.abs(pos.y - model.position[1]) < 1 &&
-              Math.abs(pos.z - model.position[2]) < 1) {
-            return true;
-          }
-          
-          current = current.parent;
-          depth++;
-        }
-        return false;
-      });
-      
-      console.log(`Model ${model.id}: distance=${distance}, withinBounds=${withinBounds}, modelIntersected=${modelIntersected}`);
-      
-      if (withinBounds || modelIntersected) {
-        console.log(`Selected model ${model.id}`);
+      // Check if click is within model bounds (approximate)
+      if (distance < model.scale * 2) {
         setSelectedObject({
           type: 'model',
           id: model.id,
