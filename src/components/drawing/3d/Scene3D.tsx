@@ -346,12 +346,13 @@ const Scene3D: React.FC<Scene3DProps> = ({
         />
       )}
       
-      {/* Orbit Controls - disabled when using hand tool */}
+      {/* Orbit Controls - completely disabled when using hand tool */}
       <OrbitControls 
         ref={controlsRef}
         enablePan={false} 
         enableZoom={false} 
-        enableRotate={mode !== 'hand' || !isDragging} 
+        enableRotate={mode !== 'hand'} 
+        enabled={mode !== 'hand'}
         enableDamping={true}
         dampingFactor={0.08} 
         rotateSpeed={0.5}
