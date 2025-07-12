@@ -156,32 +156,44 @@ const Shape3D: React.FC<Shape3DProps> = ({ obj }) => {
   }
   
   if (obj.type === 'triangle') {
-    const p1 = new THREE.Vector3((obj.x1 || 0) / 50, 1, -(obj.y1 || 0) / 50);
-    const p2 = new THREE.Vector3((obj.x2 || 0) / 50, 1, -(obj.y2 || 0) / 50);
-    const p3 = new THREE.Vector3((obj.x3 || 0) / 50, 1, -(obj.y3 || 0) / 50);
-    
-    const geometry = new THREE.BufferGeometry();
+    // Real square-based pyramid
+    const x1 = obj.x1 || 0;
+    const y1 = obj.y1 || 0;
+    const x2 = obj.x2 || 0;
+    const y3 = obj.y3 || 0;
+    // Use drag to define base width and depth
+    const baseWidth = Math.abs(x2 - x1);
+    const baseDepth = Math.abs(y3 - y1);
+    const height = Math.max(baseWidth, baseDepth); // Height equal to max(base width, depth)
+    // Base corners (on XZ plane)
+    const px1 = x1 / 50, pz1 = -y1 / 50;
+    const px2 = x2 / 50, pz2 = -y1 / 50;
+    const px3 = x2 / 50, pz3 = -y3 / 50;
+    const px4 = x1 / 50, pz4 = -y3 / 50;
+    // Apex directly above base center
+    const cx = (x1 + x2) / 2 / 50;
+    const cz = -(y1 + y3) / 2 / 50;
+    const apex = new THREE.Vector3(cx, 1 + height / 50, cz);
+    // Vertices: base (p1, p2, p3, p4), apex
     const vertices = new Float32Array([
-      p1.x, p1.y, p1.z,
-      p2.x, p2.y, p2.z,
-      p3.x, p3.y, p3.z,
-      p1.x, p1.y + 0.1, p1.z,
-      p2.x, p2.y + 0.1, p2.z,
-      p3.x, p3.y + 0.1, p3.z
+      px1, 1, pz1, // 0
+      px2, 1, pz2, // 1
+      px3, 1, pz3, // 2
+      px4, 1, pz4, // 3
+      apex.x, apex.y, apex.z // 4
     ]);
-    
+    // Faces: base (square), and four sides
     const indices = [
-      0, 1, 2,  // bottom
-      3, 5, 4,  // top
-      0, 3, 4, 0, 4, 1,  // sides
-      1, 4, 5, 1, 5, 2,
-      2, 5, 3, 2, 3, 0
+      0, 1, 2, 0, 2, 3, // base
+      0, 1, 4, // side 1
+      1, 2, 4, // side 2
+      2, 3, 4, // side 3
+      3, 0, 4  // side 4
     ];
-    
+    const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
-    
     return (
       <mesh ref={meshRef} castShadow receiveShadow>
         <primitive object={geometry} />

@@ -61,7 +61,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
       <div className="flex flex-row md:flex-col items-center gap-2 w-full md:w-16 bg-[#1a1a1a] border-b md:border-b-0 md:border-r border-neutral-700 py-2 md:py-4 overflow-y-auto max-h-full">
         {/* Drawing tools */}
         <div className="flex flex-col items-center w-full mb-4">
-          {tools.map(tool => (
+          {tools.filter(tool => is2D || (tool.mode !== 'erase' && tool.mode !== 'text')).map(tool => (
             <Button
               key={tool.name}
               variant={mode === tool.mode ? "default" : "outline"}

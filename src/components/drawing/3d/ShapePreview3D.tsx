@@ -136,31 +136,39 @@ const ShapePreview3D: React.FC<ShapePreview3DProps> = ({
   }
   
   if (shapeType === 'triangle') {
-    // Flat triangular prism (like Shape3D)
+    // Real square-based pyramid preview
     const x1 = startPoint.x;
-    const y1 = startPoint.y;
     const x2 = endPoint.x;
-    const y2 = startPoint.y;
-    const x3 = (startPoint.x + endPoint.x) / 2;
+    const y1 = startPoint.y;
     const y3 = endPoint.y;
-    const p1 = new THREE.Vector3(x1 / 50, 1, -y1 / 50);
-    const p2 = new THREE.Vector3(x2 / 50, 1, -y2 / 50);
-    const p3 = new THREE.Vector3(x3 / 50, 1, -y3 / 50);
-    const height3d = 0.1;
+    // Use drag to define base width and depth
+    const baseWidth = Math.abs(x2 - x1);
+    const baseDepth = Math.abs(y3 - y1);
+    const height = Math.max(baseWidth, baseDepth); // Height equal to max(base width, depth)
+    // Base corners (on XZ plane)
+    const px1 = x1 / 50, pz1 = -y1 / 50;
+    const px2 = x2 / 50, pz2 = -y1 / 50;
+    const px3 = x2 / 50, pz3 = -y3 / 50;
+    const px4 = x1 / 50, pz4 = -y3 / 50;
+    // Apex directly above base center
+    const cx = (x1 + x2) / 2 / 50;
+    const cz = -(y1 + y3) / 2 / 50;
+    const apex = new THREE.Vector3(cx, 1 + height / 50, cz);
+    // Vertices: base (p1, p2, p3, p4), apex
     const vertices = new Float32Array([
-      p1.x, p1.y, p1.z,
-      p2.x, p2.y, p2.z,
-      p3.x, p3.y, p3.z,
-      p1.x, p1.y + height3d, p1.z,
-      p2.x, p2.y + height3d, p2.z,
-      p3.x, p3.y + height3d, p3.z
+      px1, 1, pz1, // 0
+      px2, 1, pz2, // 1
+      px3, 1, pz3, // 2
+      px4, 1, pz4, // 3
+      apex.x, apex.y, apex.z // 4
     ]);
+    // Faces: base (square), and four sides
     const indices = [
-      0, 1, 2,  // bottom
-      3, 5, 4,  // top
-      0, 3, 4, 0, 4, 1,  // sides
-      1, 4, 5, 1, 5, 2,
-      2, 5, 3, 2, 3, 0
+      0, 1, 2, 0, 2, 3, // base
+      0, 1, 4, // side 1
+      1, 2, 4, // side 2
+      2, 3, 4, // side 3
+      3, 0, 4  // side 4
     ];
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
